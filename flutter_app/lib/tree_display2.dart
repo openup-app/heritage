@@ -2,6 +2,8 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:heritage/api.dart';
 import 'package:heritage/tree.dart';
 
 class FamilyTreeDisplay2 extends StatefulWidget {
@@ -399,12 +401,38 @@ class NodeDisplay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return FilledButton(
-      onPressed: () {},
-      style: FilledButton.styleFrom(
-        fixedSize: Size(80, 80),
+    return Consumer(
+      builder: (context, ref, child) {
+        return FilledButton(
+          onPressed: () => _sendTest(context, ref),
+          style: FilledButton.styleFrom(
+            fixedSize: const Size(80, 80),
+          ),
+          child: Text(node.id),
+        );
+      },
+    );
+  }
+
+  void _sendTest(BuildContext context, WidgetRef ref) async {
+    final api = ref.read(apiProvider);
+    final result = await api.getTest();
+    if (!context.mounted) {
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        duration: const Duration(seconds: 1),
+        backgroundColor: result.isRight() ? Colors.green : Colors.red,
+        content: Builder(
+          builder: (context) {
+            return result.fold(
+              (l) => Text('Network request failed: $l'),
+              (r) => const Text('Network request succeeded'),
+            );
+          },
+        ),
       ),
-      child: Text(node.id),
     );
   }
 }
