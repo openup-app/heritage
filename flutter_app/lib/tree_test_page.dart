@@ -1,6 +1,10 @@
 import 'dart:math';
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:heritage/api.dart';
+import 'package:heritage/heritage_app.dart';
 import 'package:heritage/tree.dart';
 import 'package:heritage/tree_display2.dart';
 
@@ -28,8 +32,313 @@ class _TreeTestPageState extends State<TreeTestPage> {
       body: Center(
         child: FamilyTreeDisplay2(
           focal: _focal,
+          // levelGap: 40,
+          // spouseGap: 4,
+          // siblingGap: 16,
+          // nodeBuilder: (context, node) {
+          //   return Consumer(
+          //     builder: (context, ref, child) {
+          //       return GestureDetector(
+          //         onTap: () => _sendTest(context, ref),
+          //         child: NodeDisplay(node: node),
+          //       );
+          //     },
+          //   );
+          // },
+          levelGap: 302,
+          spouseGap: 52,
+          siblingGap: 297,
+          nodeBuilder: (context, node) {
+            return Consumer(
+              builder: (context, ref, child) {
+                return MouseRegion(
+                  cursor: SystemMouseCursors.click,
+                  child: GestureDetector(
+                    onTap: () => _showPopup(context, node),
+                    child: NodeDisplayFull(node: node),
+                  ),
+                );
+              },
+            );
+          },
         ),
       ),
+    );
+  }
+
+  void _showPopup(BuildContext context, Node node) {
+    showAdaptiveDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog.adaptive(
+          title: const Text('Add a Sibling'),
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.all(
+              Radius.circular(16),
+            ),
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(
+                  Icons.person,
+                  size: 300,
+                  color: primaryColor,
+                ),
+                const SelectableText('Name'),
+                const SizedBox(height: 4),
+                TextFormField(
+                  decoration: const InputDecoration(
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const SelectableText('Relationship'),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Expanded(
+                      child: FilledButton(
+                        onPressed: () {},
+                        style: FilledButton.styleFrom(
+                          fixedSize: const Size.fromHeight(44),
+                          backgroundColor: primaryColor,
+                        ),
+                        child: const Text('Brother'),
+                      ),
+                    ),
+                    const SizedBox(width: 24),
+                    Expanded(
+                      child: FilledButton(
+                        onPressed: () {},
+                        style: FilledButton.styleFrom(
+                          fixedSize: const Size.fromHeight(44),
+                          backgroundColor: primaryColor,
+                        ),
+                        child: const Text('Sister'),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                FilledButton(
+                  onPressed: () {},
+                  style: FilledButton.styleFrom(
+                    backgroundColor: primaryColor,
+                    fixedSize: const Size.fromHeight(64),
+                  ),
+                  child: const Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Icon(CupertinoIcons.share),
+                      Expanded(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text('Only share this link with your sibling'),
+                            Text('They can complete their profile'),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Center(
+                  child: TextButton(
+                    onPressed: () {},
+                    child: const Text('Done'),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextButton(
+                  onPressed: () {},
+                  child: const Text(
+                      'Tap here for a child or deceased family member'),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _sendTest(BuildContext context, WidgetRef ref) async {
+    final api = ref.read(apiProvider);
+    final result = await api.getTest();
+    if (!context.mounted) {
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        duration: const Duration(seconds: 1),
+        backgroundColor: result.isRight() ? Colors.green : Colors.red,
+        content: Builder(
+          builder: (context) {
+            return result.fold(
+              (l) => Text('Network request failed: $l'),
+              (r) => const Text('Network request succeeded'),
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class HoverNodeDisplay extends StatefulWidget {
+  final Widget child;
+
+  const HoverNodeDisplay({
+    super.key,
+    required this.child,
+  });
+
+  @override
+  State<HoverNodeDisplay> createState() => _HoverNodeDisplayState();
+}
+
+class _HoverNodeDisplayState extends State<HoverNodeDisplay> {
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      child: Transform.scale(
+        scale: _hover ? 1.5 : 1.0,
+        child: IgnorePointer(
+          child: widget.child,
+        ),
+      ),
+    );
+  }
+}
+
+class NodeDisplayFull extends StatelessWidget {
+  final Node node;
+
+  const NodeDisplayFull({
+    super.key,
+    required this.node,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final random = Random(node.id.hashCode);
+    return Container(
+      width: 313,
+      height: 347,
+      clipBehavior: Clip.hardEdge,
+      decoration: const BoxDecoration(
+        borderRadius: BorderRadius.all(
+          Radius.circular(32),
+        ),
+        boxShadow: [
+          BoxShadow(
+            offset: Offset(0, 22),
+            blurRadius: 44,
+            spreadRadius: -11,
+            color: Color.fromRGBO(0x00, 0x00, 0x00, 0.33),
+          ),
+        ],
+      ),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          // ProfileImage(
+          //   'https://d2xzkuyodufiic.cloudfront.net/avatars/${random.nextInt(70)}.jpg',
+          // ),
+          ProfileImage(
+            'https://picsum.photos/${200 + random.nextInt(30)}',
+          ),
+          const Positioned(
+            left: 21,
+            bottom: 21,
+            right: 21,
+            child: DefaultTextStyle(
+              style: TextStyle(
+                shadows: [
+                  Shadow(
+                    offset: Offset(0, 5),
+                    blurRadius: 4.8,
+                    color: Color.fromRGBO(0x00, 0x00, 0x00, 0.25),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    'Me',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.white,
+                    ),
+                  ),
+                  Text(
+                    'John Smith',
+                    style: TextStyle(
+                      fontSize: 27,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class ProfileImage extends StatelessWidget {
+  final String src;
+
+  const ProfileImage(this.src, {super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Image.network(
+      src,
+      fit: BoxFit.cover,
+      frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+        if (wasSynchronouslyLoaded) {
+          return child;
+        }
+        return AnimatedCrossFade(
+          duration: const Duration(milliseconds: 300),
+          crossFadeState: frame == null
+              ? CrossFadeState.showFirst
+              : CrossFadeState.showSecond,
+          layoutBuilder: (topChild, topChildKey, bottomChild, bottomChildKey) {
+            return Stack(
+              clipBehavior: Clip.none,
+              children: <Widget>[
+                Positioned.fill(
+                  key: bottomChildKey,
+                  child: bottomChild,
+                ),
+                Positioned.fill(
+                  key: topChildKey,
+                  child: topChild,
+                ),
+              ],
+            );
+          },
+          firstChild: const ColoredBox(
+            color: Colors.grey,
+          ),
+          secondChild: child,
+        );
+      },
     );
   }
 }
