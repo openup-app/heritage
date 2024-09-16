@@ -1,0 +1,4 @@
+.env
+built/
+node_modules/
+.forever/

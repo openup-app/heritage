@@ -1,0 +1,17 @@
+steps:
+  - name: "gcr.io/cloud-builders/docker"
+    args: [ "build", "-t", "us-central1-docker.pkg.dev/$PROJECT_ID/server-repo/server-image", "." ]
+  - name: "gcr.io/cloud-builders/docker"
+    args: [ "push", "us-central1-docker.pkg.dev/$PROJECT_ID/server-repo/server-image"]
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    entrypoint: gcloud
+    args: [
+      "run", "deploy", "server",
+      "--image", "us-central1-docker.pkg.dev/$PROJECT_ID/server-repo/server-image",
+      "--region", "us-central1",
+      "--service-account", "server@heritage-435513.iam.gserviceaccount.com"
+    ]
+images:
+  - "us-central1-docker.pkg.dev/$PROJECT_ID/server-repo/server-image"
+options:
+  machineType: "E2_HIGHCPU_8"

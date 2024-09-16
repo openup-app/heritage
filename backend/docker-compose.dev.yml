@@ -1,0 +1,21 @@
+services:
+  heritage_server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile.dev
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: ${NODE_ENV}
+      GCP_PROJECT_ID: ${GCP_PROJECT_ID}
+      GOOGLE_APPLICATION_CREDENTIALS: /home/node/.config/gcloud/application_default_credentials.json
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_REGION: ${AWS_REGION}
+      MEDIA_BUCKET: ${MEDIA_BUCKET}
+      MEDIA_CDN_PREFIX: ${MEDIA_CDN_PREFIX}
+    ports:
+      - 8080:8080
+    volumes:
+      - ./server/src:/srv/server/src
+      - "$GOOGLE_APPLICATION_CREDENTIALS:/home/node/.config/gcloud/application_default_credentials.json:ro"

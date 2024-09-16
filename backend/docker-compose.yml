@@ -1,0 +1,11 @@
+version: "3"
+
+services:
+  heritage_server:
+    build: ./server
+    environment:
+      NODE_ENV: ${NODE_ENV}
+    image: heritage_server
+    container_name: heritage_server
+    ports:
+      - 8080:8080
