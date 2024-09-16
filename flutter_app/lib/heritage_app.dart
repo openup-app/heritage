@@ -7,6 +7,7 @@ class HeritageApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const MaterialApp(
+      title: 'Family Tree',
       home: TreeTestPage(),
     );
   }
