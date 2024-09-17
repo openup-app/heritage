@@ -8,6 +8,8 @@ import 'package:heritage/tree_test_page.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 
 const primaryColor = Color.fromRGBO(0x00, 0xAE, 0xFF, 1.0);
+const greyColor = Color.fromRGBO(0xEC, 0xEC, 0xEC, 1.0);
+const unselectedColor = Color.fromRGBO(175, 175, 175, 1);
 
 class HeritageApp extends StatelessWidget {
   final Api api;
@@ -42,6 +44,15 @@ class HeritageApp extends StatelessWidget {
                       Radius.circular(10),
                     ),
                   ),
+                ),
+              ),
+              inputDecorationTheme: const InputDecorationTheme(
+                filled: true,
+                fillColor: greyColor,
+                outlineBorder: BorderSide.none,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(10)),
+                  borderSide: BorderSide.none,
                 ),
               ),
             ),

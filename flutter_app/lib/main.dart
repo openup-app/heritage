@@ -5,6 +5,14 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 
 void main() async {
+  const sentryDsn = String.fromEnvironment('SENTRY_DSN');
+  await SentryFlutter.init(
+    (options) => options.dsn = sentryDsn,
+    appRunner: init,
+  );
+}
+
+void init() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   final packageInfo = await PackageInfo.fromPlatform();
@@ -16,13 +24,9 @@ void main() async {
     appVersionCode: packageInfo.buildNumber,
   );
 
-  const sentryDsn = String.fromEnvironment('SENTRY_DSN');
-  await SentryFlutter.init(
-    (options) => options.dsn = sentryDsn,
-    appRunner: () => runApp(
-      HeritageApp(
-        api: api,
-      ),
+  runApp(
+    HeritageApp(
+      api: api,
     ),
   );
 }

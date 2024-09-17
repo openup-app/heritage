@@ -2,7 +2,9 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:heritage/tree.dart';
+import 'package:heritage/tree_test_page.dart';
 
 final _transformationController = TransformationController();
 
@@ -12,6 +14,7 @@ class FamilyTreeDisplay2 extends StatefulWidget {
   final double siblingGap;
   final double spouseGap;
   final Widget Function(BuildContext context, Node node) nodeBuilder;
+  final void Function(Node node) onAddRelative;
 
   const FamilyTreeDisplay2({
     super.key,
@@ -20,6 +23,7 @@ class FamilyTreeDisplay2 extends StatefulWidget {
     required this.siblingGap,
     required this.spouseGap,
     required this.nodeBuilder,
+    required this.onAddRelative,
   });
 
   @override
@@ -75,6 +79,7 @@ class _FamilyTreeDisplay2State extends State<FamilyTreeDisplay2> {
         siblingGap: widget.siblingGap,
         spouseGap: widget.spouseGap,
         nodeBuilder: widget.nodeBuilder,
+        onAddRelative: widget.onAddRelative,
       ),
     );
   }
@@ -107,22 +112,26 @@ class _OverlayControllerBuilderState extends State<OverlayControllerBuilder> {
   }
 }
 
-class HoverOut extends StatefulWidget {
-  final VoidCallback onEnd;
+class MouseHoverAnimation extends StatefulWidget {
+  final VoidCallback onMouseEnter;
+  final VoidCallback onMouseExit;
+  final VoidCallback onHoverAnimationEnd;
   final Widget child;
 
-  const HoverOut({
+  const MouseHoverAnimation({
     super.key,
-    required this.onEnd,
+    required this.onMouseEnter,
+    required this.onMouseExit,
+    required this.onHoverAnimationEnd,
     required this.child,
   });
 
   @override
-  State<HoverOut> createState() => _HoverOutState();
+  State<MouseHoverAnimation> createState() => _MouseHoverAnimationState();
 }
 
-class _HoverOutState extends State<HoverOut> {
-  bool _isScaling = true;
+class _MouseHoverAnimationState extends State<MouseHoverAnimation> {
+  bool _isScaling = false;
 
   @override
   Widget build(BuildContext context) {
@@ -130,14 +139,20 @@ class _HoverOutState extends State<HoverOut> {
       duration: const Duration(milliseconds: 300),
       isScaling: _isScaling,
       scale: 1.5,
-      onEnd: widget.onEnd,
+      onEnd: () {
+        if (!_isScaling) {
+          widget.onHoverAnimationEnd();
+        }
+      },
       child: MouseRegion(
         opaque: false,
         onEnter: (_) {
           setState(() => _isScaling = true);
+          widget.onMouseEnter();
         },
         onExit: (_) {
           setState(() => _isScaling = false);
+          widget.onMouseExit();
         },
         child: widget.child,
       ),
@@ -213,6 +228,7 @@ class FamilyTreeLevels extends StatelessWidget {
   final double siblingGap;
   final double spouseGap;
   final Widget Function(BuildContext context, Node node) nodeBuilder;
+  final void Function(Node node) onAddRelative;
 
   const FamilyTreeLevels({
     super.key,
@@ -224,6 +240,7 @@ class FamilyTreeLevels extends StatelessWidget {
     required this.siblingGap,
     required this.spouseGap,
     required this.nodeBuilder,
+    required this.onAddRelative,
   });
 
   @override
@@ -264,8 +281,11 @@ class FamilyTreeLevels extends StatelessWidget {
                             couple: couple,
                             spouseGap: spouseGap,
                             nodeBuilder: (context, node) {
-                              return _Hoverable(
-                                child: nodeBuilder(context, node),
+                              return MouseHover(
+                                onAddRelative: () => onAddRelative(node),
+                                builder: (context, hovering) {
+                                  return nodeBuilder(context, node);
+                                },
                               );
                             },
                           ),
@@ -283,6 +303,7 @@ class FamilyTreeLevels extends StatelessWidget {
                                   siblingGap: siblingGap,
                                   spouseGap: spouseGap,
                                   nodeBuilder: nodeBuilder,
+                                  onAddRelative: onAddRelative,
                                 );
                               },
                             ),
@@ -565,19 +586,23 @@ class NodeDisplay extends StatelessWidget {
   }
 }
 
-class _Hoverable extends StatefulWidget {
-  final Widget child;
-  const _Hoverable({
+class MouseHover extends StatefulWidget {
+  final VoidCallback onAddRelative;
+  final Widget Function(BuildContext context, bool hovering) builder;
+
+  const MouseHover({
     super.key,
-    required this.child,
+    required this.onAddRelative,
+    required this.builder,
   });
 
   @override
-  State<_Hoverable> createState() => _HoverableState();
+  State<MouseHover> createState() => _MouseHoverState();
 }
 
-class _HoverableState extends State<_Hoverable> {
+class _MouseHoverState extends State<MouseHover> {
   bool _hovering = false;
+  bool _animate = false;
   final _controller = OverlayPortalController();
   final _childKey = GlobalKey();
 
@@ -592,34 +617,54 @@ class _HoverableState extends State<_Hoverable> {
             final renderBox =
                 _childKey.currentContext?.findRenderObject() as RenderBox?;
             final pos = renderBox?.localToGlobal(Offset.zero) ?? Offset.zero;
+            final scale = _transformationController.value[0];
+            final matrix = Matrix4.identity()
+              ..translate(pos.dx, pos.dy, 0.0)
+              ..scale(scale)
+              // ProfileControls
+              ..translate(-120.0, -60.0, 0.0);
             return Align(
               alignment: Alignment.topLeft,
-              child: Transform.translate(
-                offset: pos,
-                child: Transform.scale(
-                  alignment: Alignment.topLeft,
-                  scale: _transformationController.value[0],
-                  child: HoverOut(
-                    onEnd: () {
-                      setState(() => _hovering = false);
-                      _controller.hide();
-                    },
-                    child: widget.child,
-                  ),
-                ),
+              child: Transform(
+                transform: matrix,
+                child: child,
               ),
             );
           },
+          child: MouseHoverAnimation(
+            onMouseEnter: () {
+              setState(() {
+                _hovering = true;
+                _animate = true;
+              });
+            },
+            onMouseExit: () {
+              setState(() {
+                _hovering = false;
+                _animate = false;
+              });
+            },
+            onHoverAnimationEnd: () {
+              setState(() => _controller.hide());
+            },
+            child: ProfileControls(
+              show: _animate,
+              onPressed: widget.onAddRelative,
+              child: widget.builder(context, _hovering),
+            ),
+          ),
         );
       },
       child: MouseRegion(
         opaque: false,
         onEnter: (_) {
-          setState(() => _hovering = true);
-          _controller.show();
+          setState(() {
+            _hovering = true;
+            _controller.show();
+          });
         },
         child: Visibility(
-          visible: !_hovering,
+          visible: !_controller.isShowing,
           maintainSize: true,
           maintainState: true,
           maintainAnimation: true,
@@ -628,10 +673,96 @@ class _HoverableState extends State<_Hoverable> {
             ignoring: _hovering,
             child: KeyedSubtree(
               key: _childKey,
-              child: widget.child,
+              child: widget.builder(context, _hovering),
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _ProfileControls extends StatefulWidget {
+  final TransformationController transformationController;
+  final Widget child;
+
+  const _ProfileControls({
+    super.key,
+    required this.transformationController,
+    required this.child,
+  });
+
+  @override
+  State<_ProfileControls> createState() => _ProfileControlsState();
+}
+
+class _ProfileControlsState extends State<_ProfileControls> {
+  final _controller = OverlayPortalController();
+  final _childKey = GlobalKey();
+  late final _ticker = Ticker((_) {
+    setState(() {});
+  });
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.endOfFrame.then((_) {
+      if (mounted) {
+        _controller.show();
+      }
+    });
+    _ticker.start();
+  }
+
+  @override
+  void dispose() {
+    _ticker.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return OverlayPortal(
+      controller: _controller,
+      overlayChildBuilder: (context) {
+        final renderBox =
+            _childKey.currentContext?.findRenderObject() as RenderBox?;
+        final size = renderBox?.size ?? Size.zero;
+        final pos = renderBox?.localToGlobal(Offset.zero) ?? Offset.zero;
+        final scale = widget.transformationController.value[0] * 1.5;
+        print('POs $size, $scale');
+        return Stack(
+          children: [
+            Positioned(
+              left: pos.dx - 120, //+ size.width * scale,
+              top: (pos.dy + size.height) /
+                  1 /
+                  (1.5 * scale), //+ size.height * scale,
+              child: Padding(
+                padding: EdgeInsets.only(right: size.width),
+                child: FilledButton(
+                  onPressed: () {},
+                  child: Text('Add spouse'),
+                ),
+              ),
+            ),
+            Positioned(
+              left: pos.dx + size.width * scale,
+              top: pos.dy, //+ size.height * scale,
+              child: Padding(
+                padding: EdgeInsets.only(right: size.width),
+                child: FilledButton(
+                  onPressed: () {},
+                  child: Text('Add sibling'),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+      child: KeyedSubtree(
+        key: _childKey,
+        child: widget.child,
       ),
     );
   }

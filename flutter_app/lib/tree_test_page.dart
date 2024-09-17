@@ -54,19 +54,87 @@ class _TreeTestPageState extends State<TreeTestPage> {
                 return MouseRegion(
                   cursor: SystemMouseCursors.click,
                   child: GestureDetector(
-                    onTap: () => _showPopup(context, node),
+                    onTap: () => _showProfile(context, node),
                     child: NodeDisplayFull(node: node),
                   ),
                 );
               },
             );
           },
+          onAddRelative: (node) => _showAddPopup(context, node),
         ),
       ),
     );
   }
 
-  void _showPopup(BuildContext context, Node node) {
+  void _showProfile(BuildContext context, Node node) {
+    showAdaptiveDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog.adaptive(
+          title: const Text('My Profile'),
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.all(
+              Radius.circular(16),
+            ),
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 200,
+                      height: 230,
+                      decoration: const BoxDecoration(
+                        color: Color.fromRGBO(0xEC, 0xEC, 0xEC, 1.0),
+                      ),
+                      child: const Center(
+                        child: Icon(
+                          Icons.add_photo_alternate,
+                          size: 107,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 24),
+                    SizedBox(
+                      width: 400,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Name'),
+                          TextFormField(),
+                          const SizedBox(height: 4),
+                          const Text('Date of Birth'),
+                          TextFormField(),
+                          const SizedBox(height: 4),
+                          const Text('Birth place'),
+                          TextFormField(),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                FilledButton(
+                  onPressed: Navigator.of(context).pop,
+                  style: FilledButton.styleFrom(
+                    fixedSize: const Size.fromHeight(73),
+                  ),
+                  child: const Text('Done'),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showAddPopup(BuildContext context, Node node) {
     showAdaptiveDialog(
       context: context,
       builder: (context) {
@@ -78,87 +146,7 @@ class _TreeTestPageState extends State<TreeTestPage> {
             ),
           ),
           content: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Icon(
-                  Icons.person,
-                  size: 300,
-                  color: primaryColor,
-                ),
-                const SelectableText('Name'),
-                const SizedBox(height: 4),
-                TextFormField(
-                  decoration: const InputDecoration(
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                const SelectableText('Relationship'),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    Expanded(
-                      child: FilledButton(
-                        onPressed: () {},
-                        style: FilledButton.styleFrom(
-                          fixedSize: const Size.fromHeight(44),
-                          backgroundColor: primaryColor,
-                        ),
-                        child: const Text('Brother'),
-                      ),
-                    ),
-                    const SizedBox(width: 24),
-                    Expanded(
-                      child: FilledButton(
-                        onPressed: () {},
-                        style: FilledButton.styleFrom(
-                          fixedSize: const Size.fromHeight(44),
-                          backgroundColor: primaryColor,
-                        ),
-                        child: const Text('Sister'),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                FilledButton(
-                  onPressed: () {},
-                  style: FilledButton.styleFrom(
-                    backgroundColor: primaryColor,
-                    fixedSize: const Size.fromHeight(64),
-                  ),
-                  child: const Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Icon(CupertinoIcons.share),
-                      Expanded(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text('Only share this link with your sibling'),
-                            Text('They can complete their profile'),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Center(
-                  child: TextButton(
-                    onPressed: () {},
-                    child: const Text('Done'),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                TextButton(
-                  onPressed: () {},
-                  child: const Text(
-                      'Tap here for a child or deceased family member'),
-                ),
-              ],
-            ),
+            child: AddRelativeModal(),
           ),
         );
       },
@@ -182,6 +170,289 @@ class _TreeTestPageState extends State<TreeTestPage> {
               (r) => const Text('Network request succeeded'),
             );
           },
+        ),
+      ),
+    );
+  }
+}
+
+class AddRelativeModal extends StatefulWidget {
+  const AddRelativeModal({super.key});
+
+  @override
+  State<AddRelativeModal> createState() => _AddRelativeModalState();
+}
+
+class _AddRelativeModalState extends State<AddRelativeModal> {
+  bool _brother = true;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Center(
+          child: Icon(
+            Icons.person,
+            size: 200,
+            color: primaryColor,
+          ),
+        ),
+        const SelectableText('Name'),
+        const SizedBox(height: 4),
+        TextFormField(),
+        const SizedBox(height: 16),
+        const SelectableText('Relationship'),
+        const SizedBox(height: 4),
+        Row(
+          children: [
+            Expanded(
+              child: FilledButton(
+                onPressed: () => setState(() => _brother = true),
+                style: FilledButton.styleFrom(
+                  fixedSize: const Size.fromHeight(44),
+                  backgroundColor: _brother ? primaryColor : unselectedColor,
+                ),
+                child: const Text('Brother'),
+              ),
+            ),
+            const SizedBox(width: 24),
+            Expanded(
+              child: FilledButton(
+                onPressed: () => setState(() => _brother = false),
+                style: FilledButton.styleFrom(
+                  fixedSize: const Size.fromHeight(44),
+                  backgroundColor: _brother ? unselectedColor : primaryColor,
+                ),
+                child: const Text('Sister'),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 24),
+        FilledButton(
+          onPressed: () {},
+          style: FilledButton.styleFrom(
+            backgroundColor: primaryColor,
+            fixedSize: const Size.fromHeight(64),
+          ),
+          child: const Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Icon(CupertinoIcons.share),
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('Only share this link with your sibling'),
+                    Text('They can complete their profile'),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        Center(
+          child: TextButton(
+            onPressed: () {},
+            child: const Text('Done'),
+          ),
+        ),
+        const SizedBox(height: 16),
+        TextButton(
+          onPressed: () {},
+          child: const Text('Tap here for a child or deceased family member'),
+        ),
+      ],
+    );
+  }
+}
+
+class ProfileControls extends StatelessWidget {
+  final bool show;
+  final VoidCallback onPressed;
+  final Widget child;
+
+  const ProfileControls({
+    super.key,
+    required this.show,
+    required this.onPressed,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        ProfileControlAnimateIn(
+          show: show,
+          onPressed: onPressed,
+          builder: (context) {
+            return FilledButton.icon(
+              onPressed: onPressed,
+              icon: const Icon(Icons.person_add),
+              label: const Text('Parent'),
+            );
+          },
+        ),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ProfileControlAnimateIn(
+              show: show,
+              onPressed: onPressed,
+              builder: (context) {
+                return FilledButton.icon(
+                  onPressed: onPressed,
+                  icon: const Icon(Icons.person_add),
+                  label: const Text('Spouse'),
+                );
+              },
+            ),
+            child,
+            ProfileControlAnimateIn(
+              show: show,
+              onPressed: onPressed,
+              builder: (context) {
+                return FilledButton.icon(
+                  onPressed: onPressed,
+                  icon: const Icon(Icons.person_add),
+                  label: const Text('Sibling'),
+                );
+              },
+            ),
+          ],
+        ),
+        ProfileControlAnimateIn(
+          show: show,
+          onPressed: onPressed,
+          builder: (context) {
+            return FilledButton.icon(
+              onPressed: onPressed,
+              icon: const Icon(Icons.person_add),
+              label: const Text('Child'),
+            );
+          },
+        ),
+      ],
+    );
+  }
+}
+
+class ProfileControlAnimateIn extends StatefulWidget {
+  final bool show;
+  final VoidCallback onPressed;
+  final WidgetBuilder builder;
+
+  const ProfileControlAnimateIn({
+    super.key,
+    required this.show,
+    required this.onPressed,
+    required this.builder,
+  });
+
+  @override
+  State<ProfileControlAnimateIn> createState() =>
+      _ProfileControlAnimateInState();
+}
+
+class _ProfileControlAnimateInState extends State<ProfileControlAnimateIn> {
+  var _crossFadeState = CrossFadeState.showFirst;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.show) {
+      _showAfterDelay();
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant ProfileControlAnimateIn oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.show != widget.show) {
+      if (widget.show) {
+        _showAfterDelay();
+      } else {
+        setState(() => _crossFadeState = CrossFadeState.showFirst);
+      }
+    }
+  }
+
+  void _showAfterDelay() {
+    Future.delayed(const Duration(milliseconds: 500)).then((_) {
+      if (mounted) {
+        if (widget.show) {
+          setState(() => _crossFadeState = CrossFadeState.showSecond);
+        }
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedOpacity(
+      duration: const Duration(milliseconds: 300),
+      opacity: widget.show ? 1.0 : 0.0,
+      child: SizedBox(
+        width: 120,
+        height: 60,
+        child: AnimatedCrossFade(
+          duration: const Duration(milliseconds: 300),
+          alignment: Alignment.center,
+          crossFadeState: _crossFadeState,
+          layoutBuilder: (topChild, topChildKey, bottomChild, bottomChildKey) {
+            return Stack(
+              clipBehavior: Clip.none,
+              children: <Widget>[
+                Positioned.fill(
+                  key: bottomChildKey,
+                  child: bottomChild,
+                ),
+                Positioned.fill(
+                  key: topChildKey,
+                  child: topChild,
+                ),
+              ],
+            );
+          },
+          firstChild: MouseRegion(
+            cursor: SystemMouseCursors.click,
+            child: GestureDetector(
+              onTap: widget.onPressed,
+              child: const ProfileControlDot(),
+            ),
+          ),
+          secondChild: Center(
+            child: widget.builder(context),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class ProfileControlDot extends StatelessWidget {
+  const ProfileControlDot({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Container(
+        width: 32,
+        height: 32,
+        decoration: const BoxDecoration(
+          shape: BoxShape.circle,
+          color: primaryColor,
+          boxShadow: [
+            BoxShadow(
+              blurRadius: 11,
+              offset: Offset(0, 4),
+              color: Color.fromRGBO(0x00, 0x00, 0x00, 0.15),
+            ),
+          ],
         ),
       ),
     );
