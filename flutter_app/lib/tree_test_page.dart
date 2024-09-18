@@ -61,6 +61,9 @@ class ViewPageState extends ConsumerState<ViewPage> {
         foregroundColor: Colors.black.withOpacity(0.3),
         backgroundColor: Colors.transparent,
         elevation: 0,
+        leading: BackButton(
+          onPressed: () => Navigator.of(context).pop(),
+        ),
         title: Text('Family Tree - ${widget.focalNodeId}'),
       ),
       body: Builder(
@@ -383,7 +386,7 @@ class _AddConnectionModalState extends ConsumerState<AddConnectionModal> {
     final rect = _shareButtonRect();
     final graph = ref.read(graphProvider);
     final nodeId = graph.focalNode.id;
-    final url = 'https://breakfastsearch.xyz/view/$nodeId';
+    final url = 'https://breakfastsearch.xyz/$nodeId';
     Share.share(
       url,
       subject: 'Join the family tree!',

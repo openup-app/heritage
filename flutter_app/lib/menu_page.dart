@@ -130,14 +130,11 @@ class _MenuPageState extends ConsumerState<MenuPage> {
   }
 
   void _navigate(String focalNodeId) async {
-    await context.pushNamed(
+    context.goNamed(
       'view',
       pathParameters: {
         'focalNodeId': focalNodeId,
       },
     );
-    if (mounted) {
-      RestartApp.of(context).restart();
-    }
   }
 }

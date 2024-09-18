@@ -112,6 +112,10 @@ class _RouterBuilderState extends State<_RouterBuilder> {
         GoRoute(
           path: '/:focalNodeId',
           name: 'view',
+          onExit: (context, state) {
+            RestartApp.of(context).restart();
+            return Future.value(true);
+          },
           builder: (context, state) {
             final focalNodeId = state.pathParameters['focalNodeId'];
             if (focalNodeId == null) {
