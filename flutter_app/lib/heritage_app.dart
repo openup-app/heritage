@@ -14,10 +14,12 @@ const greyColor = Color.fromRGBO(0xEC, 0xEC, 0xEC, 1.0);
 const unselectedColor = Color.fromRGBO(175, 175, 175, 1);
 
 class HeritageApp extends StatelessWidget {
+  final String? redirectPath;
   final Api api;
 
   const HeritageApp({
     super.key,
+    required this.redirectPath,
     required this.api,
   });
 
@@ -29,6 +31,7 @@ class HeritageApp extends StatelessWidget {
           apiProvider.overrideWithValue(api),
         ],
         child: _RouterBuilder(
+          redirectPath: redirectPath,
           navigatorObservers: [
             SentryNavigatorObserver(),
           ],
@@ -68,11 +71,13 @@ class HeritageApp extends StatelessWidget {
 }
 
 class _RouterBuilder extends StatefulWidget {
+  final String? redirectPath;
   final List<NavigatorObserver> navigatorObservers;
   final Widget Function(BuildContext context, GoRouter router) builder;
 
   const _RouterBuilder({
     super.key,
+    required this.redirectPath,
     required this.navigatorObservers,
     required this.builder,
   });
@@ -91,6 +96,12 @@ class _RouterBuilderState extends State<_RouterBuilder> {
   }
 
   @override
+  void dispose() {
+    _router.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return widget.builder(context, _router);
   }
@@ -99,7 +110,8 @@ class _RouterBuilderState extends State<_RouterBuilder> {
     return GoRouter(
       debugLogDiagnostics: kDebugMode,
       observers: widget.navigatorObservers,
-      initialLocation: '/',
+      initialLocation: widget.redirectPath ?? '/',
+      overridePlatformDefaultLocation: true,
       errorBuilder: (context, state) => const ErrorPage(),
       routes: [
         GoRoute(

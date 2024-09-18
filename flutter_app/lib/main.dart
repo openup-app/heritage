@@ -17,6 +17,10 @@ void init() async {
   WidgetsFlutterBinding.ensureInitialized();
   usePathUrlStrategy();
 
+  // App nav misses address bar pastes/typing. So 404.html redirects to
+  // index.html with the original path as a query param, so app can handle it
+  final redirectPath = Uri.base.queryParameters['redirect'];
+
   final packageInfo = await PackageInfo.fromPlatform();
 
   const serverBaseUrl = String.fromEnvironment('SERVER_BASE_URL');
@@ -28,6 +32,7 @@ void init() async {
 
   runApp(
     HeritageApp(
+      redirectPath: redirectPath,
       api: api,
     ),
   );
