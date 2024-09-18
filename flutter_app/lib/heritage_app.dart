@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:heritage/api.dart';
 import 'package:heritage/error_page.dart';
+import 'package:heritage/menu_page.dart';
+import 'package:heritage/restart_app.dart';
 import 'package:heritage/tree_test_page.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 
@@ -21,43 +23,45 @@ class HeritageApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ProviderScope(
-      overrides: [
-        apiProvider.overrideWithValue(api),
-      ],
-      child: _RouterBuilder(
-        navigatorObservers: [
-          SentryNavigatorObserver(),
+    return RestartApp(
+      child: ProviderScope(
+        overrides: [
+          apiProvider.overrideWithValue(api),
         ],
-        builder: (context, router) {
-          return MaterialApp.router(
-            routerConfig: router,
-            title: 'Family Tree',
-            theme: ThemeData(
-              useMaterial3: false,
-              fontFamily: 'SF Pro Display',
-              primaryColor: primaryColor,
-              filledButtonTheme: FilledButtonThemeData(
-                style: FilledButton.styleFrom(
-                  shape: const RoundedRectangleBorder(
-                    borderRadius: BorderRadius.all(
-                      Radius.circular(10),
+        child: _RouterBuilder(
+          navigatorObservers: [
+            SentryNavigatorObserver(),
+          ],
+          builder: (context, router) {
+            return MaterialApp.router(
+              routerConfig: router,
+              title: 'Family Tree',
+              theme: ThemeData(
+                useMaterial3: false,
+                fontFamily: 'SF Pro Display',
+                primaryColor: primaryColor,
+                filledButtonTheme: FilledButtonThemeData(
+                  style: FilledButton.styleFrom(
+                    shape: const RoundedRectangleBorder(
+                      borderRadius: BorderRadius.all(
+                        Radius.circular(10),
+                      ),
                     ),
                   ),
                 ),
-              ),
-              inputDecorationTheme: const InputDecorationTheme(
-                filled: true,
-                fillColor: greyColor,
-                outlineBorder: BorderSide.none,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.all(Radius.circular(10)),
-                  borderSide: BorderSide.none,
+                inputDecorationTheme: const InputDecorationTheme(
+                  filled: true,
+                  fillColor: greyColor,
+                  outlineBorder: BorderSide.none,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(10)),
+                    borderSide: BorderSide.none,
+                  ),
                 ),
               ),
-            ),
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }
@@ -100,10 +104,21 @@ class _RouterBuilderState extends State<_RouterBuilder> {
       routes: [
         GoRoute(
           path: '/',
+          name: 'menu',
+          builder: (context, state) {
+            return const MenuPage();
+          },
+        ),
+        GoRoute(
+          path: '/:focalNodeId',
           name: 'view',
           builder: (context, state) {
-            return const ViewPage(
-              focalNodeId: 'um7pXAeMF38xJsueaQUPEy',
+            final focalNodeId = state.pathParameters['focalNodeId'];
+            if (focalNodeId == null) {
+              throw 'Missing focalNodeId';
+            }
+            return ViewPage(
+              focalNodeId: focalNodeId,
             );
           },
         ),

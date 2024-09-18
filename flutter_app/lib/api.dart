@@ -61,11 +61,18 @@ class Api {
     );
   }
 
-  Future<Either<Error, ApiNode>> createRoot() {
+  Future<Either<Error, ApiNode>> createRoot({
+    required String name,
+    required Gender gender,
+  }) {
     return _makeRequest(
       request: () => http.post(
         Uri.parse('$_baseUrl/v1/nodes'),
         headers: _headers,
+        body: jsonEncode({
+          'name': name,
+          'gender': gender.name,
+        }),
       ),
       handleResponse: (response) {
         final json = jsonDecode(response.body);
@@ -81,6 +88,20 @@ class Api {
     return _makeRequest(
       request: () => http.get(
         Uri.parse('$_baseUrl/v1/nodes?ids=${ids.join(',')}'),
+        headers: _headers,
+      ),
+      handleResponse: (response) {
+        final json = jsonDecode(response.body);
+        final nodes = json['nodes'] as List;
+        return right(nodes.map((e) => ApiNode.fromJson(e)).toList());
+      },
+    );
+  }
+
+  Future<Either<Error, List<ApiNode>>> getRoots() {
+    return _makeRequest(
+      request: () => http.get(
+        Uri.parse('$_baseUrl/v1/roots'),
         headers: _headers,
       ),
       handleResponse: (response) {

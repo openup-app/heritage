@@ -43,7 +43,7 @@ export function router(auth: Auth, database: Database, storage: Storage): Router
     }
 
     try {
-      const node = await database.createRootNode(body.gender);
+      const node = await database.createRootNode(body.name, body.gender);
       return res.json({
         'node': node,
       })
@@ -76,6 +76,18 @@ export function router(auth: Auth, database: Database, storage: Storage): Router
     }
   });
 
+  router.get('/roots', async (req: Request, res: Response) => {
+    try {
+      const nodes = await database.getRoots();
+      return res.json({
+        'nodes': nodes,
+      })
+    } catch (e) {
+      console.log(e);
+      return res.sendStatus(500);
+    }
+  });
+
   return router;
 }
 
@@ -86,7 +98,8 @@ const addConnectionSchema = z.object({
 });
 
 const createRootSchema = z.object({
-  gender: genderSchema
+  name: z.string(),
+  gender: genderSchema,
 });
 
 

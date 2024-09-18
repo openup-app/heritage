@@ -8,6 +8,7 @@ import 'package:heritage/graph.dart';
 import 'package:heritage/heritage_app.dart';
 import 'package:heritage/tree.dart';
 import 'package:heritage/tree_display2.dart';
+import 'package:share_plus/share_plus.dart';
 
 class ViewPage extends ConsumerStatefulWidget {
   final Id focalNodeId;
@@ -35,6 +36,14 @@ class ViewPageState extends ConsumerState<ViewPage> {
         if (focalNode != null) {
           setState(() => _focalNode = focalNode);
         }
+        WidgetsBinding.instance.endOfFrame.then((_) {
+          if (mounted) {
+            final id = focalNode?.id;
+            if (id != null) {
+              ref.read(graphProvider.notifier).fetchConnections(id);
+            }
+          }
+        });
       },
     );
     WidgetsBinding.instance.endOfFrame.then((_) {
@@ -47,6 +56,12 @@ class ViewPageState extends ConsumerState<ViewPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        foregroundColor: Colors.black.withOpacity(0.3),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        title: Text('Family Tree - ${widget.focalNodeId}'),
+      ),
       body: Builder(
         builder: (context) {
           final focalNode = _focalNode;
@@ -115,8 +130,8 @@ class _TreeTestPageState extends ConsumerState<TreeTestPage> {
               return MouseRegion(
                 cursor: SystemMouseCursors.click,
                 child: GestureDetector(
-                  // onTap: () => _showProfile(context, node),
-                  onTap: () {
+                  onTap: () => _showProfile(context, node),
+                  onDoubleTap: () {
                     ref.read(graphProvider.notifier).fetchConnections(node.id);
                   },
                   child: NodeDisplayFull(node: node),
@@ -229,23 +244,26 @@ class _TreeTestPageState extends ConsumerState<TreeTestPage> {
   }
 }
 
-class AddConnectionModal extends StatefulWidget {
+class AddConnectionModal extends ConsumerStatefulWidget {
+  final bool showRelationship;
   final Relationship relationship;
   final void Function(String name, Gender gender) onSave;
 
   const AddConnectionModal({
     super.key,
+    this.showRelationship = true,
     required this.relationship,
     required this.onSave,
   });
 
   @override
-  State<AddConnectionModal> createState() => _AddConnectionModalState();
+  ConsumerState<AddConnectionModal> createState() => _AddConnectionModalState();
 }
 
-class _AddConnectionModalState extends State<AddConnectionModal> {
+class _AddConnectionModalState extends ConsumerState<AddConnectionModal> {
   final _nameController = TextEditingController();
   Gender _gender = Gender.male;
+  final _shareButtonKey = GlobalKey();
 
   @override
   void dispose() {
@@ -256,6 +274,7 @@ class _AddConnectionModalState extends State<AddConnectionModal> {
   @override
   Widget build(BuildContext context) {
     return Column(
+      mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Center(
@@ -271,7 +290,9 @@ class _AddConnectionModalState extends State<AddConnectionModal> {
           controller: _nameController,
         ),
         const SizedBox(height: 16),
-        const SelectableText('Relationship'),
+        widget.showRelationship
+            ? const SelectableText('Relationship')
+            : const SelectableText('Your Gender'),
         const SizedBox(height: 4),
         Row(
           children: [
@@ -300,29 +321,32 @@ class _AddConnectionModalState extends State<AddConnectionModal> {
             ),
           ],
         ),
-        const SizedBox(height: 24),
-        FilledButton(
-          onPressed: () {},
-          style: FilledButton.styleFrom(
-            backgroundColor: primaryColor,
-            fixedSize: const Size.fromHeight(64),
-          ),
-          child: const Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Icon(CupertinoIcons.share),
-              Expanded(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text('Only share this link with your sibling'),
-                    Text('They can complete their profile'),
-                  ],
+        if (widget.showRelationship) ...[
+          const SizedBox(height: 24),
+          FilledButton(
+            key: _shareButtonKey,
+            onPressed: _shareLink,
+            style: FilledButton.styleFrom(
+              backgroundColor: primaryColor,
+              fixedSize: const Size.fromHeight(64),
+            ),
+            child: const Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Icon(CupertinoIcons.share),
+                Expanded(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text('Only share this link with your sibling'),
+                      Text('They can complete their profile'),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
+        ],
         const SizedBox(height: 16),
         Center(
           child: AnimatedBuilder(
@@ -335,11 +359,13 @@ class _AddConnectionModalState extends State<AddConnectionModal> {
             },
           ),
         ),
-        const SizedBox(height: 16),
-        TextButton(
-          onPressed: () {},
-          child: const Text('Tap here for a child or deceased family member'),
-        ),
+        if (widget.showRelationship) ...[
+          const SizedBox(height: 16),
+          TextButton(
+            onPressed: () {},
+            child: const Text('Tap here for a child or deceased family member'),
+          ),
+        ],
       ],
     );
   }
@@ -351,16 +377,38 @@ class _AddConnectionModalState extends State<AddConnectionModal> {
     }
     widget.onSave(name, _gender);
   }
+
+  void _shareLink() {
+    final rect = _shareButtonRect();
+    final graph = ref.read(graphProvider);
+    final nodeId = graph.focalNode.id;
+    final url = 'https://breakfastsearch.xyz/view/$nodeId';
+    Share.share(
+      url,
+      subject: 'Join the family tree!',
+      sharePositionOrigin: rect,
+    );
+  }
+
+  Rect _shareButtonRect() {
+    final renderBox =
+        _shareButtonKey.currentContext?.findRenderObject() as RenderBox?;
+    final position = renderBox?.localToGlobal(Offset.zero) ?? Offset.zero;
+    final size = renderBox?.size ?? const Size(100, 100);
+    return position & size;
+  }
 }
 
 class ProfileControls extends StatelessWidget {
   final bool show;
+  final bool canAddParent;
   final void Function(Relationship relationship) onAddConnectionPressed;
   final Widget child;
 
   const ProfileControls({
     super.key,
     required this.show,
+    required this.canAddParent,
     required this.onAddConnectionPressed,
     required this.child,
   });
@@ -372,10 +420,15 @@ class ProfileControls extends StatelessWidget {
       children: [
         ProfileControlAnimateIn(
           show: show,
-          onPressed: () => onAddConnectionPressed(Relationship.parent),
+          enabled: canAddParent,
+          onPressed: !canAddParent
+              ? null
+              : () => onAddConnectionPressed(Relationship.parent),
           builder: (context) {
             return FilledButton.icon(
-              onPressed: () => onAddConnectionPressed(Relationship.parent),
+              onPressed: !canAddParent
+                  ? null
+                  : () => onAddConnectionPressed(Relationship.parent),
               icon: const Icon(Icons.person_add),
               label: const Text('Parent'),
             );
@@ -427,12 +480,14 @@ class ProfileControls extends StatelessWidget {
 
 class ProfileControlAnimateIn extends StatefulWidget {
   final bool show;
-  final VoidCallback onPressed;
+  final bool enabled;
+  final VoidCallback? onPressed;
   final WidgetBuilder builder;
 
   const ProfileControlAnimateIn({
     super.key,
     required this.show,
+    this.enabled = true,
     required this.onPressed,
     required this.builder,
   });
@@ -503,10 +558,13 @@ class _ProfileControlAnimateInState extends State<ProfileControlAnimateIn> {
             );
           },
           firstChild: MouseRegion(
-            cursor: SystemMouseCursors.click,
+            cursor:
+                widget.enabled ? SystemMouseCursors.click : MouseCursor.defer,
             child: GestureDetector(
               onTap: widget.onPressed,
-              child: const ProfileControlDot(),
+              child: ProfileControlDot(
+                enabled: widget.enabled,
+              ),
             ),
           ),
           secondChild: Center(
@@ -519,7 +577,11 @@ class _ProfileControlAnimateInState extends State<ProfileControlAnimateIn> {
 }
 
 class ProfileControlDot extends StatelessWidget {
-  const ProfileControlDot({super.key});
+  final bool enabled;
+  const ProfileControlDot({
+    super.key,
+    required this.enabled,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -527,10 +589,10 @@ class ProfileControlDot extends StatelessWidget {
       child: Container(
         width: 32,
         height: 32,
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: primaryColor,
-          boxShadow: [
+          color: enabled ? primaryColor : Colors.grey,
+          boxShadow: const [
             BoxShadow(
               blurRadius: 11,
               offset: Offset(0, 4),

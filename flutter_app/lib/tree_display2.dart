@@ -285,6 +285,7 @@ class FamilyTreeLevels extends StatelessWidget {
                             spouseGap: spouseGap,
                             nodeBuilder: (context, node) {
                               return MouseHover(
+                                canAddParent: node.parents.isEmpty,
                                 onAddConnectionPressed: (relationship) =>
                                     onAddConnectionPressed(node, relationship),
                                 builder: (context, hovering) {
@@ -592,11 +593,13 @@ class NodeDisplay extends StatelessWidget {
 }
 
 class MouseHover extends StatefulWidget {
+  final bool canAddParent;
   final void Function(Relationship relationship) onAddConnectionPressed;
   final Widget Function(BuildContext context, bool hovering) builder;
 
   const MouseHover({
     super.key,
+    required this.canAddParent,
     required this.onAddConnectionPressed,
     required this.builder,
   });
@@ -654,6 +657,7 @@ class _MouseHoverState extends State<MouseHover> {
             },
             child: ProfileControls(
               show: _animate,
+              canAddParent: widget.canAddParent,
               onAddConnectionPressed: widget.onAddConnectionPressed,
               child: widget.builder(context, _hovering),
             ),

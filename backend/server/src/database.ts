@@ -35,9 +35,8 @@ export class Database {
       }
 
       const node = this.newEmptyNode(gender, creatorId);
-      createdNodes.push(node);
       node.profile.name = name;
-      node.profile.gender = gender;
+      createdNodes.push(node);
 
       if (relationship == "parent") {
         const spouseNode = this.newEmptyNode(node.profile.gender === "male" ? "female" : "male", creatorId);
@@ -125,22 +124,37 @@ export class Database {
     });
   }
 
-  public async createRootNode(gender: Gender): Promise<Node> {
+  public async createRootNode(name: string, gender: Gender): Promise<Node> {
     const node = this.newEmptyNode(gender, "root");
+    node.profile.name = name;
     await this.nodeRef(node.id).create(node);
     return node;
   }
 
   public async getNodes(ids: Id[]): Promise<Node[]> {
     const nodeRefs = ids.map(e => this.nodeRef(e));
-    const snapshots = await this.firestore.getAll(...nodeRefs);
+    const snapshot = await this.firestore.getAll(...nodeRefs);
     const nodes: Node[] = [];
-    for (const snapshot of snapshots) {
+    for (const doc of snapshot) {
       try {
-        const data = snapshot.data() ?? {};
+        const data = doc.data() ?? {};
         nodes.push(nodeSchema.parse(data));
       } catch (e) {
-        logger.warn(`Failed to get or parse node ${snapshot.id}`);
+        logger.warn(`Failed to get or parse node ${doc.id}`);
+      }
+    }
+    return nodes;
+  }
+
+  public async getRoots(): Promise<Node[]> {
+    const snapshot = await this.firestore.collection("nodes").where("addedBy", "==", "root").get();
+    const nodes: Node[] = [];
+    for (const doc of snapshot.docs) {
+      try {
+        const data = doc.data() ?? {};
+        nodes.push(nodeSchema.parse(data));
+      } catch (e) {
+        logger.warn(`Failed to get or parse node ${doc.id}`);
       }
     }
     return nodes;
