@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:heritage/api.dart';
-import 'package:heritage/graph.dart';
-import 'package:heritage/restart_app.dart';
 import 'package:heritage/tree_test_page.dart';
 
 class MenuPage extends ConsumerStatefulWidget {
@@ -43,7 +41,7 @@ class _MenuPageState extends ConsumerState<MenuPage> {
                           await showDialog<(String name, Gender gender)>(
                         context: context,
                         builder: (context) {
-                          return AlertDialog.adaptive(
+                          return AlertDialog(
                             title: const Text('Start a family tree'),
                             content: Consumer(builder: (context, ref, child) {
                               return AddConnectionModal(

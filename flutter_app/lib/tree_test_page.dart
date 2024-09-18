@@ -100,14 +100,6 @@ class TreeTestPage extends ConsumerStatefulWidget {
 
 class _TreeTestPageState extends ConsumerState<TreeTestPage> {
   @override
-  void initState() {
-    super.initState();
-    // _focal = _makeManyAncestoryTree();
-    // _focal = _makeWideTree();
-    // _focal = _makeTallTree();
-  }
-
-  @override
   Widget build(BuildContext context) {
     return Center(
       child: FamilyTreeDisplay2(
@@ -150,10 +142,10 @@ class _TreeTestPageState extends ConsumerState<TreeTestPage> {
   }
 
   void _showProfile(BuildContext context, Node node) {
-    showAdaptiveDialog(
+    showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog.adaptive(
+        return AlertDialog(
           title: const Text('My Profile'),
           shape: const RoundedRectangleBorder(
             borderRadius: BorderRadius.all(
@@ -218,10 +210,10 @@ class _TreeTestPageState extends ConsumerState<TreeTestPage> {
 
   void _showAddConnectionModal(Node node, Relationship relationship) {
     final graphNotifier = ref.read(graphProvider.notifier);
-    showAdaptiveDialog(
+    showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog.adaptive(
+        return AlertDialog(
           title: Text('Add a ${relationship.name}'),
           shape: const RoundedRectangleBorder(
             borderRadius: BorderRadius.all(
@@ -764,7 +756,7 @@ class ProfileImage extends StatelessWidget {
   }
 }
 
-Node _generateRandomTree(int totalNodes) {
+Node generateRandomTree(int totalNodes) {
   final random = Random();
   final nodes = List.generate(totalNodes, (i) => _createNode('$i'));
 
@@ -778,7 +770,7 @@ Node _generateRandomTree(int totalNodes) {
   return nodes[random.nextInt(totalNodes)];
 }
 
-Node _makeTallTree() {
+Node makeTallTree() {
   final nodes = List.generate(28, (i) => _createNode('$i'));
 
   void connect({
@@ -816,7 +808,7 @@ Node _makeTallTree() {
   return focalNode;
 }
 
-Node _makeWideTree() {
+Node makeWideTree() {
   final nodes = List.generate(40, (i) => _createNode('$i'));
 
   void connect({
@@ -863,7 +855,7 @@ Node _makeWideTree() {
   return focalNode;
 }
 
-Node _makeManyAncestoryTree() {
+Node makeManyAncestoryTree() {
   final nodes = List.generate(33, (i) => _createNode('$i'));
 
   void connect({

@@ -110,7 +110,7 @@ class _RouterBuilderState extends State<_RouterBuilder> {
     return GoRouter(
       debugLogDiagnostics: kDebugMode,
       observers: widget.navigatorObservers,
-      initialLocation: widget.redirectPath ?? '/',
+      initialLocation: kDebugMode ? '/test_layout' : widget.redirectPath ?? '/',
       overridePlatformDefaultLocation: true,
       errorBuilder: (context, state) => const ErrorPage(),
       routes: [
@@ -121,6 +121,21 @@ class _RouterBuilderState extends State<_RouterBuilder> {
             return const MenuPage();
           },
         ),
+        if (kDebugMode)
+          GoRoute(
+            path: '/test_layout',
+            name: 'test_layout',
+            builder: (context, state) {
+              final focalNode = makeManyAncestoryTree();
+              // final focalNode = makeWideTree();
+              // final focalNode = makeTallTree();
+              return Scaffold(
+                body: TreeTestPage(
+                  focalNode: focalNode,
+                ),
+              );
+            },
+          ),
         GoRoute(
           path: '/:focalNodeId',
           name: 'view',
