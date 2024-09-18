@@ -100,9 +100,11 @@ class _RouterBuilderState extends State<_RouterBuilder> {
       routes: [
         GoRoute(
           path: '/',
-          name: 'initial',
+          name: 'view',
           builder: (context, state) {
-            return const TreeTestPage();
+            return const ViewPage(
+              focalNodeId: 'um7pXAeMF38xJsueaQUPEy',
+            );
           },
         ),
       ],

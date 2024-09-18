@@ -1,12 +1,20 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:heritage/api.dart';
 
 class Node {
-  final String id;
+  final Id id;
   final List<Node> parents;
   final List<Node> spouses;
   final List<Node> children;
+  final List<Id> parentIds;
+  final List<Id> spouseIds;
+  final List<Id> childIds;
+  final Id addedBy;
+  final Id? ownedBy;
+  final DateTime createdAt;
+  final Profile profile;
   bool leadsToFocalNode;
   bool shouldBeRightChild;
   bool shouldTraverseChildren;
@@ -16,6 +24,13 @@ class Node {
     required this.parents,
     required this.spouses,
     required this.children,
+    required this.parentIds,
+    required this.spouseIds,
+    required this.childIds,
+    required this.addedBy,
+    required this.ownedBy,
+    required this.createdAt,
+    required this.profile,
     this.leadsToFocalNode = false,
     this.shouldBeRightChild = true,
     this.shouldTraverseChildren = true,
@@ -23,26 +38,20 @@ class Node {
 
   Node? get spouse => spouses.firstOrNull;
 
-  void addChild(Node child) {
-    children.add(child);
-    child.parents.add(this);
-  }
-
-  Node copyWith({
-    bool? shouldTraverseChildren,
-  }) {
-    return Node(
-      id: id,
-      parents: parents,
-      spouses: spouses,
-      children: children,
-      shouldTraverseChildren:
-          shouldTraverseChildren ?? this.shouldTraverseChildren,
-    );
-  }
-
   @override
   String toString() => 'Node $id';
+}
+
+class Profile {
+  final String name;
+  final Gender gender;
+  final DateTime? birthday;
+
+  Profile({
+    required this.name,
+    required this.gender,
+    required this.birthday,
+  });
 }
 
 class Couple {

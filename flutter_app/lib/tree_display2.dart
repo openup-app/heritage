@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:heritage/api.dart';
 import 'package:heritage/tree.dart';
 import 'package:heritage/tree_test_page.dart';
 
@@ -14,7 +15,8 @@ class FamilyTreeDisplay2 extends StatefulWidget {
   final double siblingGap;
   final double spouseGap;
   final Widget Function(BuildContext context, Node node) nodeBuilder;
-  final void Function(Node node) onAddRelative;
+  final void Function(Node node, Relationship relationship)
+      onAddConnectionPressed;
 
   const FamilyTreeDisplay2({
     super.key,
@@ -23,7 +25,7 @@ class FamilyTreeDisplay2 extends StatefulWidget {
     required this.siblingGap,
     required this.spouseGap,
     required this.nodeBuilder,
-    required this.onAddRelative,
+    required this.onAddConnectionPressed,
   });
 
   @override
@@ -79,7 +81,7 @@ class _FamilyTreeDisplay2State extends State<FamilyTreeDisplay2> {
         siblingGap: widget.siblingGap,
         spouseGap: widget.spouseGap,
         nodeBuilder: widget.nodeBuilder,
-        onAddRelative: widget.onAddRelative,
+        onAddConnectionPressed: widget.onAddConnectionPressed,
       ),
     );
   }
@@ -228,7 +230,8 @@ class FamilyTreeLevels extends StatelessWidget {
   final double siblingGap;
   final double spouseGap;
   final Widget Function(BuildContext context, Node node) nodeBuilder;
-  final void Function(Node node) onAddRelative;
+  final void Function(Node node, Relationship relationship)
+      onAddConnectionPressed;
 
   const FamilyTreeLevels({
     super.key,
@@ -240,7 +243,7 @@ class FamilyTreeLevels extends StatelessWidget {
     required this.siblingGap,
     required this.spouseGap,
     required this.nodeBuilder,
-    required this.onAddRelative,
+    required this.onAddConnectionPressed,
   });
 
   @override
@@ -282,7 +285,8 @@ class FamilyTreeLevels extends StatelessWidget {
                             spouseGap: spouseGap,
                             nodeBuilder: (context, node) {
                               return MouseHover(
-                                onAddRelative: () => onAddRelative(node),
+                                onAddConnectionPressed: (relationship) =>
+                                    onAddConnectionPressed(node, relationship),
                                 builder: (context, hovering) {
                                   return nodeBuilder(context, node);
                                 },
@@ -303,7 +307,8 @@ class FamilyTreeLevels extends StatelessWidget {
                                   siblingGap: siblingGap,
                                   spouseGap: spouseGap,
                                   nodeBuilder: nodeBuilder,
-                                  onAddRelative: onAddRelative,
+                                  onAddConnectionPressed:
+                                      onAddConnectionPressed,
                                 );
                               },
                             ),
@@ -587,12 +592,12 @@ class NodeDisplay extends StatelessWidget {
 }
 
 class MouseHover extends StatefulWidget {
-  final VoidCallback onAddRelative;
+  final void Function(Relationship relationship) onAddConnectionPressed;
   final Widget Function(BuildContext context, bool hovering) builder;
 
   const MouseHover({
     super.key,
-    required this.onAddRelative,
+    required this.onAddConnectionPressed,
     required this.builder,
   });
 
@@ -649,7 +654,7 @@ class _MouseHoverState extends State<MouseHover> {
             },
             child: ProfileControls(
               show: _animate,
-              onPressed: widget.onAddRelative,
+              onAddConnectionPressed: widget.onAddConnectionPressed,
               child: widget.builder(context, _hovering),
             ),
           ),

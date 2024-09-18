@@ -78,14 +78,6 @@ class FamilyTreeWidgets extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final level0Roots = rootHeights.where((e) => e.$2 == 0);
-    final fakeRoot = Node(
-      id: 'fake0',
-      parents: [],
-      spouses: [],
-      children: [...level0Roots.where((e) => e.$2 == 0).map((e) => e.$1)],
-      leadsToFocalNode: true,
-      shouldTraverseChildren: true,
-    );
     print(rootHeights);
     return Row(
       children: [

@@ -49,7 +49,7 @@ function tokenSubstring(value: string | undefined): string {
 }
 
 export function validateAuthorizationWithParam(auth: Auth): ValidationChain {
-    return header("Authorization", unauthorizedError).custom(
+    return header("authorization", unauthorizedError).custom(
         async (value, meta) => {
             const uid = meta.req.params?.uid;
             if (!uid) {
@@ -67,7 +67,7 @@ export function validateAuthorizationWithParam(auth: Auth): ValidationChain {
 /// Verifies that a valid ID token is provided, and sets req.body.uid to the
 /// UID contained in the Auth token.
 export function validateAuthorization(auth: Auth): ValidationChain {
-    return header("Authorization", unauthorizedError).custom(
+    return header("authorization", unauthorizedError).custom(
         async (value, meta) => {
             const uid = await auth.uidForToken(tokenSubstring(value));
             if (!uid) {
@@ -83,7 +83,7 @@ export function validateAuthorization(auth: Auth): ValidationChain {
 export function validateAuthorizationOptional(
     auth: Auth
 ): ValidationChain {
-    return header("Authorization", unauthorizedError)
+    return header("authorization", unauthorizedError)
         .optional()
         .custom(async (value, meta) => {
             const uid = await auth.uidForToken(tokenSubstring(value));

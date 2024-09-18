@@ -4,65 +4,128 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:heritage/api.dart';
+import 'package:heritage/graph.dart';
 import 'package:heritage/heritage_app.dart';
 import 'package:heritage/tree.dart';
 import 'package:heritage/tree_display2.dart';
 
-class TreeTestPage extends StatefulWidget {
-  const TreeTestPage({super.key});
+class ViewPage extends ConsumerStatefulWidget {
+  final Id focalNodeId;
+
+  const ViewPage({
+    super.key,
+    required this.focalNodeId,
+  });
 
   @override
-  State<TreeTestPage> createState() => _TreeTestPageState();
+  ConsumerState<ViewPage> createState() => ViewPageState();
 }
 
-class _TreeTestPageState extends State<TreeTestPage> {
-  late final Node _focal;
+class ViewPageState extends ConsumerState<ViewPage> {
+  Node? _focalNode;
 
   @override
   void initState() {
     super.initState();
-    _focal = _makeManyAncestoryTree();
+    ref.listenManual(
+      focalNodeProvider,
+      fireImmediately: true,
+      (previous, next) {
+        final focalNode = next.valueOrNull;
+        if (focalNode != null) {
+          setState(() => _focalNode = focalNode);
+        }
+      },
+    );
+    WidgetsBinding.instance.endOfFrame.then((_) {
+      if (mounted) {
+        ref.read(focalNodeIdProvider.notifier).state = widget.focalNodeId;
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Builder(
+        builder: (context) {
+          final focalNode = _focalNode;
+          if (focalNode == null) {
+            return const Center(
+              child: CircularProgressIndicator.adaptive(),
+            );
+          }
+          final result = ref.watch(graphProvider);
+          return KeyedSubtree(
+            key: Key(result.nodes.length.toString()),
+            child: TreeTestPage(
+              focalNode: result.focalNode,
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class TreeTestPage extends ConsumerStatefulWidget {
+  final Node focalNode;
+  const TreeTestPage({
+    super.key,
+    required this.focalNode,
+  });
+
+  @override
+  ConsumerState<TreeTestPage> createState() => _TreeTestPageState();
+}
+
+class _TreeTestPageState extends ConsumerState<TreeTestPage> {
+  @override
+  void initState() {
+    super.initState();
+    // _focal = _makeManyAncestoryTree();
     // _focal = _makeWideTree();
     // _focal = _makeTallTree();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Center(
-        child: FamilyTreeDisplay2(
-          focal: _focal,
-          // levelGap: 40,
-          // spouseGap: 4,
-          // siblingGap: 16,
-          // nodeBuilder: (context, node) {
-          //   return Consumer(
-          //     builder: (context, ref, child) {
-          //       return GestureDetector(
-          //         onTap: () => _sendTest(context, ref),
-          //         child: NodeDisplay(node: node),
-          //       );
-          //     },
-          //   );
-          // },
-          levelGap: 302,
-          spouseGap: 52,
-          siblingGap: 297,
-          nodeBuilder: (context, node) {
-            return Consumer(
-              builder: (context, ref, child) {
-                return MouseRegion(
-                  cursor: SystemMouseCursors.click,
-                  child: GestureDetector(
-                    onTap: () => _showProfile(context, node),
-                    child: NodeDisplayFull(node: node),
-                  ),
-                );
-              },
-            );
-          },
-          onAddRelative: (node) => _showAddPopup(context, node),
-        ),
+    return Center(
+      child: FamilyTreeDisplay2(
+        focal: widget.focalNode,
+        // levelGap: 40,
+        // spouseGap: 4,
+        // siblingGap: 16,
+        // nodeBuilder: (context, node) {
+        //   return Consumer(
+        //     builder: (context, ref, child) {
+        //       return GestureDetector(
+        //         onTap: () => _sendTest(context, ref),
+        //         child: NodeDisplay(node: node),
+        //       );
+        //     },
+        //   );
+        // },
+        levelGap: 302,
+        spouseGap: 52,
+        siblingGap: 297,
+        nodeBuilder: (context, node) {
+          return Consumer(
+            builder: (context, ref, child) {
+              return MouseRegion(
+                cursor: SystemMouseCursors.click,
+                child: GestureDetector(
+                  // onTap: () => _showProfile(context, node),
+                  onTap: () {
+                    ref.read(graphProvider.notifier).fetchConnections(node.id);
+                  },
+                  child: NodeDisplayFull(node: node),
+                ),
+              );
+            },
+          );
+        },
+        onAddConnectionPressed: _showAddConnectionModal,
       ),
     );
   }
@@ -134,57 +197,61 @@ class _TreeTestPageState extends State<TreeTestPage> {
     );
   }
 
-  void _showAddPopup(BuildContext context, Node node) {
+  void _showAddConnectionModal(Node node, Relationship relationship) {
+    final graphNotifier = ref.read(graphProvider.notifier);
     showAdaptiveDialog(
       context: context,
       builder: (context) {
         return AlertDialog.adaptive(
-          title: const Text('Add a Sibling'),
+          title: Text('Add a ${relationship.name}'),
           shape: const RoundedRectangleBorder(
             borderRadius: BorderRadius.all(
               Radius.circular(16),
             ),
           ),
           content: SingleChildScrollView(
-            child: AddRelativeModal(),
+            child: AddConnectionModal(
+              relationship: relationship,
+              onSave: (name, gender) {
+                Navigator.of(context).pop();
+                graphNotifier.addConnection(
+                  source: node.id,
+                  name: name,
+                  gender: gender,
+                  relationship: relationship,
+                );
+              },
+            ),
           ),
         );
       },
     );
   }
-
-  void _sendTest(BuildContext context, WidgetRef ref) async {
-    final api = ref.read(apiProvider);
-    final result = await api.getTest();
-    if (!context.mounted) {
-      return;
-    }
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        duration: const Duration(seconds: 1),
-        backgroundColor: result.isRight() ? Colors.green : Colors.red,
-        content: Builder(
-          builder: (context) {
-            return result.fold(
-              (l) => Text('Network request failed: $l'),
-              (r) => const Text('Network request succeeded'),
-            );
-          },
-        ),
-      ),
-    );
-  }
 }
 
-class AddRelativeModal extends StatefulWidget {
-  const AddRelativeModal({super.key});
+class AddConnectionModal extends StatefulWidget {
+  final Relationship relationship;
+  final void Function(String name, Gender gender) onSave;
+
+  const AddConnectionModal({
+    super.key,
+    required this.relationship,
+    required this.onSave,
+  });
 
   @override
-  State<AddRelativeModal> createState() => _AddRelativeModalState();
+  State<AddConnectionModal> createState() => _AddConnectionModalState();
 }
 
-class _AddRelativeModalState extends State<AddRelativeModal> {
-  bool _brother = true;
+class _AddConnectionModalState extends State<AddConnectionModal> {
+  final _nameController = TextEditingController();
+  Gender _gender = Gender.male;
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -200,7 +267,9 @@ class _AddRelativeModalState extends State<AddRelativeModal> {
         ),
         const SelectableText('Name'),
         const SizedBox(height: 4),
-        TextFormField(),
+        TextFormField(
+          controller: _nameController,
+        ),
         const SizedBox(height: 16),
         const SelectableText('Relationship'),
         const SizedBox(height: 4),
@@ -208,23 +277,25 @@ class _AddRelativeModalState extends State<AddRelativeModal> {
           children: [
             Expanded(
               child: FilledButton(
-                onPressed: () => setState(() => _brother = true),
+                onPressed: () => setState(() => _gender = Gender.male),
                 style: FilledButton.styleFrom(
                   fixedSize: const Size.fromHeight(44),
-                  backgroundColor: _brother ? primaryColor : unselectedColor,
+                  backgroundColor:
+                      _gender == Gender.male ? primaryColor : unselectedColor,
                 ),
-                child: const Text('Brother'),
+                child: const Text('Male'),
               ),
             ),
             const SizedBox(width: 24),
             Expanded(
               child: FilledButton(
-                onPressed: () => setState(() => _brother = false),
+                onPressed: () => setState(() => _gender = Gender.female),
                 style: FilledButton.styleFrom(
                   fixedSize: const Size.fromHeight(44),
-                  backgroundColor: _brother ? unselectedColor : primaryColor,
+                  backgroundColor:
+                      _gender == Gender.male ? unselectedColor : primaryColor,
                 ),
-                child: const Text('Sister'),
+                child: const Text('Female'),
               ),
             ),
           ],
@@ -254,9 +325,14 @@ class _AddRelativeModalState extends State<AddRelativeModal> {
         ),
         const SizedBox(height: 16),
         Center(
-          child: TextButton(
-            onPressed: () {},
-            child: const Text('Done'),
+          child: AnimatedBuilder(
+            animation: _nameController,
+            builder: (context, child) {
+              return TextButton(
+                onPressed: _nameController.text.isEmpty ? null : _done,
+                child: const Text('Done'),
+              );
+            },
           ),
         ),
         const SizedBox(height: 16),
@@ -267,17 +343,25 @@ class _AddRelativeModalState extends State<AddRelativeModal> {
       ],
     );
   }
+
+  void _done() {
+    final name = _nameController.text;
+    if (name.isEmpty) {
+      return;
+    }
+    widget.onSave(name, _gender);
+  }
 }
 
 class ProfileControls extends StatelessWidget {
   final bool show;
-  final VoidCallback onPressed;
+  final void Function(Relationship relationship) onAddConnectionPressed;
   final Widget child;
 
   const ProfileControls({
     super.key,
     required this.show,
-    required this.onPressed,
+    required this.onAddConnectionPressed,
     required this.child,
   });
 
@@ -288,10 +372,10 @@ class ProfileControls extends StatelessWidget {
       children: [
         ProfileControlAnimateIn(
           show: show,
-          onPressed: onPressed,
+          onPressed: () => onAddConnectionPressed(Relationship.parent),
           builder: (context) {
             return FilledButton.icon(
-              onPressed: onPressed,
+              onPressed: () => onAddConnectionPressed(Relationship.parent),
               icon: const Icon(Icons.person_add),
               label: const Text('Parent'),
             );
@@ -302,10 +386,10 @@ class ProfileControls extends StatelessWidget {
           children: [
             ProfileControlAnimateIn(
               show: show,
-              onPressed: onPressed,
+              onPressed: () => onAddConnectionPressed(Relationship.spouse),
               builder: (context) {
                 return FilledButton.icon(
-                  onPressed: onPressed,
+                  onPressed: () => onAddConnectionPressed(Relationship.spouse),
                   icon: const Icon(Icons.person_add),
                   label: const Text('Spouse'),
                 );
@@ -314,10 +398,10 @@ class ProfileControls extends StatelessWidget {
             child,
             ProfileControlAnimateIn(
               show: show,
-              onPressed: onPressed,
+              onPressed: () => onAddConnectionPressed(Relationship.sibling),
               builder: (context) {
                 return FilledButton.icon(
-                  onPressed: onPressed,
+                  onPressed: () => onAddConnectionPressed(Relationship.sibling),
                   icon: const Icon(Icons.person_add),
                   label: const Text('Sibling'),
                 );
@@ -327,10 +411,10 @@ class ProfileControls extends StatelessWidget {
         ),
         ProfileControlAnimateIn(
           show: show,
-          onPressed: onPressed,
+          onPressed: () => onAddConnectionPressed(Relationship.child),
           builder: (context) {
             return FilledButton.icon(
-              onPressed: onPressed,
+              onPressed: () => onAddConnectionPressed(Relationship.child),
               icon: const Icon(Icons.person_add),
               label: const Text('Child'),
             );
@@ -526,12 +610,12 @@ class NodeDisplayFull extends StatelessWidget {
           ProfileImage(
             'https://picsum.photos/${200 + random.nextInt(30)}',
           ),
-          const Positioned(
+          Positioned(
             left: 21,
             bottom: 21,
             right: 21,
             child: DefaultTextStyle(
-              style: TextStyle(
+              style: const TextStyle(
                 shadows: [
                   Shadow(
                     offset: Offset(0, 5),
@@ -545,16 +629,16 @@ class NodeDisplayFull extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Text(
-                    'Me',
-                    style: TextStyle(
+                    node.id,
+                    style: const TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.w500,
                       color: Colors.white,
                     ),
                   ),
                   Text(
-                    'John Smith',
-                    style: TextStyle(
+                    node.profile.name,
+                    style: const TextStyle(
                       fontSize: 27,
                       fontWeight: FontWeight.w700,
                       color: Colors.white,
@@ -616,33 +700,20 @@ class ProfileImage extends StatelessWidget {
 
 Node _generateRandomTree(int totalNodes) {
   final random = Random();
-  final nodes = <Node>[];
-
-  for (var i = 0; i < totalNodes; i++) {
-    final node = Node(
-      id: '$i',
-      parents: [],
-      children: [],
-      spouses: [],
-    );
-    nodes.add(node);
-  }
+  final nodes = List.generate(totalNodes, (i) => _createNode('$i'));
 
   for (var i = 1; i < totalNodes; i++) {
     final parentIndex = random.nextInt(i);
     final parent = nodes[parentIndex];
     final child = nodes[i];
-    parent.addChild(child);
+    parent.children.add(child);
   }
 
   return nodes[random.nextInt(totalNodes)];
 }
 
 Node _makeTallTree() {
-  final nodes = List.generate(
-    28,
-    (i) => Node(parents: [], spouses: [], children: [], id: '$i'),
-  );
+  final nodes = List.generate(28, (i) => _createNode('$i'));
 
   void connect({
     required int spouseA,
@@ -680,10 +751,7 @@ Node _makeTallTree() {
 }
 
 Node _makeWideTree() {
-  final nodes = List.generate(
-    40,
-    (i) => Node(parents: [], spouses: [], children: [], id: '$i'),
-  );
+  final nodes = List.generate(40, (i) => _createNode('$i'));
 
   void connect({
     required int spouseA,
@@ -730,10 +798,7 @@ Node _makeWideTree() {
 }
 
 Node _makeManyAncestoryTree() {
-  final nodes = List.generate(
-    33,
-    (i) => Node(parents: [], spouses: [], children: [], id: '$i'),
-  );
+  final nodes = List.generate(33, (i) => _createNode('$i'));
 
   void connect({
     required int spouseA,
@@ -773,4 +838,24 @@ Node _makeManyAncestoryTree() {
   markAncestors(focalNode, true);
 
   return focalNode;
+}
+
+Node _createNode(String id) {
+  return Node(
+    id: id,
+    parents: [],
+    children: [],
+    spouses: [],
+    parentIds: [],
+    spouseIds: [],
+    childIds: [],
+    addedBy: '',
+    ownedBy: '',
+    createdAt: DateTime.now(),
+    profile: Profile(
+      name: 'name',
+      gender: Gender.male,
+      birthday: DateTime.now(),
+    ),
+  );
 }
