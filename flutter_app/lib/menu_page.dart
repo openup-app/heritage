@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:heritage/api.dart';
-import 'package:heritage/tree_test_page.dart';
+import 'package:heritage/family_tree_page.dart';
 
 class MenuPage extends ConsumerStatefulWidget {
   const MenuPage({super.key});

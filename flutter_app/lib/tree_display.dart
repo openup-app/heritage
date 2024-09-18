@@ -2,7 +2,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'package:heritage/tree.dart';
+import 'package:heritage/graph.dart';
 
 class FamilyTreeDisplay extends StatefulWidget {
   final Node focal;
