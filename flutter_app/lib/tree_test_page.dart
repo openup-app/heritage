@@ -56,6 +56,7 @@ class ViewPageState extends ConsumerState<ViewPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
         foregroundColor: Colors.black.withOpacity(0.3),
         backgroundColor: Colors.transparent,
