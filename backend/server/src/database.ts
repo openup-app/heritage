@@ -21,6 +21,7 @@ export class Database {
       const data = sourceDoc.data() ?? {};
       const sourceNode = nodeSchema.parse(data);
       const createdNodes: Node[] = [];
+      const updatedNodes: Node[] = [];
 
       // Invariants
       if (relationship === "parent") {
@@ -48,6 +49,7 @@ export class Database {
         node.children.push(sourceId);
 
         sourceNode.parents.push(node.id, spouseNode.id);
+        updatedNodes.push(sourceNode);
         t.update(sourceRef, sourceNode);
       } else if (relationship == "sibling") {
         let parent1Node: Node;
@@ -66,6 +68,7 @@ export class Database {
           parent2Node.children.push(sourceId);
 
           sourceNode.parents.push(parent1Node.id, parent2Node.id);
+          updatedNodes.push(sourceNode);
           t.update(sourceRef, sourceNode);
         } else {
           const [parent1Snapshot, parent2Snapshot] = await t.getAll(...sourceNode.parents.map(e => this.nodeRef(e)));
@@ -103,6 +106,7 @@ export class Database {
         }
         spouseNode.children.push(node.id);
         sourceNode.children.push(node.id);
+        updatedNodes.push(sourceNode);
         t.update(sourceRef, sourceNode);
         if (!didCreateSpouse) {
           t.update(this.nodeRef(spouseNode.id), spouseNode);
@@ -113,6 +117,7 @@ export class Database {
         node.spouses.push(sourceId);
 
         sourceNode.spouses.push(node.id);
+        updatedNodes.push(sourceNode);
         t.update(sourceRef, sourceNode);
       }
 
@@ -120,7 +125,7 @@ export class Database {
         t.create(this.nodeRef(node.id), node);
       }
 
-      return createdNodes;
+      return [...createdNodes, ...updatedNodes];
     });
   }
 
