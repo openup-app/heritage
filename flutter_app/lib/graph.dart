@@ -3,69 +3,46 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:heritage/api.dart';
 
-class Node {
+abstract class GraphNode {
+  Id get id;
+  List<Id> get parents;
+  List<Id> get spouses;
+  List<Id> get children;
+}
+
+class LinkedNode<T extends GraphNode> {
   final Id id;
-  final List<Node> parents;
-  final List<Node> spouses;
-  final List<Node> children;
-  final List<Id> parentIds;
-  final List<Id> spouseIds;
-  final List<Id> childIds;
-  final Id addedBy;
-  final Id? ownedBy;
-  final DateTime createdAt;
-  final Profile profile;
+  final List<LinkedNode<T>> parents;
+  final List<LinkedNode<T>> spouses;
+  final List<LinkedNode<T>> children;
+  final T data;
   bool leadsToFocalNode;
   bool shouldBeRightChild;
   bool shouldTraverseChildren;
 
-  Node({
+  LinkedNode({
     required this.id,
     required this.parents,
     required this.spouses,
     required this.children,
-    required this.parentIds,
-    required this.spouseIds,
-    required this.childIds,
-    required this.addedBy,
-    required this.ownedBy,
-    required this.createdAt,
-    required this.profile,
+    required this.data,
     this.leadsToFocalNode = false,
     this.shouldBeRightChild = true,
     this.shouldTraverseChildren = true,
   });
 
-  Node? get spouse => spouses.firstOrNull;
+  LinkedNode<T>? get spouse => spouses.firstOrNull;
 
   @override
-  String toString() => 'Node $id';
+  String toString() => 'LinkedNode $id';
 }
 
-class Profile {
-  final String name;
-  final Gender gender;
-  final String? imageUrl;
-  final DateTime? birthday;
-  final DateTime? deathday;
-  final String birthplace;
-
-  Profile({
-    required this.name,
-    required this.gender,
-    required this.imageUrl,
-    required this.birthday,
-    required this.deathday,
-    required this.birthplace,
-  });
-}
-
-class Couple {
+class Couple<T extends GraphNode> {
   final String id;
-  final List<Couple> parents;
-  final List<Couple> children;
-  final Node node;
-  final Node? spouse;
+  final List<Couple<T>> parents;
+  final List<Couple<T>> children;
+  final LinkedNode<T> node;
+  final LinkedNode<T>? spouse;
 
   Couple({
     required this.id,
@@ -90,13 +67,15 @@ class Couple {
 }
 
 /// Roots and their distance away from the given [node].
-Set<(Node, int)> findRootsIncludingSpousesWithDistance(Node node) {
-  Set<(Node, int)> traverse(Node node, int distance) {
+Set<(LinkedNode<T>, int)>
+    findRootsIncludingSpousesWithDistance<T extends GraphNode>(
+        LinkedNode<T> node) {
+  Set<(LinkedNode<T>, int)> traverse(LinkedNode<T> node, int distance) {
     if (node.parents.isEmpty) {
       return {(node, distance)};
     }
 
-    final roots = <(Node, int)>{};
+    final roots = <(LinkedNode<T>, int)>{};
     for (final parent in node.parents) {
       roots.addAll(traverse(parent, distance + 1));
     }
@@ -107,13 +86,14 @@ Set<(Node, int)> findRootsIncludingSpousesWithDistance(Node node) {
 }
 
 /// Roots and their distance away from the given [couple].
-Set<(Couple, int)> findRootCouplesWithDistance(Couple couple) {
-  Set<(Couple, int)> traverse(Couple couple, int distance) {
+Set<(Couple<T>, int)> findRootCouplesWithDistance<T extends GraphNode>(
+    Couple<T> couple) {
+  Set<(Couple<T>, int)> traverse(Couple<T> couple, int distance) {
     if (couple.parents.isEmpty) {
       return {(couple, distance)};
     }
 
-    final roots = <(Couple, int)>{};
+    final roots = <(Couple<T>, int)>{};
     for (final parent in couple.parents) {
       roots.addAll(traverse(parent, distance + 1));
     }
@@ -124,13 +104,13 @@ Set<(Couple, int)> findRootCouplesWithDistance(Couple couple) {
 }
 
 /// Set of nodes with no parents.
-Set<Node> findRoots(Node node) {
+Set<LinkedNode> findRoots<T>(LinkedNode node) {
   final spouse = node.spouses.firstOrNull;
   if (spouse != null && node.parents.isEmpty && spouse.parents.isEmpty) {
     return {node};
   }
 
-  final roots = <Node>{};
+  final roots = <LinkedNode>{};
   for (final parent in node.parents) {
     roots.addAll(findRoots(parent));
   }
@@ -147,7 +127,8 @@ Set<Couple> findCoupleRoots(Couple couple) {
 }
 
 /// Set of nodes with no parents.
-void markAncestorCouplesWithSeparateRoots(Node node) {
+void markAncestorCouplesWithSeparateRoots<T extends GraphNode>(
+    LinkedNode<T> node) {
   final spouse = node.spouses.firstOrNull;
   final alreadyMarkedAsSpouse = node.shouldTraverseChildren == false;
   if (spouse != null &&
@@ -168,7 +149,7 @@ void markAncestorCouplesWithSeparateRoots(Node node) {
 }
 
 /// The height of the tree starting at [root].
-int findHeight(Node root) {
+int findHeight(LinkedNode root) {
   if (root.children.isEmpty) {
     return 1;
   }
@@ -194,15 +175,15 @@ int findCoupleHeight(Couple root) {
 }
 
 /// The list of nodes at each level, starting from [root].
-List<List<Node>> getNodesAtEachLevel(Node root) {
-  final nodesByDepth = <List<Node>>[];
+List<List<LinkedNode>> getGraphNodesAtEachLevel(LinkedNode root) {
+  final nodesByDepth = <List<LinkedNode>>[];
 
-  void traverse(Node currentNode, int depth) {
+  void traverse(LinkedNode currentGraphNode, int depth) {
     if (nodesByDepth.length == depth) {
       nodesByDepth.add([]);
     }
-    nodesByDepth[depth].add(currentNode);
-    for (var child in currentNode.children) {
+    nodesByDepth[depth].add(currentGraphNode);
+    for (var child in currentGraphNode.children) {
       traverse(child, depth + 1);
     }
   }
@@ -211,18 +192,18 @@ List<List<Node>> getNodesAtEachLevel(Node root) {
   return nodesByDepth;
 }
 
-Node findHighestRoot(Node focal) {
-  final topNodes = findRoots(focal);
+LinkedNode findHighestRoot(LinkedNode focal) {
+  final topGraphNodes = findRoots(focal);
 
   int maxHeight = 0;
-  Node? highestNode;
-  for (final node in topNodes) {
+  LinkedNode? highestGraphNode;
+  for (final node in topGraphNodes) {
     final height = findHeight(node);
     if (height > maxHeight) {
-      highestNode = node;
+      highestGraphNode = node;
     }
   }
-  return highestNode ?? focal;
+  return highestGraphNode ?? focal;
 }
 
 Couple findHighestCoupleRoot(Couple focal) {
@@ -239,7 +220,8 @@ Couple findHighestCoupleRoot(Couple focal) {
   return highest ?? focal;
 }
 
-List<LevelGroupCouples> getLevelsBySiblingCouples(Couple focal) {
+List<LevelGroupCouples<T>> getLevelsBySiblingCouples<T extends GraphNode>(
+    Couple<T> focal) {
   final rootsAndDistances = findRootCouplesWithDistance(focal);
   final furthest = rootsAndDistances.reduce((a, b) => a.$2 > b.$2 ? a : b);
   final rootCouple = furthest.$1;
@@ -247,15 +229,15 @@ List<LevelGroupCouples> getLevelsBySiblingCouples(Couple focal) {
   final rootCoupleLevels =
       rootsAndDistances.map((e) => (e.$1, maxDistance - e.$2));
   final treeHeight = findCoupleHeight(rootCouple);
-  final levelGroups = List.generate(treeHeight, (_) => <GroupCouple>[]);
+  final levelGroups = List.generate(treeHeight, (_) => <GroupCouple<T>>[]);
 
-  void traverseLevel(List<Couple> currentLevelCouples, int level) {
+  void traverseLevel(List<Couple<T>> currentLevelCouples, int level) {
     if (currentLevelCouples.isEmpty) {
       return;
     }
 
-    final groups = <GroupCouple>[];
-    final nextLevelCouples = <Couple>[];
+    final groups = <GroupCouple<T>>[];
+    final nextLevelCouples = <Couple<T>>[];
 
     for (final couple in currentLevelCouples) {
       // Adds root couples (no siblings)
@@ -265,7 +247,7 @@ List<LevelGroupCouples> getLevelsBySiblingCouples(Couple focal) {
 
       if (couple.children.isNotEmpty) {
         // Adds sibling group couples
-        final children = <Couple>[];
+        final children = <Couple<T>>[];
         for (final child in couple.children) {
           // Only one parent couple should add this child
           if (child.parents.isNotEmpty &&
@@ -301,31 +283,31 @@ List<LevelGroupCouples> getLevelsBySiblingCouples(Couple focal) {
   return levelGroups;
 }
 
-List<LevelSiblings> getLevelsBySiblings(Node focal) {
+List<LevelSiblings> getLevelsBySiblings(LinkedNode focal) {
   final rootsAndDistances = findRootsIncludingSpousesWithDistance(focal);
   final furthest = rootsAndDistances.reduce((a, b) => a.$2 > b.$2 ? a : b);
-  final rootNode = furthest.$1;
+  final rootGraphNode = furthest.$1;
   final maxDistance = furthest.$2;
-  final rootNodeLevels =
+  final rootGraphNodeLevels =
       rootsAndDistances.map((e) => (e.$1, maxDistance - e.$2));
-  final realRootNodeLevels = rootNodeLevels.where((e) =>
+  final realRootGraphNodeLevels = rootGraphNodeLevels.where((e) =>
       e.$1.parents.isEmpty && e.$1.spouses.expand((e) => e.parents).isEmpty);
-  final treeHeight = findHeight(rootNode);
+  final treeHeight = findHeight(rootGraphNode);
   final levelGroups = List.generate(treeHeight, (_) => <Group>[]);
 
-  void traverseLevel(List<Node> currentLevelNodes, int level) {
-    if (currentLevelNodes.isEmpty) {
+  void traverseLevel(List<LinkedNode> currentLevelGraphNodes, int level) {
+    if (currentLevelGraphNodes.isEmpty) {
       return;
     }
 
     final groups = <Group>[];
-    final nextLevelNodes = <Node>[];
+    final nextLevelGraphNodes = <LinkedNode>[];
 
-    for (final node in currentLevelNodes) {
+    for (final node in currentLevelGraphNodes) {
       if (node.children.isNotEmpty) {
         groups.add(node.children);
       }
-      nextLevelNodes.addAll(node.children);
+      nextLevelGraphNodes.addAll(node.children);
     }
 
     if (groups.isNotEmpty) {
@@ -333,26 +315,28 @@ List<LevelSiblings> getLevelsBySiblings(Node focal) {
     }
 
     // Add root nodes at the next level
-    final nextLevelRootNodes = realRootNodeLevels
+    final nextLevelRootGraphNodes = realRootGraphNodeLevels
         .where((e) => e.$2 == level + 1)
         .map((e) => e.$1)
         .toList();
-    nextLevelNodes.addAll(nextLevelRootNodes);
+    nextLevelGraphNodes.addAll(nextLevelRootGraphNodes);
 
-    traverseLevel(withoutSpouses(nextLevelNodes), level + 1);
+    traverseLevel(withoutSpouses(nextLevelGraphNodes), level + 1);
   }
 
   // Add root nodes at the next level
   const level = 0;
-  final level0RootNodes =
-      realRootNodeLevels.where((e) => e.$2 == level).map((e) => e.$1).toList();
-  final level0RootNodesSingles = withoutSpouses(level0RootNodes);
-  traverseLevel(level0RootNodesSingles, level);
+  final level0RootGraphNodes = realRootGraphNodeLevels
+      .where((e) => e.$2 == level)
+      .map((e) => e.$1)
+      .toList();
+  final level0RootGraphNodesSingles = withoutSpouses(level0RootGraphNodes);
+  traverseLevel(level0RootGraphNodesSingles, level);
 
   return levelGroups;
 }
 
-void markAncestors(Node node, bool isOnRight) {
+void markAncestors(LinkedNode node, bool isOnRight) {
   if (node.parents.length != 2) {
     return;
   }
@@ -363,8 +347,9 @@ void markAncestors(Node node, bool isOnRight) {
   markAncestors(node.parents[1], false);
 }
 
-List<Node> withoutSpouses(Iterable<Node> nodes) {
-  final copy = <Node>[];
+List<LinkedNode<T>> withoutSpouses<T extends GraphNode>(
+    Iterable<LinkedNode<T>> nodes) {
+  final copy = <LinkedNode<T>>[];
   final spouseIds = <String>{};
   for (final node in nodes) {
     if (spouseIds.contains(node.id)) {
@@ -377,7 +362,7 @@ List<Node> withoutSpouses(Iterable<Node> nodes) {
 }
 
 void dumpCoupleTree(Couple couple) {
-  final visited = <String>{};
+  final visited = <Id>{};
 
   void visit(Couple couple) {
     if (visited.contains(couple.id)) {
@@ -393,11 +378,11 @@ void dumpCoupleTree(Couple couple) {
   visit(couple);
 }
 
-(Couple, Map<String, Couple>) createCoupleTree(Node focalNode) {
-  final nodeToCouple = <String, Couple>{};
-
-  Couple create(Node node) {
-    final existing = nodeToCouple[node.id];
+(Couple<T>, Map<Id, Couple<T>>) createCoupleTree<T extends GraphNode>(
+    LinkedNode<T> focalNode) {
+  final nodeIdToCouple = <Id, Couple<T>>{};
+  Couple<T> create(LinkedNode<T> node) {
+    final existing = nodeIdToCouple[node.id];
     if (existing != null) {
       return existing;
     }
@@ -405,15 +390,15 @@ void dumpCoupleTree(Couple couple) {
     final spouse = node.spouse;
     final couple = Couple(
       id: node.id,
-      parents: [],
-      children: [],
+      parents: <Couple<T>>[],
+      children: <Couple<T>>[],
       node: node,
       spouse: spouse,
     );
 
-    nodeToCouple[node.id] = couple;
+    nodeIdToCouple[node.id] = couple;
     if (spouse != null) {
-      nodeToCouple[spouse.id] = couple;
+      nodeIdToCouple[spouse.id] = couple;
     }
 
     if (node.parents.isNotEmpty) {
@@ -431,12 +416,12 @@ void dumpCoupleTree(Couple couple) {
     return couple;
   }
 
-  final focusCouple = create(focalNode);
-  return (focusCouple, nodeToCouple);
+  final focalCouple = create(focalNode);
+  return (focalCouple, nodeIdToCouple);
 }
 
-typedef Group = List<Node>;
+typedef Group = List<LinkedNode>;
 typedef LevelSiblings = List<Group>;
 
-typedef GroupCouple = List<Couple>;
-typedef LevelGroupCouples = List<GroupCouple>;
+typedef GroupCouple<T extends GraphNode> = List<Couple<T>>;
+typedef LevelGroupCouples<T extends GraphNode> = List<GroupCouple<T>>;

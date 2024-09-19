@@ -5,8 +5,8 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fpdart/fpdart.dart';
+import 'package:heritage/graph.dart';
 import 'package:http/http.dart' as http;
-import 'package:http/http.dart';
 
 final apiProvider = Provider<Api>((ref) => throw 'Uninitialized provider');
 
@@ -37,7 +37,7 @@ class Api {
     }
   }
 
-  Future<Either<Error, List<ApiNode>>> addConnection({
+  Future<Either<Error, List<Node>>> addConnection({
     required Id sourceId,
     required String name,
     required Gender gender,
@@ -56,12 +56,12 @@ class Api {
       handleResponse: (response) {
         final json = jsonDecode(response.body);
         final nodes = json['nodes'] as List;
-        return right(nodes.map((e) => ApiNode.fromJson(e)).toList());
+        return right(nodes.map((e) => Node.fromJson(e)).toList());
       },
     );
   }
 
-  Future<Either<Error, ApiNode>> createRoot({
+  Future<Either<Error, Node>> createRoot({
     required String name,
     required Gender gender,
   }) {
@@ -76,12 +76,12 @@ class Api {
       ),
       handleResponse: (response) {
         final json = jsonDecode(response.body);
-        return right(ApiNode.fromJson(json['node']));
+        return right(Node.fromJson(json['node']));
       },
     );
   }
 
-  Future<Either<Error, List<ApiNode>>> getLimitedGraph(Id id) {
+  Future<Either<Error, List<Node>>> getLimitedGraph(Id id) {
     return _makeRequest(
       request: () => http.get(
         Uri.parse('$_baseUrl/v1/nodes/$id'),
@@ -90,12 +90,12 @@ class Api {
       handleResponse: (response) {
         final json = jsonDecode(response.body);
         final nodes = json['nodes'] as List;
-        return right(nodes.map((e) => ApiNode.fromJson(e)).toList());
+        return right(nodes.map((e) => Node.fromJson(e)).toList());
       },
     );
   }
 
-  Future<Either<Error, List<ApiNode>>> getNodes(List<Id> ids) {
+  Future<Either<Error, List<Node>>> getNodes(List<Id> ids) {
     if (ids.isEmpty) {
       return Future.value(right([]));
     }
@@ -107,12 +107,12 @@ class Api {
       handleResponse: (response) {
         final json = jsonDecode(response.body);
         final nodes = json['nodes'] as List;
-        return right(nodes.map((e) => ApiNode.fromJson(e)).toList());
+        return right(nodes.map((e) => Node.fromJson(e)).toList());
       },
     );
   }
 
-  Future<Either<Error, List<ApiNode>>> getRoots() {
+  Future<Either<Error, List<Node>>> getRoots() {
     return _makeRequest(
       request: () => http.get(
         Uri.parse('$_baseUrl/v1/roots'),
@@ -121,12 +121,12 @@ class Api {
       handleResponse: (response) {
         final json = jsonDecode(response.body);
         final nodes = json['nodes'] as List;
-        return right(nodes.map((e) => ApiNode.fromJson(e)).toList());
+        return right(nodes.map((e) => Node.fromJson(e)).toList());
       },
     );
   }
 
-  Future<Either<Error, ApiNode>> updateProfile(String id, ApiProfile profile) {
+  Future<Either<Error, Node>> updateProfile(String id, Profile profile) {
     return _makeRequest(
       request: () => http.put(
         Uri.parse('$_baseUrl/v1/node/$id/profile'),
@@ -135,14 +135,14 @@ class Api {
       ),
       handleResponse: (response) {
         final json = jsonDecode(response.body);
-        return right(ApiNode.fromJson(json['node']));
+        return right(Node.fromJson(json['node']));
       },
     );
   }
 
   Future<Either<Error, R>> _makeRequest<R>({
-    required Future<Response> Function() request,
-    required Either<Error, R> Function(Response response) handleResponse,
+    required Future<http.Response> Function() request,
+    required Either<Error, R> Function(http.Response response) handleResponse,
   }) async {
     try {
       final response = await request().timeout(_kTimeout);
@@ -150,7 +150,7 @@ class Api {
         return left('Status ${response.statusCode}');
       }
       return handleResponse(response);
-    } on ClientException {
+    } on http.ClientException {
       return left('Client Exception');
     } on SocketException {
       return left('Socket Exception');
@@ -180,17 +180,21 @@ enum Gender { male, female }
 
 enum Relationship { parent, sibling, spouse, child }
 
-class ApiNode {
+class Node implements GraphNode {
+  @override
   final Id id;
+  @override
   final List<Id> parents;
+  @override
   final List<Id> spouses;
+  @override
   final List<Id> children;
   final Id addedBy;
   final Id? ownedBy;
   final DateTime createdAt;
-  final ApiProfile profile;
+  final Profile profile;
 
-  const ApiNode({
+  const Node({
     required this.id,
     required this.parents,
     required this.spouses,
@@ -201,7 +205,7 @@ class ApiNode {
     required this.profile,
   });
 
-  factory ApiNode.fromJson(Map<String, dynamic> json) {
+  factory Node.fromJson(Map<String, dynamic> json) {
     if (json
         case {
           'id': final Id id,
@@ -220,7 +224,7 @@ class ApiNode {
             'birthplace': final String birthplace,
           }
         }) {
-      return ApiNode(
+      return Node(
         id: id,
         parents: parents.cast<Id>(),
         spouses: spouses.cast<Id>(),
@@ -228,7 +232,7 @@ class ApiNode {
         addedBy: addedBy,
         ownedBy: ownedBy,
         createdAt: DateTime.parse(createdAt),
-        profile: ApiProfile(
+        profile: Profile(
           name: name,
           gender: Gender.values.byName(gender),
           imageUrl: imageUrl,
@@ -242,7 +246,7 @@ class ApiNode {
   }
 }
 
-class ApiProfile {
+class Profile {
   final String name;
   final Gender gender;
   final String? imageUrl;
@@ -250,7 +254,7 @@ class ApiProfile {
   final DateTime? deathday;
   final String birthplace;
 
-  ApiProfile({
+  Profile({
     required this.name,
     required this.gender,
     required this.imageUrl,

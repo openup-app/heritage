@@ -1,11 +1,10 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:heritage/api.dart';
-import 'package:heritage/graph.dart';
 
 final focalNodeIdProvider = StateProvider<Id?>((ref) => null);
 
-final _nodesProvider = FutureProvider<List<ApiNode>>((ref) async {
+final _nodesProvider = FutureProvider<List<Node>>((ref) async {
   final focalNodeId = ref.watch(focalNodeIdProvider);
   if (focalNodeId == null) {
     throw 'No focal node id set';
@@ -25,15 +24,12 @@ final graphProvider = StateNotifierProvider<GraphNotifier, Graph>((ref) {
   final api = ref.watch(apiProvider);
   final focalNodeId = ref.watch(focalNodeIdProvider);
   final value = ref.watch(_nodesProvider);
-  final apiNodes = value.valueOrNull;
-  if (apiNodes == null) {
+  final nodes = value.valueOrNull;
+  if (nodes == null) {
     throw 'Initial nodes have not yet loaded';
   }
 
-  final nodeMap = _linkWithNewApiNodes(
-    currentNodes: [],
-    newApiNodes: apiNodes,
-  );
+  final nodeMap = Map.fromEntries(nodes.map((e) => MapEntry(e.id, e)));
   final focalNode = nodeMap[focalNodeId];
   if (focalNode == null) {
     throw 'Missing focal node';
@@ -49,11 +45,13 @@ final graphProvider = StateNotifierProvider<GraphNotifier, Graph>((ref) {
 
 class GraphNotifier extends StateNotifier<Graph> {
   final Api api;
+  final String _focalNodeId;
 
   GraphNotifier({
     required this.api,
     required Graph initialGraph,
-  }) : super(initialGraph);
+  })  : _focalNodeId = initialGraph.focalNode.id,
+        super(initialGraph);
 
   Future<void> addConnection({
     required Id source,
@@ -111,53 +109,23 @@ class GraphNotifier extends StateNotifier<Graph> {
   // }
 
   Future<void> updateProfile(String id, Profile profile) async {
-    await api.updateProfile(id, _convertProfileToApiProfile(profile));
+    await api.updateProfile(id, profile);
   }
 
-  void _addNodes(List<ApiNode> newApiNodes) {
-    final linkedNodes = _linkWithNewApiNodes(
-      currentNodes: state.nodes.values,
-      newApiNodes: newApiNodes,
-    );
+  void _addNodes(List<Node> newNodes) {
+    final nodes =
+        Map.fromEntries(state.nodes.values.map((e) => MapEntry(e.id, e)));
+    // Overwrite old nodes with any updates
+    nodes.addEntries(newNodes.map((e) => MapEntry(e.id, e)));
+    final focalNode = nodes[_focalNodeId];
+    if (focalNode == null) {
+      throw 'Missing focal node after update';
+    }
     state = Graph(
-      focalNode: state.focalNode,
-      nodes: linkedNodes,
+      focalNode: focalNode,
+      nodes: nodes,
     );
   }
-}
-
-Map<Id, Node> _linkWithNewApiNodes({
-  required Iterable<Node> currentNodes,
-  required Iterable<ApiNode> newApiNodes,
-}) {
-  final newNodes = newApiNodes.map((e) => _convertApiNodeToNode(e));
-  final map = Map.fromEntries(
-      [...currentNodes, ...newNodes].map((e) => MapEntry(e.id, e)));
-
-  for (final newNode in newNodes) {
-    for (final parentId in newNode.parentIds) {
-      final parentNode = map[parentId];
-      if (parentNode != null) {
-        newNode.parents.add(parentNode);
-        parentNode.children.add(newNode);
-      }
-    }
-    for (final childId in newNode.childIds) {
-      final childNode = map[childId];
-      if (childNode != null) {
-        newNode.children.add(childNode);
-        childNode.parents.add(newNode);
-      }
-    }
-    for (final spouseId in newNode.spouseIds) {
-      final spouseNode = map[spouseId];
-      if (spouseNode != null) {
-        newNode.spouses.add(spouseNode);
-        spouseNode.spouses.add(newNode);
-      }
-    }
-  }
-  return map;
 }
 
 class Graph {
@@ -168,38 +136,4 @@ class Graph {
     required this.focalNode,
     required this.nodes,
   });
-}
-
-Node _convertApiNodeToNode(ApiNode apiNode) {
-  return Node(
-    id: apiNode.id,
-    parents: [],
-    spouses: [],
-    children: [],
-    parentIds: List.of(apiNode.parents),
-    spouseIds: List.of(apiNode.spouses),
-    childIds: List.of(apiNode.children),
-    addedBy: apiNode.addedBy,
-    ownedBy: apiNode.ownedBy,
-    createdAt: apiNode.createdAt,
-    profile: Profile(
-      name: apiNode.profile.name,
-      gender: apiNode.profile.gender,
-      imageUrl: apiNode.profile.imageUrl,
-      birthday: apiNode.profile.birthday,
-      deathday: apiNode.profile.deathday,
-      birthplace: apiNode.profile.birthplace,
-    ),
-  );
-}
-
-ApiProfile _convertProfileToApiProfile(Profile profile) {
-  return ApiProfile(
-    name: profile.name,
-    gender: profile.gender,
-    imageUrl: profile.imageUrl,
-    birthday: profile.birthday,
-    deathday: profile.deathday,
-    birthplace: profile.birthplace,
-  );
 }

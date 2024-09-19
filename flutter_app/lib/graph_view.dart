@@ -1,16 +1,22 @@
+import 'dart:collection';
+
+import 'package:collection/collection.dart';
 import 'package:flutter/widgets.dart';
+import 'package:heritage/api.dart';
 import 'package:heritage/graph.dart';
 
-class GraphView extends StatefulWidget {
-  final Node focal;
+class GraphView<T extends GraphNode> extends StatefulWidget {
+  final String focalNodeId;
+  final List<T> nodes;
   final double levelGap;
   final double siblingGap;
   final double spouseGap;
-  final Widget Function(BuildContext context, Node node) nodeBuilder;
+  final Widget Function(BuildContext context, T node) nodeBuilder;
 
   const GraphView({
     super.key,
-    required this.focal,
+    required this.focalNodeId,
+    required this.nodes,
     required this.levelGap,
     required this.siblingGap,
     required this.spouseGap,
@@ -18,26 +24,20 @@ class GraphView extends StatefulWidget {
   });
 
   @override
-  State<GraphView> createState() => _GraphViewState();
+  State<GraphView<T>> createState() => _GraphViewState<T>();
 }
 
-class _GraphViewState extends State<GraphView> {
-  late final Couple _focalCouple;
+class _GraphViewState<T extends GraphNode> extends State<GraphView<T>> {
+  late Couple<T> _focalCouple;
   // late final Map<String, Couple> _nodeToCouple;
   // late final List<(Couple, int)> _rootCoupleHeights;
-  late final List<LevelGroupCouples> _levelGroupCouples;
+  late List<LevelGroupCouples<T>> _levelGroupCouples;
+  late Key _levelsKey;
 
   @override
   void initState() {
     super.initState();
-    final (focalCouple, nodeToCouple) = createCoupleTree(widget.focal);
-    setState(() {
-      _focalCouple = focalCouple;
-      // _nodeToCouple = nodeToCouple;
-    });
-
-    final levelGroupCouples = getLevelsBySiblingCouples(focalCouple);
-    _levelGroupCouples = levelGroupCouples;
+    _initCouples(widget.nodes);
     // if (_focalCouple.parents.isNotEmpty) {
     //   final individualRootHeights = getRootHeights(widget.focal);
     //   final rootCoupleHeights = individualRootHeights.map((e) {
@@ -54,8 +54,19 @@ class _GraphViewState extends State<GraphView> {
   }
 
   @override
+  void didUpdateWidget(covariant GraphView<T> oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final oldIds = Set.of(oldWidget.nodes.map((e) => e.id));
+    final newIds = Set.of(widget.nodes.map((e) => e.id));
+    if (!const DeepCollectionEquality.unordered().equals(oldIds, newIds)) {
+      _initCouples(widget.nodes);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return _GraphLevelView(
+    return _GraphLevelView<T>(
+      key: _levelsKey,
       levelGroupCouples: _levelGroupCouples,
       parentId: null,
       isFirstCoupleInLevel: true,
@@ -66,17 +77,68 @@ class _GraphViewState extends State<GraphView> {
       nodeBuilder: widget.nodeBuilder,
     );
   }
+
+  void _initCouples(Iterable<T> unlinkedNodes) {
+    final linkedNodes = _linkNodes(unlinkedNodes);
+    final focalNode = linkedNodes[widget.focalNodeId];
+    if (focalNode == null) {
+      throw 'Missing node with focalNodeId';
+    }
+    final (focalCouple, nodeToCouple) = createCoupleTree(focalNode);
+    _focalCouple = focalCouple;
+    final levelGroupCouples = getLevelsBySiblingCouples(focalCouple);
+    _levelGroupCouples = levelGroupCouples;
+    _levelsKey = UniqueKey();
+  }
+
+  Map<Id, LinkedNode<T>> _linkNodes(Iterable<T> unlinkedNodes) {
+    final nodes = unlinkedNodes.map((t) => _emptyLinkedNode(t.id, t)).toList();
+    final idToNode = Map.fromEntries(nodes.map((e) => MapEntry(e.id, e)));
+
+    for (final (index, unlinkedNode) in unlinkedNodes.indexed) {
+      final node = nodes[index];
+      for (final parentId in unlinkedNode.parents) {
+        final parentNode = idToNode[parentId];
+        if (parentNode != null) {
+          node.parents.add(parentNode);
+        }
+      }
+      for (final childId in unlinkedNode.children) {
+        final childNode = idToNode[childId];
+        if (childNode != null) {
+          node.children.add(childNode);
+        }
+      }
+      for (final spouseId in unlinkedNode.spouses) {
+        final spouseNode = idToNode[spouseId];
+        if (spouseNode != null) {
+          node.spouses.add(spouseNode);
+        }
+      }
+    }
+    return idToNode;
+  }
+
+  LinkedNode<T> _emptyLinkedNode(String id, T data) {
+    return LinkedNode<T>(
+      id: data.id,
+      parents: [],
+      spouses: [],
+      children: [],
+      data: data,
+    );
+  }
 }
 
-class _GraphLevelView extends StatelessWidget {
-  final List<LevelGroupCouples> levelGroupCouples;
+class _GraphLevelView<T extends GraphNode> extends StatelessWidget {
+  final List<LevelGroupCouples<T>> levelGroupCouples;
   final String? parentId;
   final bool isFirstCoupleInLevel;
   final int level;
   final double levelGap;
   final double siblingGap;
   final double spouseGap;
-  final Widget Function(BuildContext context, Node node) nodeBuilder;
+  final Widget Function(BuildContext context, T node) nodeBuilder;
 
   const _GraphLevelView({
     super.key,
@@ -124,7 +186,7 @@ class _GraphLevelView extends StatelessWidget {
                       padding: EdgeInsets.symmetric(horizontal: siblingGap / 2),
                       child: Column(
                         children: [
-                          _CoupleView(
+                          _CoupleView<T>(
                             couple: couple,
                             spouseGap: spouseGap,
                             nodeBuilder: nodeBuilder,
@@ -165,10 +227,10 @@ class _GraphLevelView extends StatelessWidget {
   }
 }
 
-class _CoupleView extends StatelessWidget {
-  final Couple couple;
+class _CoupleView<T extends GraphNode> extends StatelessWidget {
+  final Couple<T> couple;
   final double spouseGap;
-  final Widget Function(BuildContext context, Node node) nodeBuilder;
+  final Widget Function(BuildContext context, T node) nodeBuilder;
 
   const _CoupleView({
     super.key,
@@ -187,9 +249,9 @@ class _CoupleView extends StatelessWidget {
         if (spouse != null)
           Padding(
             padding: EdgeInsets.only(right: spouseGap),
-            child: nodeBuilder(context, spouse),
+            child: nodeBuilder(context, spouse.data),
           ),
-        nodeBuilder(context, couple.node),
+        nodeBuilder(context, couple.node.data),
       ],
     );
   }

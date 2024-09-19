@@ -175,7 +175,11 @@ class _FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
   @override
   void didUpdateWidget(covariant FamilyTreeView oldWidget) {
     super.didUpdateWidget(oldWidget);
-    _updateKeys();
+    final oldIds = oldWidget.nodes.map((e) => e.id);
+    final newIds = widget.nodes.map((e) => e.id);
+    if (!const DeepCollectionEquality.unordered().equals(oldIds, newIds)) {
+      _updateKeys();
+    }
   }
 
   void _updateKeys() {
@@ -202,8 +206,8 @@ class _FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
         },
         onTransformed: (transform) => _transformNotifier.value = transform,
         child: GraphView(
-          key: Key(widget.nodes.length.toString()),
-          focal: widget.focalNode,
+          focalNodeId: widget.focalNode.id,
+          nodes: widget.nodes,
           // levelGap: 40,
           // spouseGap: 4,
           // siblingGap: 16,

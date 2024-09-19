@@ -2,7 +2,6 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:heritage/api.dart';
-import 'package:heritage/graph.dart';
 import 'package:heritage/heritage_app.dart';
 
 class ProfileControls extends StatelessWidget {

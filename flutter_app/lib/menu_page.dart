@@ -14,7 +14,7 @@ class MenuPage extends ConsumerStatefulWidget {
 class _MenuPageState extends ConsumerState<MenuPage> {
   bool _loading = false;
 
-  List<ApiNode>? _roots;
+  List<Node>? _roots;
 
   @override
   void initState() {
