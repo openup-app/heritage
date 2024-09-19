@@ -1,3 +1,4 @@
+import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:heritage/api.dart';
@@ -31,6 +32,7 @@ final graphProvider = StateNotifierProvider<GraphNotifier, Graph>((ref) {
 class GraphNotifier extends StateNotifier<Graph> {
   final Api api;
   late final Map<Id, Node> _nodes;
+  final _connectionsFetched = <Id>{};
 
   GraphNotifier({
     required this.api,
@@ -59,22 +61,27 @@ class GraphNotifier extends StateNotifier<Graph> {
     );
   }
 
-  Future<void> fetchConnections(Id id) async {
-    final node = _nodes[id];
-    if (node == null) {
+  Future<void> fetchConnections(List<Id> ids) async {
+    final nodes = ids.map((e) => _nodes[e]).whereNotNull();
+    if (nodes.isEmpty) {
       return;
     }
     final connectionIds = [
-      ...node.parentIds,
-      ...node.spouseIds,
-      ...node.childIds,
+      for (final node in nodes) ...[
+        ...node.parentIds,
+        ...node.spouseIds,
+        ...node.childIds,
+      ],
     ];
-    connectionIds.removeWhere((e) => _nodes.keys.contains(e));
-    return fetchNodes(connectionIds);
+    connectionIds
+      ..removeWhere((e) => _nodes.keys.contains(e))
+      ..removeWhere((e) => _connectionsFetched.contains(e));
+    _connectionsFetched.addAll(connectionIds);
+    return fetchNodes(connectionIds.toSet());
   }
 
-  Future<void> fetchNodes(List<Id> ids) async {
-    final result = await api.getNodes(ids);
+  Future<void> fetchNodes(Set<Id> ids) async {
+    final result = await api.getNodes(ids.toList());
     if (!mounted) {
       return;
     }
@@ -85,6 +92,9 @@ class GraphNotifier extends StateNotifier<Graph> {
   }
 
   void _addNodes(List<ApiNode> newApiNodes) {
+    if (newApiNodes.isEmpty) {
+      return;
+    }
     final newNodePairs = newApiNodes.map((e) => (_convertApiNodeGraph(e), e));
     for (final (newNode, newApiNode) in newNodePairs) {
       for (final parentId in newApiNode.parents) {

@@ -1,3 +1,4 @@
+import 'package:collection/collection.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,13 +13,12 @@ import 'package:share_plus/share_plus.dart';
 
 class FamilyTreeLoadingPage extends ConsumerStatefulWidget {
   final Id focalNodeId;
-  final Widget Function(BuildContext context, Node focalNode, List<Node> nodes)
-      builder;
+  final Widget child;
 
   const FamilyTreeLoadingPage({
     super.key,
     required this.focalNodeId,
-    required this.builder,
+    required this.child,
   });
 
   @override
@@ -43,7 +43,7 @@ class ViewPageState extends ConsumerState<FamilyTreeLoadingPage> {
           if (mounted) {
             final id = focalNode?.id;
             if (id != null) {
-              ref.read(graphProvider.notifier).fetchConnections(id);
+              ref.read(graphProvider.notifier).fetchConnections([id]);
             }
           }
         });
@@ -77,87 +77,35 @@ class ViewPageState extends ConsumerState<FamilyTreeLoadingPage> {
               child: CircularProgressIndicator.adaptive(),
             );
           }
-          final result = ref.watch(graphProvider);
-          return widget.builder(
-            context,
-            result.focalNode,
-            result.nodes.values.toList(),
-          );
+          return widget.child;
         },
       ),
     );
   }
 }
 
-class FamilyTreeView extends ConsumerStatefulWidget {
-  final Node focalNode;
-  final List<Node> nodes;
-
-  const FamilyTreeView({
-    super.key,
-    required this.focalNode,
-    required this.nodes,
-  });
+class FamilyTreePage extends ConsumerStatefulWidget {
+  const FamilyTreePage({super.key});
 
   @override
-  ConsumerState<FamilyTreeView> createState() => _FamilyTreeViewState();
+  ConsumerState<FamilyTreePage> createState() => _FamilyTreePageState();
 }
 
-class _FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
-  final _transformNotifier = ValueNotifier<Matrix4>(Matrix4.identity());
-
+class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: ZoomablePannableViewport(
-        onTransformed: (transform) => _transformNotifier.value = transform,
-        child: GraphView(
-          focal: widget.focalNode,
-          // levelGap: 40,
-          // spouseGap: 4,
-          // siblingGap: 16,
-          // nodeBuilder: (context, node) {
-          //   return Consumer(
-          //     builder: (context, ref, child) {
-          //       return GestureDetector(
-          //         onTap: () => _sendTest(context, ref),
-          //         child: NodeDisplay(node: node),
-          //       );
-          //     },
-          //   );
-          // },
-          levelGap: 302,
-          spouseGap: 52,
-          siblingGap: 297,
-          nodeBuilder: (context, node) {
-            return MouseRegion(
-              cursor: SystemMouseCursors.click,
-              child: GestureDetector(
-                onTap: () => _showProfile(context, node),
-                onDoubleTap: () {
-                  ref.read(graphProvider.notifier).fetchConnections(node.id);
-                },
-                child: MouseHover(
-                  transformNotifier: _transformNotifier,
-                  builder: (context, hovering) {
-                    return ProfileControls(
-                      show: hovering,
-                      canAddParent: node.parents.isEmpty,
-                      onAddConnectionPressed: (relationship) =>
-                          _showAddConnectionModal,
-                      child: NodeProfile(node: node),
-                    );
-                  },
-                ),
-              ),
-            );
-          },
-        ),
-      ),
+    final graph = ref.watch(graphProvider);
+    return FamilyTreeView(
+      focalNode: graph.focalNode,
+      nodes: graph.nodes.values.toList(),
+      onProfilePressed: _showProfile,
+      onAddConnectionPressed: _showAddConnectionModal,
+      onFetchConnections: (ids) =>
+          ref.read(graphProvider.notifier).fetchConnections(ids),
     );
   }
 
-  void _showProfile(BuildContext context, Node node) {
+  void _showProfile(Node node) {
     showDialog(
       context: context,
       builder: (context) {
@@ -252,6 +200,115 @@ class _FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
           ),
         );
       },
+    );
+  }
+}
+
+class FamilyTreeView extends ConsumerStatefulWidget {
+  final Node focalNode;
+  final List<Node> nodes;
+  final void Function(Node node) onProfilePressed;
+  final void Function(Node node, Relationship relationship)
+      onAddConnectionPressed;
+  final void Function(List<Id> ids) onFetchConnections;
+
+  const FamilyTreeView({
+    super.key,
+    required this.focalNode,
+    required this.nodes,
+    required this.onProfilePressed,
+    required this.onAddConnectionPressed,
+    required this.onFetchConnections,
+  });
+
+  @override
+  ConsumerState<FamilyTreeView> createState() => _FamilyTreeViewState();
+}
+
+class _FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
+  final _nodeKeys = <Id, GlobalKey>{};
+  final _nodeKeysFlipped = <GlobalKey, Id>{};
+  final _transformNotifier = ValueNotifier<Matrix4>(Matrix4.identity());
+
+  @override
+  void initState() {
+    super.initState();
+    _updateKeys();
+  }
+
+  @override
+  void didUpdateWidget(covariant FamilyTreeView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _updateKeys();
+  }
+
+  void _updateKeys() {
+    for (final node in widget.nodes) {
+      _nodeKeys.putIfAbsent(node.id, () {
+        final key = GlobalKey();
+        _nodeKeysFlipped[key] = node.id;
+        return key;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: ZoomablePannableViewport(
+        childKeys: _nodeKeys.values.toList(),
+        onWithinViewport: (keys) {
+          final ids =
+              keys.map((e) => _nodeKeysFlipped[e]).whereNotNull().toList();
+          if (ids.isNotEmpty) {
+            widget.onFetchConnections(ids);
+          }
+        },
+        onTransformed: (transform) => _transformNotifier.value = transform,
+        child: GraphView(
+          key: Key(widget.nodes.length.toString()),
+          focal: widget.focalNode,
+          // levelGap: 40,
+          // spouseGap: 4,
+          // siblingGap: 16,
+          // nodeBuilder: (context, node) {
+          //   return Consumer(
+          //     builder: (context, ref, child) {
+          //       return GestureDetector(
+          //         onTap: () => _sendTest(context, ref),
+          //         child: NodeDisplay(node: node),
+          //       );
+          //     },
+          //   );
+          // },
+          levelGap: 302,
+          spouseGap: 52,
+          siblingGap: 297,
+          nodeBuilder: (context, node) {
+            return MouseRegion(
+              key: _nodeKeys[node.id],
+              cursor: SystemMouseCursors.click,
+              child: GestureDetector(
+                onTap: () => widget.onProfilePressed(node),
+                child: MouseHover(
+                  transformNotifier: _transformNotifier,
+                  builder: (context, hovering) {
+                    return ProfileControls(
+                      show: hovering,
+                      canAddParent: node.parents.isEmpty,
+                      onAddConnectionPressed: (relationship) =>
+                          widget.onAddConnectionPressed(node, relationship),
+                      child: NodeProfile(
+                        node: node,
+                      ),
+                    );
+                  },
+                ),
+              ),
+            );
+          },
+        ),
+      ),
     );
   }
 }

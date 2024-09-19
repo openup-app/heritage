@@ -137,6 +137,9 @@ class _RouterBuilderState extends State<_RouterBuilder> {
                 body: FamilyTreeView(
                   focalNode: focalNode,
                   nodes: nodes,
+                  onFetchConnections: (_) {},
+                  onAddConnectionPressed: (_, __) {},
+                  onProfilePressed: (_) {},
                 ),
               );
             },
@@ -155,12 +158,7 @@ class _RouterBuilderState extends State<_RouterBuilder> {
             }
             return FamilyTreeLoadingPage(
               focalNodeId: focalNodeId,
-              builder: (context, focalNode, nodes) {
-                return FamilyTreeView(
-                  focalNode: focalNode,
-                  nodes: nodes,
-                );
-              },
+              child: const FamilyTreePage(),
             );
           },
         ),
