@@ -34,6 +34,8 @@ migrate_working_dir/
 **/generated_plugin_registrant.cc
 **/generated_plugin_registrant.h
 generated_plugins.cmake
+*.freezed.dart
+*.g.dart
 
 # Symbolication related
 app.*.symbols

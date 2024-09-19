@@ -2,11 +2,15 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:heritage/graph.dart';
 import 'package:http/http.dart' as http;
+
+part 'api.freezed.dart';
+part 'api.g.dart';
 
 final apiProvider = Provider<Api>((ref) => throw 'Uninitialized provider');
 
@@ -182,97 +186,43 @@ enum Gender { male, female }
 
 enum Relationship { parent, sibling, spouse, child }
 
-class Node implements GraphNode {
-  @override
-  final Id id;
-  @override
-  final List<Id> parents;
-  @override
-  final List<Id> spouses;
-  @override
-  final List<Id> children;
-  final Id addedBy;
-  final Id? ownedBy;
-  final DateTime createdAt;
-  final Profile profile;
+@freezed
+class Node with _$Node implements GraphNode {
+  const factory Node({
+    required Id id,
+    required List<Id> parents,
+    required List<Id> spouses,
+    required List<Id> children,
+    required Id addedBy,
+    required Id? ownedBy,
+    @DateTimeConverter() required DateTime createdAt,
+    required Profile profile,
+  }) = _Node;
 
-  const Node({
-    required this.id,
-    required this.parents,
-    required this.spouses,
-    required this.children,
-    required this.addedBy,
-    required this.ownedBy,
-    required this.createdAt,
-    required this.profile,
-  });
-
-  factory Node.fromJson(Map<String, dynamic> json) {
-    if (json
-        case {
-          'id': final Id id,
-          'parents': final List parents,
-          'spouses': final List spouses,
-          'children': final List children,
-          'addedBy': final String addedBy,
-          'ownedBy': final String? ownedBy,
-          'createdAt': final String createdAt,
-          'profile': {
-            'name': final String name,
-            'gender': final String gender,
-            'imageUrl': final String? imageUrl,
-            'birthday': final String? birthday,
-            'deathday': final String? deathday,
-            'birthplace': final String birthplace,
-          }
-        }) {
-      return Node(
-        id: id,
-        parents: parents.cast<Id>(),
-        spouses: spouses.cast<Id>(),
-        children: children.cast<Id>(),
-        addedBy: addedBy,
-        ownedBy: ownedBy,
-        createdAt: DateTime.parse(createdAt),
-        profile: Profile(
-          name: name,
-          gender: Gender.values.byName(gender),
-          imageUrl: imageUrl,
-          birthday: birthday == null ? null : DateTime.tryParse(birthday),
-          deathday: deathday == null ? null : DateTime.tryParse(deathday),
-          birthplace: birthplace,
-        ),
-      );
-    }
-    throw FormatException('Failed to parse $json');
-  }
+  factory Node.fromJson(Map<String, Object?> json) => _$NodeFromJson(json);
 }
 
-class Profile {
-  final String name;
-  final Gender gender;
-  final String? imageUrl;
-  final DateTime? birthday;
-  final DateTime? deathday;
-  final String birthplace;
+@freezed
+class Profile with _$Profile {
+  const factory Profile({
+    required String name,
+    required Gender gender,
+    required String? imageUrl,
+    required DateTime? birthday,
+    @DateTimeConverter() required DateTime? deathday,
+    required final String birthplace,
+  }) = _Profile;
 
-  Profile({
-    required this.name,
-    required this.gender,
-    required this.imageUrl,
-    required this.birthday,
-    required this.deathday,
-    required this.birthplace,
-  });
+  factory Profile.fromJson(Map<String, Object?> json) =>
+      _$ProfileFromJson(json);
+}
 
-  Map<String, dynamic> toJson() {
-    return {
-      'name': name,
-      'gender': gender.name,
-      'imageUrl': imageUrl,
-      'birthday': birthday?.toIso8601String(),
-      'deathday': deathday?.toIso8601String(),
-      'birthplace': birthplace,
-    };
-  }
+class DateTimeConverter implements JsonConverter<DateTime, String> {
+  const DateTimeConverter();
+
+  @override
+  DateTime fromJson(String value) => DateTime.parse(value);
+
+  @override
+  String toJson(DateTime dateTime) => dateTime.toUtc().toIso8601String();
 }
