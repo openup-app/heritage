@@ -1,5 +1,5 @@
 import { Request, Response, Router } from "express";
-import { Database, genderSchema, relationshipSchema } from "./database.js";
+import { Database, Profile, genderSchema, profileSchema, relationshipSchema } from "./database.js";
 import { Storage } from "./storage/storage.js";
 import { Auth } from "./auth.js";
 import { z } from "zod";
@@ -65,6 +65,27 @@ export function router(auth: Auth, database: Database, storage: Storage): Router
     }
   });
 
+  router.put('/nodes/:id/profile', async (req: Request, res: Response) => {
+    const id = req.params.id;
+
+    let body: UpdateProfileBody;
+    try {
+      body = updateProfileSchema.parse(req.body);
+    } catch (e) {
+      return res.sendStatus(400);
+    }
+
+    try {
+      const node = await database.updateProfile(id, body.profile);
+      return res.json({
+        'node': node,
+      })
+    } catch (e) {
+      console.log(e);
+      return res.sendStatus(500);
+    }
+  });
+
   router.get('/roots', async (req: Request, res: Response) => {
     try {
       const nodes = await database.getRoots();
@@ -92,6 +113,12 @@ const createRootSchema = z.object({
 });
 
 
+const updateProfileSchema = z.object({
+  profile: profileSchema,
+});
+
 type AddConnectionBody = z.infer<typeof addConnectionSchema>;
 
 type CreateRootBody = z.infer<typeof createRootSchema>;
+
+type UpdateProfileBody = z.infer<typeof updateProfileSchema>;

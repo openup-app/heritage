@@ -129,9 +129,11 @@ class Api {
   Future<Either<Error, Node>> updateProfile(String id, Profile profile) {
     return _makeRequest(
       request: () => http.put(
-        Uri.parse('$_baseUrl/v1/node/$id/profile'),
+        Uri.parse('$_baseUrl/v1/nodes/$id/profile'),
         headers: _headers,
-        body: jsonEncode(profile.toJson()),
+        body: jsonEncode({
+          'profile': profile.toJson(),
+        }),
       ),
       handleResponse: (response) {
         final json = jsonDecode(response.body);

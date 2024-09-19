@@ -228,6 +228,14 @@ export class Database {
     return output;
   }
 
+  public async updateProfile(id: Id, profile: Profile): Promise<Node> {
+    const nodeRef = this.nodeRef(id);
+    await nodeRef.update({ "profile": profile });
+    const snapshot = await nodeRef.get();
+    const data = snapshot.data();
+    return nodeSchema.parse(data);
+  }
+
   private newEmptyNode(gender: Gender, creatorId: Id): Node {
     return {
       "id": shortUUID.generate(),
@@ -259,6 +267,15 @@ export const genderSchema = z.enum(["male", "female"]);
 
 export const relationshipSchema = z.enum(["parent", "sibling", "spouse", "child"]);
 
+export const profileSchema = z.object({
+  name: z.string(),
+  gender: genderSchema,
+  imageUrl: z.string().nullable(),
+  birthday: z.string().nullable(),
+  deathday: z.string().nullable(),
+  birthplace: z.string(),
+});
+
 const nodeSchema = z.object({
   id: idSchema,
   parents: z.array(idSchema),
@@ -267,14 +284,7 @@ const nodeSchema = z.object({
   addedBy: idSchema,
   ownedBy: idSchema.nullable(),
   createdAt: z.string(),
-  profile: z.object({
-    name: z.string(),
-    gender: genderSchema,
-    imageUrl: z.string().nullable(),
-    birthday: z.string().nullable(),
-    deathday: z.string().nullable(),
-    birthplace: z.string(),
-  }),
+  profile: profileSchema,
 });
 
 type Id = z.infer<typeof idSchema>;
@@ -282,5 +292,7 @@ type Id = z.infer<typeof idSchema>;
 type Gender = z.infer<typeof genderSchema>;
 
 type Relationship = z.infer<typeof relationshipSchema>;
+
+export type Profile = z.infer<typeof profileSchema>;
 
 type Node = z.infer<typeof nodeSchema>;

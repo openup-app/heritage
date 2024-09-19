@@ -70,7 +70,7 @@ class GraphNotifier extends StateNotifier<Graph> {
     }
     result.fold(
       (l) => debugPrint(l),
-      _addNodes,
+      _updateNodes,
     );
   }
 
@@ -109,14 +109,21 @@ class GraphNotifier extends StateNotifier<Graph> {
   // }
 
   Future<void> updateProfile(String id, Profile profile) async {
-    await api.updateProfile(id, profile);
+    final result = await api.updateProfile(id, profile);
+    if (!mounted) {
+      return;
+    }
+    result.fold(
+      debugPrint,
+      (r) => _updateNodes([r]),
+    );
   }
 
-  void _addNodes(List<Node> newNodes) {
+  void _updateNodes(List<Node> updates) {
     final nodes =
         Map.fromEntries(state.nodes.values.map((e) => MapEntry(e.id, e)));
     // Overwrite old nodes with any updates
-    nodes.addEntries(newNodes.map((e) => MapEntry(e.id, e)));
+    nodes.addEntries(updates.map((e) => MapEntry(e.id, e)));
     final focalNode = nodes[_focalNodeId];
     if (focalNode == null) {
       throw 'Missing focal node after update';
