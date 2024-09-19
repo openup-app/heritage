@@ -3,7 +3,6 @@ import { Database, genderSchema, relationshipSchema } from "./database.js";
 import { Storage } from "./storage/storage.js";
 import { Auth } from "./auth.js";
 import { z } from "zod";
-import { parse as qsParse } from "qs";
 
 export function router(auth: Auth, database: Database, storage: Storage): Router {
   const router = Router();
@@ -53,20 +52,10 @@ export function router(auth: Auth, database: Database, storage: Storage): Router
     }
   });
 
-  router.get('/nodes', async (req: Request, res: Response) => {
-    let idsQuery = req.query.ids;
-    const parsedIds = typeof idsQuery === 'string'
-      ? idsQuery
-        .split(',')
-        .map(e => e.trim())
-        .filter(e => e.length !== 0)
-      : [];
-    const ids = [...new Set(parsedIds)];
-    if (ids.length === 0) {
-      return res.sendStatus(400);
-    }
+  router.get('/nodes/:id', async (req: Request, res: Response) => {
+    const id = req.params.id;
     try {
-      const nodes = await database.getNodes(ids);
+      const nodes = await database.getLimitedGraph(id);
       return res.json({
         'nodes': nodes,
       })

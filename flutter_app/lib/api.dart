@@ -81,6 +81,20 @@ class Api {
     );
   }
 
+  Future<Either<Error, List<ApiNode>>> getLimitedGraph(Id id) {
+    return _makeRequest(
+      request: () => http.get(
+        Uri.parse('$_baseUrl/v1/nodes/$id'),
+        headers: _headers,
+      ),
+      handleResponse: (response) {
+        final json = jsonDecode(response.body);
+        final nodes = json['nodes'] as List;
+        return right(nodes.map((e) => ApiNode.fromJson(e)).toList());
+      },
+    );
+  }
+
   Future<Either<Error, List<ApiNode>>> getNodes(List<Id> ids) {
     if (ids.isEmpty) {
       return Future.value(right([]));

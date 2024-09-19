@@ -26,27 +26,17 @@ class FamilyTreeLoadingPage extends ConsumerStatefulWidget {
 }
 
 class ViewPageState extends ConsumerState<FamilyTreeLoadingPage> {
-  Node? _focalNode;
+  bool _ready = false;
 
   @override
   void initState() {
     super.initState();
     ref.listenManual(
-      focalNodeProvider,
-      fireImmediately: true,
+      hasNodesProvider,
       (previous, next) {
-        final focalNode = next.valueOrNull;
-        if (focalNode != null) {
-          setState(() => _focalNode = focalNode);
+        if (next) {
+          setState(() => _ready = true);
         }
-        WidgetsBinding.instance.endOfFrame.then((_) {
-          if (mounted) {
-            final id = focalNode?.id;
-            if (id != null) {
-              ref.read(graphProvider.notifier).fetchConnections([id]);
-            }
-          }
-        });
       },
     );
     WidgetsBinding.instance.endOfFrame.then((_) {
@@ -69,17 +59,11 @@ class ViewPageState extends ConsumerState<FamilyTreeLoadingPage> {
         ),
         title: Text('Family Tree - ${widget.focalNodeId}'),
       ),
-      body: Builder(
-        builder: (context) {
-          final focalNode = _focalNode;
-          if (focalNode == null) {
-            return const Center(
+      body: !_ready
+          ? const Center(
               child: CircularProgressIndicator.adaptive(),
-            );
-          }
-          return widget.child;
-        },
-      ),
+            )
+          : widget.child,
     );
   }
 }
@@ -100,8 +84,7 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
       nodes: graph.nodes.values.toList(),
       onProfilePressed: _showProfile,
       onAddConnectionPressed: _showAddConnectionModal,
-      onFetchConnections: (ids) =>
-          ref.read(graphProvider.notifier).fetchConnections(ids),
+      onFetchConnections: (ids) {},
     );
   }
 

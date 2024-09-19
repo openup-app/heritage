@@ -131,6 +131,10 @@ export class Database {
     return node;
   }
 
+  public async getLimitedGraph(id: Id): Promise<Node[]> {
+    return this.fetchUpToDistance(id, { maxDistance: 3, noChildrenOfSiblingsOfAncestorDistance: 2 });
+  }
+
   public async getNodes(ids: Id[]): Promise<Node[]> {
     const nodeRefs = ids.map(e => this.nodeRef(e));
     const snapshot = await this.firestore.getAll(...nodeRefs);
@@ -158,6 +162,65 @@ export class Database {
       }
     }
     return nodes;
+  }
+
+  public async fetchUpToDistance(id: Id, options: { maxDistance: number, noChildrenOfSiblingsOfAncestorDistance: number }): Promise<Node[]> {
+    const visited = new Set<Id>();
+    const spouses = new Set<Id>();
+    const fringe: { id: Id; level: number }[] = [{ id, level: 0 }];
+    const output: Node[] = [];
+
+    while (fringe.length > 0) {
+      // Fetch fringe in a single request
+      const currentFringe = fringe.splice(0, fringe.length);
+      const fringeIds = currentFringe.map(f => f.id);
+      const fringeIdToLevel = new Map<Id, number>(currentFringe.map(f => [f.id, f.level]));
+      const nodeRefs = fringeIds.map(id => this.nodeRef(id));
+      const snapshots = await this.firestore.getAll(...nodeRefs);
+
+      for (const snapshot of snapshots) {
+        if (!snapshot.exists) {
+          continue;
+        }
+
+        const node = nodeSchema.parse(snapshot.data());
+        const id = snapshot.id;
+        const level = fringeIdToLevel.get(id)!;
+
+        if (visited.has(id)) {
+          continue;
+        }
+
+        visited.add(id);
+        output.push(node);
+
+        // Traversal limited at spouses and max depth
+        if (spouses.has(id) || level >= options.maxDistance) {
+          continue;
+        }
+
+        const neighbourIds = new Set<Id>([
+          ...node.parents,
+          ...node.spouses,
+          ...((level < options.noChildrenOfSiblingsOfAncestorDistance) ? node.children : []),
+        ]);
+
+        // Next level fringe
+        for (const neighbourId of neighbourIds) {
+          if (!visited.has(neighbourId)) {
+            fringe.push({ id: neighbourId, level: level + 1 });
+          }
+        }
+
+        if (node.spouses.length > 0) {
+          for (const spouseId of node.spouses) {
+            spouses.add(spouseId);
+          }
+        }
+      }
+    }
+
+    return output;
   }
 
   private newEmptyNode(gender: Gender, creatorId: Id): Node {
