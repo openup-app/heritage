@@ -175,9 +175,8 @@ class _FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
   @override
   void didUpdateWidget(covariant FamilyTreeView oldWidget) {
     super.didUpdateWidget(oldWidget);
-    final oldIds = oldWidget.nodes.map((e) => e.id);
-    final newIds = widget.nodes.map((e) => e.id);
-    if (!const DeepCollectionEquality.unordered().equals(oldIds, newIds)) {
+    if (!const DeepCollectionEquality.unordered()
+        .equals(oldWidget.nodes, widget.nodes)) {
       _updateKeys();
     }
   }

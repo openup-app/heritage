@@ -56,9 +56,8 @@ class _GraphViewState<T extends GraphNode> extends State<GraphView<T>> {
   @override
   void didUpdateWidget(covariant GraphView<T> oldWidget) {
     super.didUpdateWidget(oldWidget);
-    final oldIds = Set.of(oldWidget.nodes.map((e) => e.id));
-    final newIds = Set.of(widget.nodes.map((e) => e.id));
-    if (!const DeepCollectionEquality.unordered().equals(oldIds, newIds)) {
+    if (!const DeepCollectionEquality.unordered()
+        .equals(oldWidget.nodes, widget.nodes)) {
       _initCouples(widget.nodes);
     }
   }
