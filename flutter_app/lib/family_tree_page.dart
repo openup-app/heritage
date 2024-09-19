@@ -88,71 +88,24 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
     );
   }
 
-  void _showProfile(Node node) {
-    showDialog(
+  void _showProfile(Node node) async {
+    final profile = await showDialog<Profile>(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: const Text('My Profile'),
-          shape: const RoundedRectangleBorder(
-            borderRadius: BorderRadius.all(
-              Radius.circular(16),
-            ),
-          ),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 200,
-                      height: 230,
-                      decoration: const BoxDecoration(
-                        color: Color.fromRGBO(0xEC, 0xEC, 0xEC, 1.0),
-                      ),
-                      child: const Center(
-                        child: Icon(
-                          Icons.add_photo_alternate,
-                          size: 107,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 24),
-                    SizedBox(
-                      width: 400,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('Name'),
-                          TextFormField(),
-                          const SizedBox(height: 4),
-                          const Text('Date of Birth'),
-                          TextFormField(),
-                          const SizedBox(height: 4),
-                          const Text('Birth place'),
-                          TextFormField(),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                FilledButton(
-                  onPressed: Navigator.of(context).pop,
-                  style: FilledButton.styleFrom(
-                    fixedSize: const Size.fromHeight(73),
-                  ),
-                  child: const Text('Done'),
-                ),
-              ],
-            ),
-          ),
+        return _ProfileView(
+          editable: node.ownedBy == null,
+          initialProfile: node.profile,
         );
       },
     );
+
+    if (!mounted) {
+      return;
+    }
+
+    if (profile != null) {
+      ref.read(graphProvider.notifier).updateProfile(node.id, profile);
+    }
   }
 
   void _showAddConnectionModal(Node node, Relationship relationship) {
@@ -268,26 +221,26 @@ class _FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
           spouseGap: 52,
           siblingGap: 297,
           nodeBuilder: (context, node) {
-            return MouseRegion(
+            return MouseHover(
               key: _nodeKeys[node.id],
-              cursor: SystemMouseCursors.click,
-              child: GestureDetector(
-                onTap: () => widget.onProfilePressed(node),
-                child: MouseHover(
-                  transformNotifier: _transformNotifier,
-                  builder: (context, hovering) {
-                    return ProfileControls(
-                      show: hovering,
-                      canAddParent: node.parents.isEmpty,
-                      onAddConnectionPressed: (relationship) =>
-                          widget.onAddConnectionPressed(node, relationship),
+              transformNotifier: _transformNotifier,
+              builder: (context, hovering) {
+                return ProfileControls(
+                  show: hovering,
+                  canAddParent: node.parents.isEmpty,
+                  onAddConnectionPressed: (relationship) =>
+                      widget.onAddConnectionPressed(node, relationship),
+                  child: MouseRegion(
+                    cursor: SystemMouseCursors.click,
+                    child: GestureDetector(
+                      onTap: () => widget.onProfilePressed(node),
                       child: NodeProfile(
                         node: node,
                       ),
-                    );
-                  },
-                ),
-              ),
+                    ),
+                  ),
+                );
+              },
             );
           },
         ),
@@ -448,5 +401,139 @@ class _AddConnectionModalState extends ConsumerState<AddConnectionModal> {
     final position = renderBox?.localToGlobal(Offset.zero) ?? Offset.zero;
     final size = renderBox?.size ?? const Size(100, 100);
     return position & size;
+  }
+}
+
+class _ProfileView extends StatefulWidget {
+  final bool editable;
+  final Profile initialProfile;
+
+  const _ProfileView({
+    super.key,
+    required this.editable,
+    required this.initialProfile,
+  });
+
+  @override
+  State<_ProfileView> createState() => _ProfileViewState();
+}
+
+class _ProfileViewState extends State<_ProfileView> {
+  final _formKey = GlobalKey<FormState>();
+  late final TextEditingController _nameController;
+  late final TextEditingController _birthplaceController;
+  bool _valid = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.initialProfile.name);
+    _birthplaceController =
+        TextEditingController(text: widget.initialProfile.birthplace);
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _birthplaceController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('My Profile'),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.all(
+          Radius.circular(16),
+        ),
+      ),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                GestureDetector(
+                  onTap: _showPhotoPicker,
+                  child: Container(
+                    width: 200,
+                    height: 230,
+                    decoration: const BoxDecoration(
+                      color: Color.fromRGBO(0xEC, 0xEC, 0xEC, 1.0),
+                    ),
+                    child: const Center(
+                      child: Icon(
+                        Icons.add_photo_alternate,
+                        size: 107,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 24),
+                SizedBox(
+                  width: 400,
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Name'),
+                        TextFormField(
+                          controller: _nameController,
+                          onChanged: (_) => _validateForm(),
+                        ),
+                        const SizedBox(height: 4),
+                        const Text('Date of Birth'),
+                        TextFormField(),
+                        const SizedBox(height: 4),
+                        const Text('Birth place'),
+                        TextFormField(
+                          controller: _birthplaceController,
+                          onChanged: (_) => _validateForm(),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            FilledButton(
+              onPressed: _valid ? _done : null,
+              style: FilledButton.styleFrom(
+                fixedSize: const Size.fromHeight(73),
+              ),
+              child: const Text('Save'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showPhotoPicker() {}
+
+  void _validateForm() {
+    setState(() => _valid = _formKey.currentState?.validate() ?? false);
+  }
+
+  void _done() {
+    if (_formKey.currentState?.validate() != true) {
+      return;
+    }
+
+    final name = _nameController.text;
+    final newProfile = Profile(
+      name: name.isEmpty ? 'Unknown' : name,
+      gender: widget.initialProfile.gender,
+      imageUrl: widget.initialProfile.imageUrl,
+      birthday: widget.initialProfile.birthday,
+      deathday: widget.initialProfile.deathday,
+      birthplace: widget.initialProfile.birthplace,
+    );
+    return Navigator.of(context).pop(newProfile);
   }
 }

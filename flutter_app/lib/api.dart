@@ -126,6 +126,20 @@ class Api {
     );
   }
 
+  Future<Either<Error, ApiNode>> updateProfile(String id, ApiProfile profile) {
+    return _makeRequest(
+      request: () => http.put(
+        Uri.parse('$_baseUrl/v1/node/$id/profile'),
+        headers: _headers,
+        body: jsonEncode(profile.toJson()),
+      ),
+      handleResponse: (response) {
+        final json = jsonDecode(response.body);
+        return right(ApiNode.fromJson(json['node']));
+      },
+    );
+  }
+
   Future<Either<Error, R>> _makeRequest<R>({
     required Future<Response> Function() request,
     required Either<Error, R> Function(Response response) handleResponse,
@@ -200,7 +214,10 @@ class ApiNode {
           'profile': {
             'name': final String name,
             'gender': final String gender,
+            'imageUrl': final String? imageUrl,
             'birthday': final String? birthday,
+            'deathday': final String? deathday,
+            'birthplace': final String birthplace,
           }
         }) {
       return ApiNode(
@@ -214,7 +231,10 @@ class ApiNode {
         profile: ApiProfile(
           name: name,
           gender: Gender.values.byName(gender),
+          imageUrl: imageUrl,
           birthday: birthday == null ? null : DateTime.tryParse(birthday),
+          deathday: deathday == null ? null : DateTime.tryParse(deathday),
+          birthplace: birthplace,
         ),
       );
     }
@@ -225,11 +245,28 @@ class ApiNode {
 class ApiProfile {
   final String name;
   final Gender gender;
+  final String? imageUrl;
   final DateTime? birthday;
+  final DateTime? deathday;
+  final String birthplace;
 
   ApiProfile({
     required this.name,
     required this.gender,
+    required this.imageUrl,
     required this.birthday,
+    required this.deathday,
+    required this.birthplace,
   });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'name': name,
+      'gender': gender.name,
+      'imageUrl': imageUrl,
+      'birthday': birthday?.toIso8601String(),
+      'deathday': deathday?.toIso8601String(),
+      'birthplace': birthplace,
+    };
+  }
 }

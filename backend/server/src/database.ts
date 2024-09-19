@@ -235,7 +235,10 @@ export class Database {
       "profile": {
         "name": "Unknown",
         "gender": gender,
+        "imageUrl": null,
         "birthday": null,
+        "deathday": null,
+        "birthplace": "",
       }
     }
   }
@@ -262,7 +265,10 @@ const nodeSchema = z.object({
   profile: z.object({
     name: z.string(),
     gender: genderSchema,
+    imageUrl: z.string().nullable(),
     birthday: z.string().nullable(),
+    deathday: z.string().nullable(),
+    birthplace: z.string(),
   }),
 });
 

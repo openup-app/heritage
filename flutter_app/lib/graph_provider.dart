@@ -110,6 +110,10 @@ class GraphNotifier extends StateNotifier<Graph> {
   //   );
   // }
 
+  Future<void> updateProfile(String id, Profile profile) async {
+    await api.updateProfile(id, _convertProfileToApiProfile(profile));
+  }
+
   void _addNodes(List<ApiNode> newApiNodes) {
     final linkedNodes = _linkWithNewApiNodes(
       currentNodes: state.nodes.values,
@@ -181,7 +185,21 @@ Node _convertApiNodeToNode(ApiNode apiNode) {
     profile: Profile(
       name: apiNode.profile.name,
       gender: apiNode.profile.gender,
+      imageUrl: apiNode.profile.imageUrl,
       birthday: apiNode.profile.birthday,
+      deathday: apiNode.profile.deathday,
+      birthplace: apiNode.profile.birthplace,
     ),
+  );
+}
+
+ApiProfile _convertProfileToApiProfile(Profile profile) {
+  return ApiProfile(
+    name: profile.name,
+    gender: profile.gender,
+    imageUrl: profile.imageUrl,
+    birthday: profile.birthday,
+    deathday: profile.deathday,
+    birthplace: profile.birthplace,
   );
 }

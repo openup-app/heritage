@@ -114,7 +114,7 @@ class _RouterBuilderState extends State<_RouterBuilder> {
     return GoRouter(
       debugLogDiagnostics: kDebugMode,
       observers: widget.navigatorObservers,
-      initialLocation: kDebugMode ? '/test_layout' : widget.redirectPath ?? '/',
+      initialLocation: widget.redirectPath ?? '/',
       overridePlatformDefaultLocation: true,
       errorBuilder: (context, state) => const ErrorPage(),
       routes: [
@@ -324,7 +324,10 @@ Node _createNode(String id) {
     profile: Profile(
       name: 'name',
       gender: Gender.male,
-      birthday: DateTime.now(),
+      imageUrl: '',
+      birthday: null,
+      deathday: null,
+      birthplace: '',
     ),
   );
 }

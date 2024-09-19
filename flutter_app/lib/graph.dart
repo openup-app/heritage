@@ -45,12 +45,18 @@ class Node {
 class Profile {
   final String name;
   final Gender gender;
+  final String? imageUrl;
   final DateTime? birthday;
+  final DateTime? deathday;
+  final String birthplace;
 
   Profile({
     required this.name,
     required this.gender,
+    required this.imageUrl,
     required this.birthday,
+    required this.deathday,
+    required this.birthplace,
   });
 }
 
