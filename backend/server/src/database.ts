@@ -14,12 +14,7 @@ export class Database {
     return this.firestore.runTransaction(async (t: Transaction) => {
       const sourceRef = this.nodeRef(sourceId);
       const sourceDoc = await t.get(sourceRef);
-      if (!sourceDoc.exists) {
-        return [];
-      }
-
-      const data = sourceDoc.data() ?? {};
-      const sourceNode = nodeSchema.parse(data);
+      const sourceNode = nodeSchema.parse(sourceDoc.data());
       const createdNodes: Node[] = [];
       const updatedNodes: Node[] = [];
 
@@ -82,6 +77,8 @@ export class Database {
         parent1Node.children.push(node.id);
         parent2Node.children.push(node.id);
         if (!didCreateParents) {
+          updatedNodes.push(parent1Node);
+          updatedNodes.push(parent2Node);
           t.update(this.nodeRef(parent1Node.id), parent1Node);
           t.update(this.nodeRef(parent2Node.id), parent2Node);
         }
@@ -98,14 +95,13 @@ export class Database {
           spouseNode.spouses.push(sourceId);
           sourceNode.spouses.push(spouseNode.id);
         } else {
-          const spouseSnapshot = await t.get(this.nodeRef(sourceNode.spouses[0]));
-          if (!spouseSnapshot.exists) {
-            throw "Missing spouse";
-          }
-          spouseNode = nodeSchema.parse(data);
+          const spouseRef = this.nodeRef(sourceNode.spouses[0]);
+          const spouseSnapshot = await t.get(spouseRef);
+          spouseNode = nodeSchema.parse(spouseSnapshot.data());
         }
         spouseNode.children.push(node.id);
         sourceNode.children.push(node.id);
+        updatedNodes.push(spouseNode);
         updatedNodes.push(sourceNode);
         t.update(sourceRef, sourceNode);
         if (!didCreateSpouse) {
