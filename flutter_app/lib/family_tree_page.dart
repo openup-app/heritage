@@ -4,10 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:heritage/api.dart';
+import 'package:heritage/graph.dart';
 import 'package:heritage/graph_provider.dart';
 import 'package:heritage/graph_view.dart';
 import 'package:heritage/heritage_app.dart';
 import 'package:heritage/profile_display.dart';
+import 'package:heritage/util.dart';
 import 'package:heritage/zoomable_pannable_viewport.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -88,12 +90,19 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
     );
   }
 
-  void _showProfile(Node node) async {
+  void _showProfile(LinkedNode<Node> linkedNode) async {
+    // TODO: Need accounts
+    final focalNode = ref.read(graphProvider).focalNode;
+    final node = linkedNode.data;
+    final isMe = focalNode.id == node.id;
+    final ownershipClaimed = node.ownedBy != null;
+    final canModify = isMe || (linkedNode.isRelative && !ownershipClaimed);
     final profile = await showDialog<Profile>(
       context: context,
       builder: (context) {
         return _ProfileView(
-          editable: node.ownedBy == null,
+          editable: canModify,
+          ownershipClaimed: ownershipClaimed,
           initialProfile: node.profile,
         );
       },
@@ -116,7 +125,7 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
         return AlertDialog(
           title: Text('Add a ${relationship.name}'),
           content: SingleChildScrollView(
-            child: AddConnectionModal(
+            child: BasicProfileModal(
               relationship: relationship,
               onSave: (name, gender) {
                 Navigator.of(context).pop();
@@ -138,7 +147,7 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
 class FamilyTreeView extends ConsumerStatefulWidget {
   final Node focalNode;
   final List<Node> nodes;
-  final void Function(Node node) onProfilePressed;
+  final void Function(LinkedNode<Node> node) onProfilePressed;
   final void Function(Node node, Relationship relationship)
       onAddConnectionPressed;
   final void Function(List<Id> ids) onFetchConnections;
@@ -225,15 +234,16 @@ class _FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
           levelGap: 302,
           spouseGap: 52,
           siblingGap: 297,
-          nodeBuilder: (context, node, isInBloodLine) {
+          nodeBuilder: (context, linkedNode) {
             return MouseHover(
-              key: _nodeKeys[node.id],
+              key: _nodeKeys[linkedNode.id],
               transformNotifier: _transformNotifier,
               builder: (context, hovering) {
                 // TODO: Need accounts
+                final node = linkedNode.data;
                 final isMe = widget.focalNode.id == node.id;
                 final canModify =
-                    isMe || (isInBloodLine && node.ownedBy == null);
+                    isMe || (linkedNode.isRelative && node.ownedBy == null);
                 return ProfileControls(
                   show: hovering && canModify,
                   canAddParent: node.parents.isEmpty,
@@ -242,7 +252,7 @@ class _FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
                   child: MouseRegion(
                     cursor: SystemMouseCursors.click,
                     child: GestureDetector(
-                      onTap: () => widget.onProfilePressed(node),
+                      onTap: () => widget.onProfilePressed(linkedNode),
                       child: NodeProfile(
                         node: node,
                       ),
@@ -281,23 +291,23 @@ class _FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
   }
 }
 
-class AddConnectionModal extends ConsumerStatefulWidget {
-  final bool showRelationship;
+class BasicProfileModal extends ConsumerStatefulWidget {
+  final bool isRootNodeCreation;
   final Relationship relationship;
   final void Function(String name, Gender gender) onSave;
 
-  const AddConnectionModal({
+  const BasicProfileModal({
     super.key,
-    this.showRelationship = true,
+    this.isRootNodeCreation = false,
     required this.relationship,
     required this.onSave,
   });
 
   @override
-  ConsumerState<AddConnectionModal> createState() => _AddConnectionModalState();
+  ConsumerState<BasicProfileModal> createState() => _AddConnectionModalState();
 }
 
-class _AddConnectionModalState extends ConsumerState<AddConnectionModal> {
+class _AddConnectionModalState extends ConsumerState<BasicProfileModal> {
   final _nameController = TextEditingController();
   Gender _gender = Gender.male;
   final _shareButtonKey = GlobalKey();
@@ -327,9 +337,11 @@ class _AddConnectionModalState extends ConsumerState<AddConnectionModal> {
           controller: _nameController,
         ),
         const SizedBox(height: 16),
-        widget.showRelationship
-            ? const SelectableText('Relationship')
-            : const SelectableText('Your Gender'),
+        widget.isRootNodeCreation
+            ? const SelectableText('Your Gender')
+            : widget.relationship != Relationship.spouse
+                ? const SelectableText('Relationship')
+                : const Text('Gender'),
         const SizedBox(height: 4),
         Row(
           children: [
@@ -341,7 +353,10 @@ class _AddConnectionModalState extends ConsumerState<AddConnectionModal> {
                   backgroundColor:
                       _gender == Gender.male ? primaryColor : unselectedColor,
                 ),
-                child: const Text('Male'),
+                child: widget.relationship != Relationship.spouse
+                    ? Text(
+                        genderedRelationship(widget.relationship, Gender.male))
+                    : const Text('Male'),
               ),
             ),
             const SizedBox(width: 24),
@@ -353,27 +368,31 @@ class _AddConnectionModalState extends ConsumerState<AddConnectionModal> {
                   backgroundColor:
                       _gender == Gender.male ? unselectedColor : primaryColor,
                 ),
-                child: const Text('Female'),
+                child: widget.relationship != Relationship.spouse
+                    ? Text(genderedRelationship(
+                        widget.relationship, Gender.female))
+                    : const Text('Female'),
               ),
             ),
           ],
         ),
-        if (widget.showRelationship) ...[
+        if (!widget.isRootNodeCreation) ...[
           const SizedBox(height: 24),
           FilledButton(
             key: _shareButtonKey,
             onPressed: _shareLink,
             style: _bigButtonStyle,
-            child: const Row(
+            child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Icon(CupertinoIcons.share),
+                const Icon(CupertinoIcons.share),
                 Expanded(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text('Only share this link with your sibling'),
-                      Text('They can complete their profile'),
+                      Text(
+                          'Only share this link with your ${widget.relationship.name}'),
+                      const Text('They can complete their profile'),
                     ],
                   ),
                 ),
@@ -393,7 +412,7 @@ class _AddConnectionModalState extends ConsumerState<AddConnectionModal> {
             },
           ),
         ),
-        if (widget.showRelationship) ...[
+        if (!widget.isRootNodeCreation) ...[
           const SizedBox(height: 16),
           TextButton(
             onPressed: () {},
@@ -435,11 +454,13 @@ class _AddConnectionModalState extends ConsumerState<AddConnectionModal> {
 
 class _ProfileView extends StatefulWidget {
   final bool editable;
+  final bool ownershipClaimed;
   final Profile initialProfile;
 
   const _ProfileView({
     super.key,
     required this.editable,
+    required this.ownershipClaimed,
     required this.initialProfile,
   });
 

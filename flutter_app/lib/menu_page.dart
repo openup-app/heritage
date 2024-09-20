@@ -44,8 +44,8 @@ class _MenuPageState extends ConsumerState<MenuPage> {
                           return AlertDialog(
                             title: const Text('Start a family tree'),
                             content: Consumer(builder: (context, ref, child) {
-                              return AddConnectionModal(
-                                showRelationship: false,
+                              return BasicProfileModal(
+                                isRootNodeCreation: true,
                                 relationship: Relationship.child,
                                 onSave: (name, gender) {
                                   Navigator.of(context).pop((name, gender));

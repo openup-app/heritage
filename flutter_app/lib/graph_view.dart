@@ -11,7 +11,7 @@ class GraphView<T extends GraphNode> extends StatefulWidget {
   final double levelGap;
   final double siblingGap;
   final double spouseGap;
-  final Widget Function(BuildContext context, T node, bool isInBloodLine)
+  final Widget Function(BuildContext context, LinkedNode<T> linkedNode)
       nodeBuilder;
 
   const GraphView({
@@ -83,6 +83,7 @@ class _GraphViewState<T extends GraphNode> extends State<GraphView<T>> {
     if (focalNode == null) {
       throw 'Missing node with focalNodeId';
     }
+    _markRelatives(focalNode);
     final (focalCouple, nodeToCouple) = createCoupleTree(focalNode);
     final levelGroupCouples = getLevelsBySiblingCouples(focalCouple);
     _levelGroupCouples = levelGroupCouples;
@@ -114,7 +115,27 @@ class _GraphViewState<T extends GraphNode> extends State<GraphView<T>> {
         }
       }
     }
+
     return idToNode;
+  }
+
+  void _markRelatives(LinkedNode<T> focalNode) {
+    final rootNodes =
+        findRootsIncludingSpousesWithDistance(focalNode).map((e) => e.$1);
+
+    // Breadth-first search marking children, but not spouses
+    final fringe = Queue<LinkedNode<T>>();
+    final visited = <Id>{};
+    fringe.addAll(rootNodes);
+    while (fringe.isNotEmpty) {
+      final node = fringe.removeFirst();
+      if (visited.contains(node.id)) {
+        continue;
+      }
+      visited.add(node.id);
+      node.isRelative = true;
+      fringe.addAll(node.children);
+    }
   }
 
   LinkedNode<T> _emptyLinkedNode(String id, T data) {
@@ -136,7 +157,7 @@ class _GraphLevelView<T extends GraphNode> extends StatelessWidget {
   final double levelGap;
   final double siblingGap;
   final double spouseGap;
-  final Widget Function(BuildContext context, T node, bool isInBloodLine)
+  final Widget Function(BuildContext context, LinkedNode<T> linkedNode)
       nodeBuilder;
 
   const _GraphLevelView({
@@ -229,7 +250,7 @@ class _GraphLevelView<T extends GraphNode> extends StatelessWidget {
 class _CoupleView<T extends GraphNode> extends StatelessWidget {
   final Couple<T> couple;
   final double spouseGap;
-  final Widget Function(BuildContext context, T node, bool isInBloodLine)
+  final Widget Function(BuildContext context, LinkedNode<T> linkedNode)
       nodeBuilder;
 
   const _CoupleView({
@@ -249,9 +270,9 @@ class _CoupleView<T extends GraphNode> extends StatelessWidget {
         if (spouse != null)
           Padding(
             padding: EdgeInsets.only(right: spouseGap),
-            child: nodeBuilder(context, spouse.data, spouse.leadsToFocalNode),
+            child: nodeBuilder(context, spouse),
           ),
-        nodeBuilder(context, couple.node.data, true),
+        nodeBuilder(context, couple.node),
       ],
     );
   }

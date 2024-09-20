@@ -17,6 +17,7 @@ class LinkedNode<T extends GraphNode> {
   final List<LinkedNode<T>> children;
   final T data;
   bool leadsToFocalNode;
+  bool isRelative;
   bool shouldBeRightChild;
   bool shouldTraverseChildren;
 
@@ -27,6 +28,7 @@ class LinkedNode<T extends GraphNode> {
     required this.children,
     required this.data,
     this.leadsToFocalNode = false,
+    this.isRelative = false,
     this.shouldBeRightChild = true,
     this.shouldTraverseChildren = true,
   });
