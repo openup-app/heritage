@@ -1,5 +1,3 @@
-import 'dart:math';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import 'package:heritage/api.dart';
 import 'package:heritage/error_page.dart';
 import 'package:heritage/family_tree_page.dart';
-import 'package:heritage/graph.dart';
 import 'package:heritage/menu_page.dart';
 import 'package:heritage/restart_app.dart';
 
@@ -63,6 +60,13 @@ class HeritageApp extends StatelessWidget {
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.all(Radius.circular(10)),
                     borderSide: BorderSide.none,
+                  ),
+                ),
+                dialogTheme: const DialogTheme(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.all(
+                      Radius.circular(16),
+                    ),
                   ),
                 ),
               ),

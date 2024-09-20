@@ -86,6 +86,20 @@ export function router(auth: Auth, database: Database, storage: Storage): Router
     }
   });
 
+  router.put('/nodes/:id/take_ownership', async (req: Request, res: Response) => {
+    const id = req.params.id;
+
+    try {
+      const node = await database.updateOwnership(id, id);
+      return res.json({
+        'node': node,
+      })
+    } catch (e) {
+      console.log(e);
+      return res.sendStatus(500);
+    }
+  });
+
   router.get('/roots', async (req: Request, res: Response) => {
     try {
       const nodes = await database.getRoots();

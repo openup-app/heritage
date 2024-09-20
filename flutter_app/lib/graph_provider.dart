@@ -119,6 +119,17 @@ class GraphNotifier extends StateNotifier<Graph> {
     );
   }
 
+  Future<void> takeOwnership(String id) async {
+    final result = await api.takeOwnership(id);
+    if (!mounted) {
+      return;
+    }
+    result.fold(
+      debugPrint,
+      (r) => _updateNodes([r]),
+    );
+  }
+
   void _updateNodes(List<Node> updates) {
     final nodes =
         Map.fromEntries(state.nodes.values.map((e) => MapEntry(e.id, e)));

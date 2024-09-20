@@ -146,6 +146,19 @@ class Api {
     );
   }
 
+  Future<Either<Error, Node>> takeOwnership(String id) {
+    return _makeRequest(
+      request: () => http.put(
+        Uri.parse('$_baseUrl/v1/nodes/$id/take_ownership'),
+        headers: _headers,
+      ),
+      handleResponse: (response) {
+        final json = jsonDecode(response.body);
+        return right(Node.fromJson(json['node']));
+      },
+    );
+  }
+
   Future<Either<Error, R>> _makeRequest<R>({
     required Future<http.Response> Function() request,
     required Either<Error, R> Function(http.Response response) handleResponse,

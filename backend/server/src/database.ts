@@ -30,6 +30,8 @@ export class Database {
         }
       }
 
+      // TODO: Don't allow adding of any spouse's family
+
       const node = this.newEmptyNode(gender, creatorId);
       node.profile.name = name;
       createdNodes.push(node);
@@ -128,6 +130,7 @@ export class Database {
   public async createRootNode(name: string, gender: Gender): Promise<Node> {
     const node = this.newEmptyNode(gender, "root");
     node.profile.name = name;
+    node.ownedBy = node.id;
     await this.nodeRef(node.id).create(node);
     return node;
   }
@@ -231,6 +234,15 @@ export class Database {
     const data = snapshot.data();
     return nodeSchema.parse(data);
   }
+
+  public async updateOwnership(id: Id, newOwnerId: Id): Promise<Node> {
+    const nodeRef = this.nodeRef(id);
+    await nodeRef.update({ "ownedBy": id });
+    const snapshot = await nodeRef.get();
+    const data = snapshot.data();
+    return nodeSchema.parse(data);
+  }
+
 
   private newEmptyNode(gender: Gender, creatorId: Id): Node {
     return {

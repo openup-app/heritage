@@ -2,8 +2,8 @@ import 'package:collection/collection.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:heritage/api.dart';
-import 'package:heritage/graph.dart';
 import 'package:heritage/graph_provider.dart';
 import 'package:heritage/graph_view.dart';
 import 'package:heritage/heritage_app.dart';
@@ -115,11 +115,6 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
       builder: (context) {
         return AlertDialog(
           title: Text('Add a ${relationship.name}'),
-          shape: const RoundedRectangleBorder(
-            borderRadius: BorderRadius.all(
-              Radius.circular(16),
-            ),
-          ),
           content: SingleChildScrollView(
             child: AddConnectionModal(
               relationship: relationship,
@@ -170,6 +165,13 @@ class _FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
   void initState() {
     super.initState();
     _updateKeys();
+    if (widget.focalNode.ownedBy == null) {
+      WidgetsBinding.instance.endOfFrame.then((_) {
+        if (mounted) {
+          _showOwnershipModal();
+        }
+      });
+    }
   }
 
   @override
@@ -223,13 +225,17 @@ class _FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
           levelGap: 302,
           spouseGap: 52,
           siblingGap: 297,
-          nodeBuilder: (context, node) {
+          nodeBuilder: (context, node, isInBloodLine) {
             return MouseHover(
               key: _nodeKeys[node.id],
               transformNotifier: _transformNotifier,
               builder: (context, hovering) {
+                // TODO: Need accounts
+                final isMe = widget.focalNode.id == node.id;
+                final canModify =
+                    isMe || (isInBloodLine && node.ownedBy == null);
                 return ProfileControls(
-                  show: hovering,
+                  show: hovering && canModify,
                   canAddParent: node.parents.isEmpty,
                   onAddConnectionPressed: (relationship) =>
                       widget.onAddConnectionPressed(node, relationship),
@@ -249,6 +255,29 @@ class _FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
         ),
       ),
     );
+  }
+
+  void _showOwnershipModal() async {
+    final addedBy =
+        widget.nodes.firstWhereOrNull((e) => e.id == widget.focalNode.addedBy);
+    final tookOwnership = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return OwnershipDialog(
+          focalNode: widget.focalNode,
+          addedBy: addedBy,
+        );
+      },
+    );
+    if (!mounted) {
+      return;
+    }
+    if (tookOwnership == true) {
+      ref.read(graphProvider.notifier).takeOwnership(widget.focalNode.id);
+    } else {
+      context.goNamed('menu');
+    }
   }
 }
 
@@ -334,10 +363,7 @@ class _AddConnectionModalState extends ConsumerState<AddConnectionModal> {
           FilledButton(
             key: _shareButtonKey,
             onPressed: _shareLink,
-            style: FilledButton.styleFrom(
-              backgroundColor: primaryColor,
-              fixedSize: const Size.fromHeight(64),
-            ),
+            style: _bigButtonStyle,
             child: const Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
@@ -540,3 +566,50 @@ class _ProfileViewState extends State<_ProfileView> {
     return Navigator.of(context).pop(newProfile);
   }
 }
+
+class OwnershipDialog extends StatelessWidget {
+  final Node focalNode;
+  final Node? addedBy;
+
+  const OwnershipDialog({
+    super.key,
+    required this.focalNode,
+    required this.addedBy,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final addedBy = this.addedBy;
+    return AlertDialog(
+      title: addedBy == null
+          ? Text('${focalNode.profile.name} has been added to the family tree')
+          : Text(
+              '${focalNode.profile.name} has been added to the family tree by ${addedBy.profile.name}'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Center(
+            child: Text('Are you ${focalNode.profile.name}?'),
+          ),
+          const SizedBox(height: 16),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: _bigButtonStyle,
+            child: Text('Yes, I am ${focalNode.profile.name}'),
+          ),
+          const SizedBox(height: 16),
+          TextButton(
+            onPressed: Navigator.of(context).pop,
+            child: const Text('No, I am someone else'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+ButtonStyle _bigButtonStyle = FilledButton.styleFrom(
+  backgroundColor: primaryColor,
+  fixedSize: const Size.fromHeight(64),
+);

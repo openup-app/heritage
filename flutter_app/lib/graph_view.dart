@@ -11,7 +11,8 @@ class GraphView<T extends GraphNode> extends StatefulWidget {
   final double levelGap;
   final double siblingGap;
   final double spouseGap;
-  final Widget Function(BuildContext context, T node) nodeBuilder;
+  final Widget Function(BuildContext context, T node, bool isInBloodLine)
+      nodeBuilder;
 
   const GraphView({
     super.key,
@@ -28,7 +29,6 @@ class GraphView<T extends GraphNode> extends StatefulWidget {
 }
 
 class _GraphViewState<T extends GraphNode> extends State<GraphView<T>> {
-  late Couple<T> _focalCouple;
   // late final Map<String, Couple> _nodeToCouple;
   // late final List<(Couple, int)> _rootCoupleHeights;
   late List<LevelGroupCouples<T>> _levelGroupCouples;
@@ -84,7 +84,6 @@ class _GraphViewState<T extends GraphNode> extends State<GraphView<T>> {
       throw 'Missing node with focalNodeId';
     }
     final (focalCouple, nodeToCouple) = createCoupleTree(focalNode);
-    _focalCouple = focalCouple;
     final levelGroupCouples = getLevelsBySiblingCouples(focalCouple);
     _levelGroupCouples = levelGroupCouples;
     _levelsKey = UniqueKey();
@@ -137,7 +136,8 @@ class _GraphLevelView<T extends GraphNode> extends StatelessWidget {
   final double levelGap;
   final double siblingGap;
   final double spouseGap;
-  final Widget Function(BuildContext context, T node) nodeBuilder;
+  final Widget Function(BuildContext context, T node, bool isInBloodLine)
+      nodeBuilder;
 
   const _GraphLevelView({
     super.key,
@@ -229,7 +229,8 @@ class _GraphLevelView<T extends GraphNode> extends StatelessWidget {
 class _CoupleView<T extends GraphNode> extends StatelessWidget {
   final Couple<T> couple;
   final double spouseGap;
-  final Widget Function(BuildContext context, T node) nodeBuilder;
+  final Widget Function(BuildContext context, T node, bool isInBloodLine)
+      nodeBuilder;
 
   const _CoupleView({
     super.key,
@@ -248,9 +249,9 @@ class _CoupleView<T extends GraphNode> extends StatelessWidget {
         if (spouse != null)
           Padding(
             padding: EdgeInsets.only(right: spouseGap),
-            child: nodeBuilder(context, spouse.data),
+            child: nodeBuilder(context, spouse.data, spouse.leadsToFocalNode),
           ),
-        nodeBuilder(context, couple.node.data),
+        nodeBuilder(context, couple.node.data, true),
       ],
     );
   }

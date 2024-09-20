@@ -46,7 +46,7 @@ class _ZoomablePannableViewportState extends State<ZoomablePannableViewport> {
       constrained: false,
       maxScale: 4,
       minScale: 0.1,
-      // boundaryMargin: const EdgeInsets.all(500),
+      boundaryMargin: const EdgeInsets.all(500),
       child: _ViewportWatcher(
         controller: _transformationController,
         interactiveViewerKey: _interactiveViewerKey,
