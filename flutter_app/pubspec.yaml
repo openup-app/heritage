@@ -10,6 +10,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
   flutter_web_plugins:
     sdk: flutter
   collection: ^1.18.0
@@ -19,6 +21,7 @@ dependencies:
   flutter_riverpod: ^2.5.1
   fpdart: ^1.1.0
   http: ^1.2.2   
+  intl: ^0.19.0
   json_annotation: ^4.9.0
   package_info_plus: ^8.0.2
   sentry_flutter: ^8.9.0

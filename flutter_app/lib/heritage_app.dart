@@ -40,6 +40,10 @@ class HeritageApp extends StatelessWidget {
             return MaterialApp.router(
               routerConfig: router,
               title: 'Family Tree',
+              supportedLocales: const [
+                Locale('en'),
+                Locale('en', 'AU'),
+              ],
               theme: ThemeData(
                 useMaterial3: false,
                 fontFamily: 'SF Pro Display',
