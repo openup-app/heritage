@@ -1,8 +1,11 @@
 import { Request, Response, Router } from "express";
-import { Database, Profile, genderSchema, profileSchema, relationshipSchema } from "./database.js";
+import { Database, Node, Profile, genderSchema, profileSchema, relationshipSchema } from "./database.js";
 import { Storage } from "./storage/storage.js";
 import { Auth } from "./auth.js";
 import { z } from "zod";
+import formidable, { IncomingForm } from "formidable";
+import fs from "fs/promises";
+import shortUUID from "short-uuid";
 
 export function router(auth: Auth, database: Database, storage: Storage): Router {
   const router = Router();
@@ -25,7 +28,7 @@ export function router(auth: Auth, database: Database, storage: Storage): Router
     try {
       const nodes = await database.addConnection(sourceId, body.name, body.gender, body.relationship, creatorId);
       return res.json({
-        'nodes': nodes,
+        'nodes': nodes.map(e => constructURLs(e, storage)),
       });
     } catch (e) {
       console.log(e);
@@ -44,7 +47,7 @@ export function router(auth: Auth, database: Database, storage: Storage): Router
     try {
       const node = await database.createRootNode(body.name, body.gender);
       return res.json({
-        'node': node,
+        'node': constructURLs(node, storage),
       })
     } catch (e) {
       console.log(e);
@@ -57,7 +60,7 @@ export function router(auth: Auth, database: Database, storage: Storage): Router
     try {
       const nodes = await database.getLimitedGraph(id);
       return res.json({
-        'nodes': nodes,
+        'nodes': nodes.map(e => constructURLs(e, storage)),
       })
     } catch (e) {
       console.log(e);
@@ -68,17 +71,36 @@ export function router(auth: Auth, database: Database, storage: Storage): Router
   router.put('/nodes/:id/profile', async (req: Request, res: Response) => {
     const id = req.params.id;
 
-    let body: UpdateProfileBody;
+    let profile: Profile;
+    let imageFile: formidable.File | undefined;
     try {
-      body = updateProfileSchema.parse(req.body);
+      const { fields, files } = await parseForm(req);
+      const normalized = normalizeFields(fields);
+      profile = profileSchema.parse(normalized.profile);
+      const file = files.image;
+      if (file) {
+        imageFile = Array.isArray(file) ? file[0] : file;
+      }
     } catch (e) {
       return res.sendStatus(400);
     }
 
     try {
-      const node = await database.updateProfile(id, body.profile);
+      if (imageFile) {
+        const buffer = await fs.readFile(imageFile.filepath);
+        const oldProfile = await database.getNode(id);
+        const oldImageKey = oldProfile.profile.imageKey;
+        const imageKey = `images/${shortUUID.generate()}.jpg`;
+        await storage.upload(imageKey, buffer);
+        if (oldImageKey) {
+          await storage.delete(oldImageKey);
+        }
+        profile.imageKey = imageKey;
+      }
+
+      const node = await database.updateProfile(id, profile);
       return res.json({
-        'node': node,
+        'node': constructURLs(node, storage),
       })
     } catch (e) {
       console.log(e);
@@ -92,7 +114,7 @@ export function router(auth: Auth, database: Database, storage: Storage): Router
     try {
       const node = await database.updateOwnership(id, id);
       return res.json({
-        'node': node,
+        'node': constructURLs(node, storage),
       })
     } catch (e) {
       console.log(e);
@@ -104,7 +126,7 @@ export function router(auth: Auth, database: Database, storage: Storage): Router
     try {
       const nodes = await database.getRoots();
       return res.json({
-        'nodes': nodes,
+        'nodes': nodes.map(e => constructURLs(e, storage)),
       })
     } catch (e) {
       console.log(e);
@@ -114,6 +136,50 @@ export function router(auth: Auth, database: Database, storage: Storage): Router
 
   return router;
 }
+
+function constructURLs(node: Node, storage: Storage) {
+  const object: any = {
+    ...node,
+
+  }
+  const imageKey = object.profile.imageKey ?? "public/no_image.png";
+  object.profile.imageUrl = storage.urlForKey(imageKey);
+  return object;
+}
+
+
+function parseForm(req: Request): Promise<{ fields: formidable.Fields; files: formidable.Files }> {
+  return new Promise((resolve, reject) => {
+    const form = new IncomingForm({ uploadDir: 'uploads/', keepExtensions: true });
+
+    form.parse(req, (err, fields, files) => {
+      if (err) {
+        return reject(err);
+      }
+      resolve({ fields, files });
+    });
+  });
+};
+
+// Convert arrays to object
+function normalizeFields(fields: formidable.Fields) {
+  const normalized: { [key: string]: any } = {};
+
+  for (const [key, value] of Object.entries(fields)) {
+    if (Array.isArray(value)) {
+      try {
+        normalized[key] = JSON.parse(value[0]);
+      } catch (e) {
+        normalized[key] = value[0];
+      }
+    } else {
+      normalized[key] = value;
+    }
+  }
+
+  return normalized;
+};
+
 
 const addConnectionSchema = z.object({
   name: z.string(),

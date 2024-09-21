@@ -139,6 +139,14 @@ export class Database {
     return this.fetchUpToDistance(id, { maxDistance: 3, noChildrenOfSiblingsOfAncestorDistance: 2 });
   }
 
+  public async getNode(id: Id): Promise<Node> {
+    const nodes = await this.getNodes([id]);
+    if (nodes.length === 0) {
+      throw "Unable to fetch node";
+    }
+    return nodes[0];
+  }
+
   public async getNodes(ids: Id[]): Promise<Node[]> {
     const nodeRefs = ids.map(e => this.nodeRef(e));
     const snapshot = await this.firestore.getAll(...nodeRefs);
@@ -256,7 +264,7 @@ export class Database {
       "profile": {
         "name": "Unknown",
         "gender": gender,
-        "imageUrl": null,
+        "imageKey": null,
         "birthday": null,
         "deathday": null,
         "birthplace": "",
@@ -278,7 +286,7 @@ export const relationshipSchema = z.enum(["parent", "sibling", "spouse", "child"
 export const profileSchema = z.object({
   name: z.string(),
   gender: genderSchema,
-  imageUrl: z.string().nullable(),
+  imageKey: z.string().nullable().optional(),
   birthday: z.string().nullable(),
   deathday: z.string().nullable(),
   birthplace: z.string(),
@@ -303,4 +311,4 @@ type Relationship = z.infer<typeof relationshipSchema>;
 
 export type Profile = z.infer<typeof profileSchema>;
 
-type Node = z.infer<typeof nodeSchema>;
+export type Node = z.infer<typeof nodeSchema>;
