@@ -1,4 +1,5 @@
 import 'package:heritage/api.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 String genderedRelationship(Relationship relationship, Gender gender) {
   switch (relationship) {
@@ -11,4 +12,9 @@ String genderedRelationship(Relationship relationship, Gender gender) {
     case Relationship.child:
       return gender == Gender.male ? 'Son' : 'Daughter';
   }
+}
+
+void launchEmail() {
+  final uri = Uri.parse('mailto:tarloksinghfilms@gmail.com?subject=');
+  launchUrl(uri);
 }

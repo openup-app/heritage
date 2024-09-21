@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:heritage/api.dart';
+import 'package:heritage/profile_update.dart';
 
 final focalNodeIdProvider = StateProvider<Id?>((ref) => null);
 
@@ -108,8 +109,12 @@ class GraphNotifier extends StateNotifier<Graph> {
   //   );
   // }
 
-  Future<void> updateProfile(String id, Profile profile) async {
-    final result = await api.updateProfile(id, profile);
+  Future<void> updateProfile(String id, ProfileUpdate update) async {
+    final result = await api.updateProfile(
+      id,
+      profile: update.profile,
+      image: update.image,
+    );
     if (!mounted) {
       return;
     }

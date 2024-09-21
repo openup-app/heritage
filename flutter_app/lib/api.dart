@@ -130,20 +130,51 @@ class Api {
     );
   }
 
-  Future<Either<Error, Node>> updateProfile(String id, Profile profile) {
-    return _makeRequest(
-      request: () => http.put(
-        Uri.parse('$_baseUrl/v1/nodes/$id/profile'),
-        headers: _headers,
-        body: jsonEncode({
-          'profile': profile.toJson(),
-        }),
-      ),
-      handleResponse: (response) {
-        final json = jsonDecode(response.body);
-        return right(Node.fromJson(json['node']));
-      },
-    );
+  Future<Either<Error, Node>> updateProfile(
+    String id, {
+    Profile? profile,
+    Uint8List? image,
+  }) async {
+    if (profile == null && image == null) {
+      return left('No data');
+    }
+
+    final uri = Uri.parse('$_baseUrl/v1/nodes/$id/profile');
+    final request = http.MultipartRequest('PUT', uri);
+    if (profile != null) {
+      request.fields['profile'] = jsonEncode(profile.toJson());
+    }
+
+    if (image != null) {
+      request.files.add(http.MultipartFile.fromBytes(
+        'image',
+        image,
+        filename: 'image.jpg',
+      ));
+    }
+
+    request.headers.addAll(_headers);
+
+    try {
+      final response = await request.send().timeout(_kTimeout);
+
+      if (response.statusCode != 200) {
+        return left('Status ${response.statusCode}');
+      }
+
+      // Handle the response
+      final responseBody = await http.Response.fromStream(response);
+      final json = jsonDecode(responseBody.body);
+      return right(Node.fromJson(json['node']));
+    } on http.ClientException {
+      return left('Client Exception');
+    } on SocketException {
+      return left('Socket Exception');
+    } on TimeoutException {
+      return left('Timeout Exception');
+    } catch (e) {
+      return left('Error $e');
+    }
   }
 
   Future<Either<Error, Node>> takeOwnership(String id) {
@@ -220,7 +251,7 @@ class Profile with _$Profile {
   const factory Profile({
     required String name,
     required Gender gender,
-    required String? imageUrl,
+    required String imageUrl,
     required DateTime? birthday,
     @DateTimeConverter() required DateTime? deathday,
     required final String birthplace,

@@ -1,5 +1,3 @@
-import 'dart:math';
-
 import 'package:flutter/material.dart';
 import 'package:heritage/api.dart';
 import 'package:heritage/heritage_app.dart';
@@ -250,7 +248,6 @@ class NodeProfile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final random = Random(node.id.hashCode);
     return Container(
       width: 313,
       height: 347,
@@ -271,12 +268,7 @@ class NodeProfile extends StatelessWidget {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          // ProfileImage(
-          //   'https://d2xzkuyodufiic.cloudfront.net/avatars/${random.nextInt(70)}.jpg',
-          // ),
-          ProfileImage(
-            'https://picsum.photos/${200 + random.nextInt(30)}',
-          ),
+          ProfileImage(node.profile.imageUrl),
           Positioned(
             left: 21,
             bottom: 21,

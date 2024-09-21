@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:heritage/api.dart';
+import 'package:heritage/date.dart';
+import 'package:heritage/family_tree_page_panels.dart';
 import 'package:heritage/graph.dart';
 import 'package:heritage/graph_provider.dart';
 import 'package:heritage/graph_view.dart';
@@ -95,16 +97,28 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
     final focalNode = ref.read(graphProvider).focalNode;
     final node = linkedNode.data;
     final isMe = focalNode.id == node.id;
+    final isOwnedByMe = node.ownedBy == node.id;
     final ownershipClaimed = node.ownedBy != null;
-    final canModify = isMe || (linkedNode.isRelative && !ownershipClaimed);
     final profile = await showDialog<Profile>(
       context: context,
       builder: (context) {
-        return _ProfileView(
-          editable: canModify,
-          ownershipClaimed: ownershipClaimed,
-          initialProfile: node.profile,
-        );
+        if (!(isMe || isOwnedByMe)) {
+          return _ProfileView(
+            editable: true,
+            ownershipClaimed: ownershipClaimed,
+            initialProfile: node.profile,
+          );
+        } else {
+          return AlertDialog(
+            content: SizedBox(
+              width: 400,
+              child: ProfileEditor(
+                id: node.id,
+                profile: node.profile,
+              ),
+            ),
+          );
+        }
       },
     );
 
@@ -113,7 +127,7 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
     }
 
     if (profile != null) {
-      ref.read(graphProvider.notifier).updateProfile(node.id, profile);
+      // ref.read(graphProvider.notifier).updateProfile(node.id, profile);
     }
   }
 
@@ -353,7 +367,8 @@ class _AddConnectionModalState extends ConsumerState<BasicProfileModal> {
                   backgroundColor:
                       _gender == Gender.male ? primaryColor : unselectedColor,
                 ),
-                child: widget.relationship != Relationship.spouse
+                child: (widget.relationship != Relationship.spouse &&
+                        !widget.isRootNodeCreation)
                     ? Text(
                         genderedRelationship(widget.relationship, Gender.male))
                     : const Text('Male'),
@@ -368,7 +383,8 @@ class _AddConnectionModalState extends ConsumerState<BasicProfileModal> {
                   backgroundColor:
                       _gender == Gender.male ? unselectedColor : primaryColor,
                 ),
-                child: widget.relationship != Relationship.spouse
+                child: (widget.relationship != Relationship.spouse &&
+                        !widget.isRootNodeCreation)
                     ? Text(genderedRelationship(
                         widget.relationship, Gender.female))
                     : const Text('Female'),
@@ -471,6 +487,7 @@ class _ProfileView extends StatefulWidget {
 class _ProfileViewState extends State<_ProfileView> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _nameController;
+  late final TextEditingController _dateOfBirthController;
   late final TextEditingController _birthplaceController;
   bool _valid = true;
 
@@ -478,6 +495,8 @@ class _ProfileViewState extends State<_ProfileView> {
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.initialProfile.name);
+    _dateOfBirthController = TextEditingController(
+        text: widget.initialProfile.birthday?.toString() ?? '');
     _birthplaceController =
         TextEditingController(text: widget.initialProfile.birthplace);
   }
@@ -485,6 +504,7 @@ class _ProfileViewState extends State<_ProfileView> {
   @override
   void dispose() {
     _nameController.dispose();
+    _dateOfBirthController.dispose();
     _birthplaceController.dispose();
     super.dispose();
   }
@@ -537,7 +557,15 @@ class _ProfileViewState extends State<_ProfileView> {
                         ),
                         const SizedBox(height: 4),
                         const Text('Date of Birth'),
-                        TextFormField(),
+                        TextFormField(
+                          controller: _dateOfBirthController,
+                          keyboardType: TextInputType.number,
+                          inputFormatters: [DateTextFormatter()],
+                          decoration: InputDecoration(
+                            hintText: getFormattedDatePattern().formatted,
+                          ),
+                          onChanged: (_) => _validateForm(),
+                        ),
                         const SizedBox(height: 4),
                         const Text('Birth place'),
                         TextFormField(
