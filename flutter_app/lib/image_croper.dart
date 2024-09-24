@@ -2,53 +2,67 @@ import 'dart:typed_data';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:heritage/profile_display.dart';
 import 'package:vector_math/vector_math_64.dart' hide Colors;
 
 Future<Uint8List?> showCropDialog(
     BuildContext context, Uint8List image, Size size) async {
-  final transform = await showDialog(
+  final rect = await showDialog<Rect>(
     context: context,
     builder: (context) {
       return _CropDialog(
         image: image,
+        size: size,
       );
     },
   );
-  if (!context.mounted || transform == null) {
+  if (!context.mounted || rect == null) {
     return null;
   }
-  return _cropImage(image, transform);
+  return _cropImage(image, Offset.zero & size);
 }
 
 class _CropDialog extends StatefulWidget {
   final Uint8List image;
+  final Size size;
+
   const _CropDialog({
     super.key,
     required this.image,
+    required this.size,
   });
 
   @override
-  State<_CropDialog> createState() => __CropDialogState();
+  State<_CropDialog> createState() => _CropDialogState();
 }
 
-class __CropDialogState extends State<_CropDialog> {
-  Matrix4 _transform = Matrix4.identity();
+class _CropDialogState extends State<_CropDialog> {
+  Rect _rect = Rect.zero;
 
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
       title: const Text('Crop Photo'),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(_transform),
-          child: const Text('Confirm'),
-        ),
-      ],
-      content: ImageCropper(
-        image: widget.image,
-        onTransform: (transform) {
-          setState(() => _transform = transform);
-        },
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          ImageCropper(
+            image: widget.image,
+            size: widget.size,
+            onRect: (rect) {
+              setState(() => _rect = rect);
+            },
+          ),
+          const SizedBox(height: 16),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(_rect),
+            style: FilledButton.styleFrom(
+              fixedSize: const Size.fromHeight(73),
+            ),
+            child: const Text('Done'),
+          ),
+        ],
       ),
     );
   }
@@ -56,12 +70,14 @@ class __CropDialogState extends State<_CropDialog> {
 
 class ImageCropper extends StatefulWidget {
   final Uint8List image;
-  final void Function(Matrix4 transform) onTransform;
+  final Size size;
+  final void Function(Rect rect) onRect;
 
   const ImageCropper({
     super.key,
     required this.image,
-    required this.onTransform,
+    required this.size,
+    required this.onRect,
   });
 
   @override
@@ -69,16 +85,36 @@ class ImageCropper extends StatefulWidget {
 }
 
 class _ImageCropperState extends State<ImageCropper> {
-  final _controller = TransformationController();
+  late final TransformationController _controller;
 
   @override
   void initState() {
     super.initState();
+    const outputSize = Size(300, 400);
+    final fittedSizes = applyBoxFit(BoxFit.cover, widget.size, outputSize);
+    final scale = fittedSizes.destination.height / fittedSizes.source.height;
+    final translation = fittedSizes.source.width / widget.size.width;
+    final outputRect =
+        Alignment.center.inscribe(fittedSizes.source, Offset.zero & outputSize);
+    final t = outputRect.topLeft;
+    final s = outputSize.height / outputRect.height;
+    final matrix = Matrix4.identity()
+      ..translate(t.dx, 0.0, 0.0)
+      // ..translate(widget.size.width / 2, widget.size.height / 2, 0.0)
+      ..scale(s);
+    // ..translate(-widget.size.width / 2, -widget.size.height / 2, 0.0);
+
+    _controller = TransformationController(matrix);
     _controller.addListener(_onTransform);
   }
 
   void _onTransform() {
-    widget.onTransform(_controller.value);
+    final matrix = _controller.value;
+    final scale = matrix.getMaxScaleOnAxis();
+    final Vector3 tl = -(matrix * Vector3.zero()) / scale;
+    final Vector3 br = Vector3.zero();
+    final rect = Rect.fromLTWH(tl.x, tl.y, br.x - tl.x, br.y - tl.y);
+    widget.onRect(rect);
   }
 
   @override
@@ -109,10 +145,8 @@ class _ImageCropperState extends State<ImageCropper> {
       mainAxisSize: MainAxisSize.min,
       children: [
         SizedBox(
-          width: 300,
-          height: 400,
-          child: AspectRatio(
-            aspectRatio: 0.75,
+          width: 400,
+          child: ImageAspect(
             child: _BorderOverlay(
               child: MouseRegion(
                 cursor: SystemMouseCursors.move,
@@ -120,14 +154,51 @@ class _ImageCropperState extends State<ImageCropper> {
                   clipBehavior: Clip.none,
                   transformationController: _controller,
                   constrained: false,
+
+                  // alignment: Alignment.center,
                   minScale: 0.1,
                   maxScale: 3.5,
-                  child: Image.memory(
-                    widget.image,
+                  child: SizedBox(
+                    height: 400,
+                    width: 400,
+                    child: Image.memory(
+                      widget.image,
+                    ),
                   ),
                 ),
               ),
             ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 32.0),
+          child: Row(
+            children: [
+              const Icon(Icons.zoom_out),
+              Expanded(
+                child: AnimatedBuilder(
+                  animation: _controller,
+                  builder: (context, child) {
+                    return Slider(
+                      min: 0.1,
+                      max: 3.5,
+                      value:
+                          _controller.value.getMaxScaleOnAxis().clamp(0.1, 3.5),
+                      onChanged: (scale) {
+                        final centerX = widget.size.width / 2;
+                        final centerY = widget.size.height / 2;
+                        _controller.value = Matrix4.identity()
+                          ..translate(centerX, centerY, 0.0)
+                          ..scale(scale)
+                          ..translate(-centerX, -centerY, 0.0);
+                      },
+                    );
+                  },
+                ),
+              ),
+              const Icon(Icons.zoom_in),
+            ],
           ),
         ),
       ],
@@ -216,12 +287,16 @@ class _BorderOverlay extends StatelessWidget {
   }
 }
 
-Future<Uint8List?> _cropImage(Uint8List imageBytes, Matrix4 transform) async {
+Future<Uint8List?> _cropImage(Uint8List imageBytes, Rect rect) async {
   final image = await decodeImageFromList(imageBytes);
   final recorder = PictureRecorder();
   final canvas = Canvas(recorder);
-  canvas.transform(transform.storage);
-  canvas.drawImage(image, Offset.zero, Paint());
+  canvas.drawImageRect(
+    image,
+    Offset.zero & Size(image.width.toDouble(), image.height.toDouble()),
+    rect,
+    Paint(),
+  );
   final picture = recorder.endRecording();
   final cropped = await picture.toImage(image.width, image.height);
   final byteData = await cropped.toByteData(format: ImageByteFormat.png);

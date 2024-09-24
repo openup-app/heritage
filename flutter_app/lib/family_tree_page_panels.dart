@@ -6,21 +6,128 @@ import 'package:heritage/date.dart';
 import 'package:heritage/file_picker.dart';
 import 'package:heritage/graph_provider.dart';
 import 'package:heritage/image_croper.dart';
+import 'package:heritage/layout.dart';
+import 'package:heritage/profile_display.dart';
 import 'package:heritage/profile_update.dart';
 import 'package:heritage/util.dart';
 
-class ProfileEditor extends StatelessWidget {
+class Panels extends ConsumerStatefulWidget {
+  final Node node;
+  final VoidCallback onViewPerspective;
+
+  const Panels({
+    super.key,
+    required this.node,
+    required this.onViewPerspective,
+  });
+
+  @override
+  ConsumerState<Panels> createState() => _PanelsState();
+}
+
+class _PanelsState extends ConsumerState<Panels> {
+  final _childKey = GlobalKey();
+
+  @override
+  Widget build(BuildContext context) {
+    final focalNode = ref.read(graphProvider).focalNode;
+    final isMe = focalNode.id == widget.node.id;
+    final isOwnedByMe = widget.node.ownedBy == widget.node.id;
+    final layout = Layout.of(context);
+    final small = layout == LayoutType.small;
+    final child = ProfileDisplay(
+      id: widget.node.id,
+      profile: widget.node.profile,
+      isMe: isMe,
+      isEditable: isMe || isOwnedByMe,
+      hasDifferentOwner: widget.node.ownedBy != widget.node.id,
+      padding: small ? const EdgeInsets.all(16) : const EdgeInsets.all(24),
+      onViewPerspective: widget.onViewPerspective,
+    );
+    return Stack(
+      children: [
+        if (small)
+          Positioned.fill(
+            child: DraggableScrollableSheet(
+              builder: (context, controller) {
+                return Container(
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(24),
+                      topRight: Radius.circular(24),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        offset: Offset(0, 4),
+                        blurRadius: 16,
+                        color: Color.fromRGBO(0x00, 0x00, 0x00, 0.25),
+                      ),
+                    ],
+                  ),
+                  child: KeyedSubtree(
+                    key: _childKey,
+                    child: child,
+                  ),
+                );
+              },
+            ),
+          )
+        else
+          Positioned(
+            left: 16,
+            top: 16 + MediaQuery.of(context).padding.top,
+            width: 390,
+            child: DecoratedBox(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.all(Radius.circular(36)),
+                boxShadow: [
+                  BoxShadow(
+                    offset: Offset(0, 4),
+                    blurRadius: 16,
+                    color: Color.fromRGBO(0x00, 0x00, 0x00, 0.25),
+                  ),
+                ],
+              ),
+              child: KeyedSubtree(
+                key: _childKey,
+                child: child,
+              ),
+            ),
+          ),
+      ],
+    );
+    // if (!mounted) {
+    //   return;
+    // }
+
+    // if (profile != null) {
+    //   // ref.read(graphProvider.notifier).updateProfile(node.id, profile);
+    // }
+  }
+}
+
+class ProfileDisplay extends StatelessWidget {
   final String id;
   final Profile profile;
+  final bool isMe;
   final bool isEditable;
   final bool hasDifferentOwner;
+  final ScrollController? scrollController;
+  final EdgeInsets padding;
+  final VoidCallback onViewPerspective;
 
-  const ProfileEditor({
+  const ProfileDisplay({
     super.key,
     required this.id,
     required this.profile,
+    required this.isMe,
     required this.isEditable,
     required this.hasDifferentOwner,
+    this.scrollController,
+    required this.padding,
+    required this.onViewPerspective,
   });
 
   @override
@@ -30,32 +137,44 @@ class ProfileEditor extends StatelessWidget {
         profileUpdateProvider.overrideWith(
             (ref) => ProfileUpdateNotifier(initialProfile: profile)),
       ],
-      child: _ProfileEditor(
+      child: _ProfileDisplay(
         id: id,
+        isMe: isMe,
         isEditable: isEditable,
         hasDifferentOwner: hasDifferentOwner,
+        scrollController: scrollController,
+        padding: padding,
+        onViewPerspective: onViewPerspective,
       ),
     );
   }
 }
 
-class _ProfileEditor extends ConsumerStatefulWidget {
+class _ProfileDisplay extends ConsumerStatefulWidget {
   final String id;
+  final bool isMe;
   final bool isEditable;
   final bool hasDifferentOwner;
+  final ScrollController? scrollController;
+  final EdgeInsets padding;
+  final VoidCallback onViewPerspective;
 
-  const _ProfileEditor({
+  const _ProfileDisplay({
     super.key,
     required this.id,
+    required this.isMe,
     required this.isEditable,
     required this.hasDifferentOwner,
+    this.scrollController,
+    required this.padding,
+    required this.onViewPerspective,
   });
 
   @override
-  ConsumerState<_ProfileEditor> createState() => _ProfileEditorState();
+  ConsumerState<_ProfileDisplay> createState() => _ProfileEditorState();
 }
 
-class _ProfileEditorState extends ConsumerState<_ProfileEditor> {
+class _ProfileEditorState extends ConsumerState<_ProfileDisplay> {
   late final TextEditingController _nameController;
   late final TextEditingController _birthdayController;
   late final TextEditingController _deathdayController;
@@ -95,22 +214,54 @@ class _ProfileEditorState extends ConsumerState<_ProfileEditor> {
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
+      controller: widget.scrollController,
+      padding: EdgeInsets.only(
+        left: widget.padding.left,
+        right: widget.padding.right,
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          FilledButton(
-            onPressed: () => showBlockingModal(context, _pickPhoto()),
-            child: AspectRatio(
-              aspectRatio: 1.0,
-              child: ProfileImage(
-                imageUrl:
-                    ref.watch(profileUpdateProvider.select((p) => p.imageUrl)),
-                image: ref.watch(profileUpdateProvider.select((p) => p.image)),
+          SizedBox(height: widget.padding.top),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+            child: Text(
+              ref.watch(profileUpdateProvider.select((p) => p.name)),
+              style: const TextStyle(
+                fontSize: 24,
               ),
             ),
           ),
           const SizedBox(height: 24),
+          MouseRegion(
+            cursor: SystemMouseCursors.click,
+            child: GestureDetector(
+              onTap: () => showBlockingModal(context, _pickPhoto()),
+              child: ClipRRect(
+                borderRadius: const BorderRadius.all(Radius.circular(16)),
+                child: ProfileImage(
+                  imageUrl: ref
+                      .watch(profileUpdateProvider.select((p) => p.imageUrl)),
+                  image:
+                      ref.watch(profileUpdateProvider.select((p) => p.image)),
+                ),
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 24),
+          if (!widget.isMe) ...[
+            FilledButton(
+              onPressed: widget.onViewPerspective,
+              style: FilledButton.styleFrom(
+                fixedSize: const Size.fromHeight(48),
+              ),
+              child: Text(
+                  'View ${ref.watch(profileUpdateProvider.select((s) => s.name))}\'s tree'),
+            ),
+            const SizedBox(height: 24),
+          ],
           TextFormField(
             controller: _nameController,
             onChanged: ref.read(profileUpdateProvider.notifier).name,
@@ -245,6 +396,10 @@ class _ProfileEditorState extends ConsumerState<_ProfileEditor> {
                   )
                 : const Text('Save'),
           ),
+          SizedBox(height: widget.padding.bottom),
+          SizedBox(
+            height: MediaQuery.of(context).padding.bottom,
+          ),
         ],
       ),
     );
@@ -273,8 +428,6 @@ class _ProfileEditorState extends ConsumerState<_ProfileEditor> {
     await notifier.updateProfile(widget.id, profileUpdate);
     if (mounted) {
       setState(() => _submitting = false);
-
-      Navigator.of(context).pop();
     }
   }
 }
@@ -294,20 +447,26 @@ class ProfileImage extends StatelessWidget {
     final image = this.image;
     final imageUrl = this.imageUrl;
     if (image != null) {
-      return Image.memory(
-        image,
-        fit: BoxFit.cover,
+      return ImageAspect(
+        child: Image.memory(
+          image,
+          fit: BoxFit.cover,
+        ),
       );
     } else if (imageUrl != null) {
-      return Image.network(
-        imageUrl,
-        fit: BoxFit.cover,
+      return ImageAspect(
+        child: Image.network(
+          imageUrl,
+          fit: BoxFit.cover,
+        ),
       );
     }
-    return const FittedBox(
-      fit: BoxFit.cover,
-      child: Icon(
-        Icons.person,
+    return const ImageAspect(
+      child: FittedBox(
+        fit: BoxFit.cover,
+        child: Icon(
+          Icons.person,
+        ),
       ),
     );
   }

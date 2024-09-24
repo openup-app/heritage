@@ -248,63 +248,59 @@ class NodeProfile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 313,
-      height: 347,
-      clipBehavior: Clip.hardEdge,
-      decoration: const BoxDecoration(
-        borderRadius: BorderRadius.all(
-          Radius.circular(32),
-        ),
-        boxShadow: [
-          BoxShadow(
-            offset: Offset(0, 22),
-            blurRadius: 44,
-            spreadRadius: -11,
-            color: Color.fromRGBO(0x00, 0x00, 0x00, 0.33),
+    return DefaultTextStyle(
+      style: const TextStyle(
+        color: Colors.black,
+        shadows: [
+          Shadow(
+            offset: Offset(0, 5),
+            blurRadius: 4.8,
+            color: Color.fromRGBO(0x00, 0x00, 0x00, 0.25),
           ),
         ],
       ),
-      child: Stack(
-        fit: StackFit.expand,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          ProfileImage(node.profile.imageUrl),
-          Positioned(
-            left: 21,
-            bottom: 21,
-            right: 21,
-            child: DefaultTextStyle(
-              style: const TextStyle(
-                shadows: [
-                  Shadow(
-                    offset: Offset(0, 5),
-                    blurRadius: 4.8,
-                    color: Color.fromRGBO(0x00, 0x00, 0x00, 0.25),
-                  ),
-                ],
+          Container(
+            width: 260,
+            clipBehavior: Clip.hardEdge,
+            decoration: const BoxDecoration(
+              borderRadius: BorderRadius.all(
+                Radius.circular(32),
               ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    node.id,
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.white,
-                    ),
-                  ),
-                  Text(
-                    node.profile.name,
-                    style: const TextStyle(
-                      fontSize: 27,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
-                    ),
-                  ),
-                ],
-              ),
+              boxShadow: [
+                BoxShadow(
+                  offset: Offset(0, 22),
+                  blurRadius: 44,
+                  spreadRadius: -11,
+                  color: Color.fromRGBO(0x00, 0x00, 0x00, 0.33),
+                ),
+              ],
+            ),
+            child: ImageAspect(
+              child: ProfileImage(node.profile.imageUrl),
+            ),
+          ),
+          Text(
+            node.profile.name,
+            style: const TextStyle(
+              fontSize: 27,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          Text(
+            node.id,
+            style: const TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          Text(
+            node.profile.birthday?.year.toString() ?? '',
+            style: const TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.w500,
             ),
           ),
         ],
@@ -537,6 +533,25 @@ class _MouseHoverState extends State<MouseHover> {
           ),
         ),
       ),
+    );
+  }
+}
+
+class ImageAspect extends StatelessWidget {
+  static const ratio = 260 / 336;
+
+  final Widget child;
+
+  const ImageAspect({
+    super.key,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AspectRatio(
+      aspectRatio: ratio,
+      child: child,
     );
   }
 }

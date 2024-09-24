@@ -45,9 +45,10 @@ dev_dependencies:
 flutter:
   uses-material-design: true
 
-assets:
+  assets:
+    - assets/images/tree_background.jpg
 
- fonts:
+  fonts:
     - family: SF Pro Display
       fonts:
         - asset: assets/fonts/SF-Pro-Display-Ultralight.otf

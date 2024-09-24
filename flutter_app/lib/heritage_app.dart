@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:heritage/api.dart';
 import 'package:heritage/error_page.dart';
 import 'package:heritage/family_tree_page.dart';
+import 'package:heritage/layout.dart';
 import 'package:heritage/menu_page.dart';
 import 'package:heritage/restart_app.dart';
 
@@ -31,51 +32,53 @@ class HeritageApp extends StatelessWidget {
         overrides: [
           apiProvider.overrideWithValue(api),
         ],
-        child: _RouterBuilder(
-          redirectPath: redirectPath,
-          navigatorObservers: [
-            SentryNavigatorObserver(),
-          ],
-          builder: (context, router) {
-            return MaterialApp.router(
-              routerConfig: router,
-              title: 'Family Tree',
-              supportedLocales: const [
-                Locale('en'),
-                Locale('en', 'AU'),
-              ],
-              theme: ThemeData(
-                useMaterial3: false,
-                fontFamily: 'SF Pro Display',
-                primaryColor: primaryColor,
-                filledButtonTheme: FilledButtonThemeData(
-                  style: FilledButton.styleFrom(
-                    shape: const RoundedRectangleBorder(
+        child: LayoutWidget(
+          child: _RouterBuilder(
+            redirectPath: redirectPath,
+            navigatorObservers: [
+              SentryNavigatorObserver(),
+            ],
+            builder: (context, router) {
+              return MaterialApp.router(
+                routerConfig: router,
+                title: 'Family Tree',
+                supportedLocales: const [
+                  Locale('en'),
+                  Locale('en', 'AU'),
+                ],
+                theme: ThemeData(
+                  useMaterial3: false,
+                  fontFamily: 'SF Pro Display',
+                  primaryColor: primaryColor,
+                  filledButtonTheme: FilledButtonThemeData(
+                    style: FilledButton.styleFrom(
+                      shape: const RoundedRectangleBorder(
+                        borderRadius: BorderRadius.all(
+                          Radius.circular(10),
+                        ),
+                      ),
+                    ),
+                  ),
+                  inputDecorationTheme: const InputDecorationTheme(
+                    filled: true,
+                    fillColor: greyColor,
+                    outlineBorder: BorderSide.none,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(10)),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                  dialogTheme: const DialogTheme(
+                    shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.all(
-                        Radius.circular(10),
+                        Radius.circular(16),
                       ),
                     ),
                   ),
                 ),
-                inputDecorationTheme: const InputDecorationTheme(
-                  filled: true,
-                  fillColor: greyColor,
-                  outlineBorder: BorderSide.none,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(10)),
-                    borderSide: BorderSide.none,
-                  ),
-                ),
-                dialogTheme: const DialogTheme(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.all(
-                      Radius.circular(16),
-                    ),
-                  ),
-                ),
-              ),
-            );
-          },
+              );
+            },
+          ),
         ),
       ),
     );
@@ -169,6 +172,24 @@ class _RouterBuilderState extends State<_RouterBuilder> {
               child: const FamilyTreePage(),
             );
           },
+          routes: [
+            GoRoute(
+              path: 'perspective/:perspectiveNodeId',
+              name: 'perspective',
+              builder: (context, state) {
+                final focalNodeId = state.pathParameters['perspectiveNodeId'];
+                if (focalNodeId == null) {
+                  throw 'Missing focalNodeId';
+                }
+                return FamilyTreeLoadingPage(
+                  focalNodeId: focalNodeId,
+                  child: const FamilyTreePage(
+                    isPerspectiveMode: true,
+                  ),
+                );
+              },
+            ),
+          ],
         ),
       ],
     );

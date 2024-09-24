@@ -72,67 +72,57 @@ class ViewPageState extends ConsumerState<FamilyTreeLoadingPage> {
 }
 
 class FamilyTreePage extends ConsumerStatefulWidget {
-  const FamilyTreePage({super.key});
+  final bool isPerspectiveMode;
+
+  const FamilyTreePage({
+    super.key,
+    this.isPerspectiveMode = false,
+  });
 
   @override
   ConsumerState<FamilyTreePage> createState() => _FamilyTreePageState();
 }
 
 class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
+  Node? _node;
+
   @override
   Widget build(BuildContext context) {
+    final node = _node;
     final graph = ref.watch(graphProvider);
-    return FamilyTreeView(
-      focalNode: graph.focalNode,
-      nodes: graph.nodes.values.toList(),
-      onProfilePressed: _showProfile,
-      onAddConnectionPressed: _showAddConnectionModal,
-      onFetchConnections: (ids) {},
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        FamilyTreeView(
+          focalNode: graph.focalNode,
+          nodes: graph.nodes.values.toList(),
+          onProfilePressed: _onProfilePressed,
+          onAddConnectionPressed: _showAddConnectionModal,
+          onFetchConnections: (ids) {},
+        ),
+        if (node != null)
+          Panels(
+            node: node,
+            onViewPerspective: () {
+              final pathParameters = {
+                'focalNodeId': graph.focalNode.id,
+                'perspectiveNodeId': node.id,
+              };
+              if (!widget.isPerspectiveMode) {
+                context.pushNamed(
+                  'perspective',
+                  pathParameters: pathParameters,
+                );
+              } else {
+                context.pushReplacementNamed(
+                  'perspective',
+                  pathParameters: pathParameters,
+                );
+              }
+            },
+          ),
+      ],
     );
-  }
-
-  void _showProfile(LinkedNode<Node> linkedNode) async {
-    // TODO: Need accounts
-    final focalNode = ref.read(graphProvider).focalNode;
-    final node = linkedNode.data;
-    final isMe = focalNode.id == node.id;
-    final isOwnedByMe = node.ownedBy == node.id;
-    final ownershipClaimed = node.ownedBy != null;
-    final profile = await showDialog<Profile>(
-      context: context,
-      builder: (context) {
-        if (!ownershipClaimed) {
-          return AlertDialog(
-            content: BasicProfileModal(
-              relationship: Relationship.sibling,
-              initialName: node.profile.name,
-              initialGender: node.profile.gender,
-              onSave: (_, __) {},
-            ),
-          );
-        } else {
-          return AlertDialog(
-            content: SizedBox(
-              width: 400,
-              child: ProfileEditor(
-                id: node.id,
-                profile: node.profile,
-                isEditable: isMe || isOwnedByMe,
-                hasDifferentOwner: node.ownedBy != node.id,
-              ),
-            ),
-          );
-        }
-      },
-    );
-
-    if (!mounted) {
-      return;
-    }
-
-    if (profile != null) {
-      // ref.read(graphProvider.notifier).updateProfile(node.id, profile);
-    }
   }
 
   void _showAddConnectionModal(Node node, Relationship relationship) {
@@ -159,6 +149,29 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
         );
       },
     );
+  }
+
+  void _onProfilePressed(LinkedNode<Node> linkedNode) {
+    final node = linkedNode.data;
+    final ownershipClaimed = node.ownedBy != null;
+    if (!ownershipClaimed) {
+      setState(() => _node = null);
+      showDialog(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            content: BasicProfileModal(
+              relationship: Relationship.sibling,
+              initialName: node.profile.name,
+              initialGender: node.profile.gender,
+              onSave: (_, __) {},
+            ),
+          );
+        },
+      );
+    } else {
+      setState(() => _node = linkedNode.data);
+    }
   }
 }
 
@@ -233,53 +246,63 @@ class _FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
           }
         },
         onTransformed: (transform) => _transformNotifier.value = transform,
-        child: GraphView(
-          focalNodeId: widget.focalNode.id,
-          nodes: widget.nodes,
-          // levelGap: 40,
-          // spouseGap: 4,
-          // siblingGap: 16,
-          // nodeBuilder: (context, node) {
-          //   return Consumer(
-          //     builder: (context, ref, child) {
-          //       return GestureDetector(
-          //         onTap: () => _sendTest(context, ref),
-          //         child: NodeDisplay(node: node),
-          //       );
-          //     },
-          //   );
-          // },
-          levelGap: 302,
-          spouseGap: 52,
-          siblingGap: 297,
-          nodeBuilder: (context, linkedNode) {
-            return MouseHover(
-              key: _nodeKeys[linkedNode.id],
-              transformNotifier: _transformNotifier,
-              builder: (context, hovering) {
-                // TODO: Need accounts
-                final node = linkedNode.data;
-                final isMe = widget.focalNode.id == node.id;
-                final canModify =
-                    isMe || (linkedNode.isRelative && node.ownedBy == null);
-                return ProfileControls(
-                  show: hovering && canModify,
-                  canAddParent: node.parents.isEmpty,
-                  onAddConnectionPressed: (relationship) =>
-                      widget.onAddConnectionPressed(node, relationship),
-                  child: MouseRegion(
-                    cursor: SystemMouseCursors.click,
-                    child: GestureDetector(
-                      onTap: () => widget.onProfilePressed(linkedNode),
-                      child: NodeProfile(
-                        node: node,
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: Image.asset(
+                'assets/images/tree_background.jpg',
+                fit: BoxFit.cover,
+              ),
+            ),
+            GraphView(
+              focalNodeId: widget.focalNode.id,
+              nodes: widget.nodes,
+              // levelGap: 40,
+              // spouseGap: 4,
+              // siblingGap: 16,
+              // nodeBuilder: (context, node) {
+              //   return Consumer(
+              //     builder: (context, ref, child) {
+              //       return GestureDetector(
+              //         onTap: () => _sendTest(context, ref),
+              //         child: NodeDisplay(node: node),
+              //       );
+              //     },
+              //   );
+              // },
+              levelGap: 302,
+              spouseGap: 52,
+              siblingGap: 297,
+              nodeBuilder: (context, linkedNode) {
+                return MouseHover(
+                  key: _nodeKeys[linkedNode.id],
+                  transformNotifier: _transformNotifier,
+                  builder: (context, hovering) {
+                    // TODO: Need accounts
+                    final node = linkedNode.data;
+                    final isMe = widget.focalNode.id == node.id;
+                    final canModify =
+                        isMe || (linkedNode.isRelative && node.ownedBy == null);
+                    return ProfileControls(
+                      show: hovering && canModify,
+                      canAddParent: node.parents.isEmpty,
+                      onAddConnectionPressed: (relationship) =>
+                          widget.onAddConnectionPressed(node, relationship),
+                      child: MouseRegion(
+                        cursor: SystemMouseCursors.click,
+                        child: GestureDetector(
+                          onTap: () => widget.onProfilePressed(linkedNode),
+                          child: NodeProfile(
+                            node: node,
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
+                    );
+                  },
                 );
               },
-            );
-          },
+            ),
+          ],
         ),
       ),
     );
@@ -360,7 +383,7 @@ class _AddConnectionModalState extends ConsumerState<BasicProfileModal> {
             color: primaryColor,
           ),
         ),
-        const SelectableText('Name'),
+        const SelectableText('First & Last Name'),
         const SizedBox(height: 4),
         TextFormField(
           controller: _nameController,
