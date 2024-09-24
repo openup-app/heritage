@@ -5,17 +5,22 @@ import 'package:heritage/api.dart';
 import 'package:heritage/date.dart';
 import 'package:heritage/file_picker.dart';
 import 'package:heritage/graph_provider.dart';
+import 'package:heritage/image_croper.dart';
 import 'package:heritage/profile_update.dart';
 import 'package:heritage/util.dart';
 
 class ProfileEditor extends StatelessWidget {
   final String id;
   final Profile profile;
+  final bool isEditable;
+  final bool hasDifferentOwner;
 
   const ProfileEditor({
     super.key,
     required this.id,
     required this.profile,
+    required this.isEditable,
+    required this.hasDifferentOwner,
   });
 
   @override
@@ -27,6 +32,8 @@ class ProfileEditor extends StatelessWidget {
       ],
       child: _ProfileEditor(
         id: id,
+        isEditable: isEditable,
+        hasDifferentOwner: hasDifferentOwner,
       ),
     );
   }
@@ -34,12 +41,14 @@ class ProfileEditor extends StatelessWidget {
 
 class _ProfileEditor extends ConsumerStatefulWidget {
   final String id;
+  final bool isEditable;
   final bool hasDifferentOwner;
 
   const _ProfileEditor({
     super.key,
     required this.id,
-    this.hasDifferentOwner = false,
+    required this.isEditable,
+    required this.hasDifferentOwner,
   });
 
   @override
@@ -91,7 +100,7 @@ class _ProfileEditorState extends ConsumerState<_ProfileEditor> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           FilledButton(
-            onPressed: _pickPhoto,
+            onPressed: () => showBlockingModal(context, _pickPhoto()),
             child: AspectRatio(
               aspectRatio: 1.0,
               child: ProfileImage(
@@ -105,6 +114,7 @@ class _ProfileEditorState extends ConsumerState<_ProfileEditor> {
           TextFormField(
             controller: _nameController,
             onChanged: ref.read(profileUpdateProvider.notifier).name,
+            enabled: widget.isEditable,
             decoration: const InputDecoration(
               label: Text('Name'),
             ),
@@ -240,13 +250,19 @@ class _ProfileEditorState extends ConsumerState<_ProfileEditor> {
     );
   }
 
-  void _pickPhoto() async {
-    final image = await pickPhoto(context);
-    if (!mounted) {
+  Future<void> _pickPhoto() async {
+    final file = await pickPhoto(context);
+    final image = await file?.readAsBytes();
+    if (!mounted || image == null) {
       return;
     }
-    if (image != null) {
-      ref.read(profileUpdateProvider.notifier).image(image);
+    final (frame, size) = await getFirstFrameAndSize(image);
+    if (!mounted || frame == null) {
+      return;
+    }
+    final cropped = await showCropDialog(context, frame, size);
+    if (cropped != null) {
+      ref.read(profileUpdateProvider.notifier).image(cropped);
     }
   }
 

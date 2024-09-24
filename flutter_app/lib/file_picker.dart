@@ -73,6 +73,18 @@ Future<XFile?> pickPhoto(BuildContext context) async {
   return XFile(result.path);
 }
 
+Future<(Uint8List? bytes, Size size)> getFirstFrameAndSize(
+    Uint8List image) async {
+  final decodedImage = await decodeImageFromList(image);
+  final byteData =
+      await decodedImage.toByteData(format: ui.ImageByteFormat.png);
+  decodedImage.dispose();
+  return (
+    byteData?.buffer.asUint8List(),
+    Size(decodedImage.width.toDouble(), decodedImage.height.toDouble()),
+  );
+}
+
 Future<Uint8List?> downscaleImage(Uint8List image, {required int size}) async {
   final uiImage = await decodeImageFromList(image);
   final resized = await _downscaleImage(uiImage, size);

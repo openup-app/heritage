@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:heritage/api.dart';
-import 'package:heritage/date.dart';
 import 'package:heritage/family_tree_page_panels.dart';
 import 'package:heritage/graph.dart';
 import 'package:heritage/graph_provider.dart';
@@ -102,11 +101,14 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
     final profile = await showDialog<Profile>(
       context: context,
       builder: (context) {
-        if (!(isMe || isOwnedByMe)) {
-          return _ProfileView(
-            editable: true,
-            ownershipClaimed: ownershipClaimed,
-            initialProfile: node.profile,
+        if (!ownershipClaimed) {
+          return AlertDialog(
+            content: BasicProfileModal(
+              relationship: Relationship.sibling,
+              initialName: node.profile.name,
+              initialGender: node.profile.gender,
+              onSave: (_, __) {},
+            ),
           );
         } else {
           return AlertDialog(
@@ -115,6 +117,8 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
               child: ProfileEditor(
                 id: node.id,
                 profile: node.profile,
+                isEditable: isMe || isOwnedByMe,
+                hasDifferentOwner: node.ownedBy != node.id,
               ),
             ),
           );
@@ -308,12 +312,16 @@ class _FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
 class BasicProfileModal extends ConsumerStatefulWidget {
   final bool isRootNodeCreation;
   final Relationship relationship;
+  final String? initialName;
+  final Gender? initialGender;
   final void Function(String name, Gender gender) onSave;
 
   const BasicProfileModal({
     super.key,
     this.isRootNodeCreation = false,
     required this.relationship,
+    this.initialName,
+    this.initialGender,
     required this.onSave,
   });
 
@@ -322,9 +330,16 @@ class BasicProfileModal extends ConsumerStatefulWidget {
 }
 
 class _AddConnectionModalState extends ConsumerState<BasicProfileModal> {
-  final _nameController = TextEditingController();
-  Gender _gender = Gender.male;
+  late final TextEditingController _nameController;
+  late Gender _gender;
   final _shareButtonKey = GlobalKey();
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.initialName ?? '');
+    _gender = widget.initialGender ?? Gender.male;
+  }
 
   @override
   void dispose() {
@@ -465,154 +480,6 @@ class _AddConnectionModalState extends ConsumerState<BasicProfileModal> {
     final position = renderBox?.localToGlobal(Offset.zero) ?? Offset.zero;
     final size = renderBox?.size ?? const Size(100, 100);
     return position & size;
-  }
-}
-
-class _ProfileView extends StatefulWidget {
-  final bool editable;
-  final bool ownershipClaimed;
-  final Profile initialProfile;
-
-  const _ProfileView({
-    super.key,
-    required this.editable,
-    required this.ownershipClaimed,
-    required this.initialProfile,
-  });
-
-  @override
-  State<_ProfileView> createState() => _ProfileViewState();
-}
-
-class _ProfileViewState extends State<_ProfileView> {
-  final _formKey = GlobalKey<FormState>();
-  late final TextEditingController _nameController;
-  late final TextEditingController _dateOfBirthController;
-  late final TextEditingController _birthplaceController;
-  bool _valid = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _nameController = TextEditingController(text: widget.initialProfile.name);
-    _dateOfBirthController = TextEditingController(
-        text: widget.initialProfile.birthday?.toString() ?? '');
-    _birthplaceController =
-        TextEditingController(text: widget.initialProfile.birthplace);
-  }
-
-  @override
-  void dispose() {
-    _nameController.dispose();
-    _dateOfBirthController.dispose();
-    _birthplaceController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('My Profile'),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.all(
-          Radius.circular(16),
-        ),
-      ),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                GestureDetector(
-                  onTap: _showPhotoPicker,
-                  child: Container(
-                    width: 200,
-                    height: 230,
-                    decoration: const BoxDecoration(
-                      color: Color.fromRGBO(0xEC, 0xEC, 0xEC, 1.0),
-                    ),
-                    child: const Center(
-                      child: Icon(
-                        Icons.add_photo_alternate,
-                        size: 107,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 24),
-                SizedBox(
-                  width: 400,
-                  child: Form(
-                    key: _formKey,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('Name'),
-                        TextFormField(
-                          controller: _nameController,
-                          onChanged: (_) => _validateForm(),
-                        ),
-                        const SizedBox(height: 4),
-                        const Text('Date of Birth'),
-                        TextFormField(
-                          controller: _dateOfBirthController,
-                          keyboardType: TextInputType.number,
-                          inputFormatters: [DateTextFormatter()],
-                          decoration: InputDecoration(
-                            hintText: getFormattedDatePattern().formatted,
-                          ),
-                          onChanged: (_) => _validateForm(),
-                        ),
-                        const SizedBox(height: 4),
-                        const Text('Birth place'),
-                        TextFormField(
-                          controller: _birthplaceController,
-                          onChanged: (_) => _validateForm(),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-            FilledButton(
-              onPressed: _valid ? _done : null,
-              style: FilledButton.styleFrom(
-                fixedSize: const Size.fromHeight(73),
-              ),
-              child: const Text('Save'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showPhotoPicker() {}
-
-  void _validateForm() {
-    setState(() => _valid = _formKey.currentState?.validate() ?? false);
-  }
-
-  void _done() {
-    if (_formKey.currentState?.validate() != true) {
-      return;
-    }
-
-    final name = _nameController.text;
-    final newProfile = Profile(
-      name: name.isEmpty ? 'Unknown' : name,
-      gender: widget.initialProfile.gender,
-      imageUrl: widget.initialProfile.imageUrl,
-      birthday: widget.initialProfile.birthday,
-      deathday: widget.initialProfile.deathday,
-      birthplace: widget.initialProfile.birthplace,
-    );
-    return Navigator.of(context).pop(newProfile);
   }
 }
 

@@ -1,6 +1,5 @@
 import 'dart:typed_data';
 
-import 'package:cross_file/cross_file.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:heritage/api.dart';
@@ -57,9 +56,8 @@ class ProfileUpdateNotifier extends StateNotifier<ProfileUpdate> {
   void birthplace(String value) =>
       state = state.copyWith.profile(birthplace: value);
 
-  Future<void> image(XFile value) async {
-    final bytes = await value.readAsBytes();
-    final downscaled = await downscaleImage(bytes, size: 300);
+  Future<void> image(Uint8List value) async {
+    final downscaled = await downscaleImage(value, size: 300);
     if (!mounted) {
       return Future.value();
     }
