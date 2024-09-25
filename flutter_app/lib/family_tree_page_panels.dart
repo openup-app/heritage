@@ -48,29 +48,40 @@ class _PanelsState extends ConsumerState<Panels> {
       children: [
         if (small)
           Positioned.fill(
-            child: DraggableScrollableSheet(
-              builder: (context, controller) {
-                return Container(
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(24),
-                      topRight: Radius.circular(24),
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        offset: Offset(0, 4),
-                        blurRadius: 16,
-                        color: Color.fromRGBO(0x00, 0x00, 0x00, 0.25),
+            child: Padding(
+              padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top),
+              child: DraggableScrollableSheet(
+                expand: false,
+                snap: true,
+                initialChildSize: 0.2,
+                minChildSize: 0.2,
+                maxChildSize: 1.0,
+                builder: (context, controller) {
+                  return Container(
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(24),
+                        topRight: Radius.circular(24),
                       ),
-                    ],
-                  ),
-                  child: KeyedSubtree(
-                    key: _childKey,
-                    child: child,
-                  ),
-                );
-              },
+                      boxShadow: [
+                        BoxShadow(
+                          offset: Offset(0, 4),
+                          blurRadius: 16,
+                          color: Color.fromRGBO(0x00, 0x00, 0x00, 0.25),
+                        ),
+                      ],
+                    ),
+                    child: SingleChildScrollView(
+                      controller: controller,
+                      child: KeyedSubtree(
+                        key: _childKey,
+                        child: child,
+                      ),
+                    ),
+                  );
+                },
+              ),
             ),
           )
         else
