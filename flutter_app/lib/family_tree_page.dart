@@ -163,7 +163,6 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
     }
 
     final node = linkedNode.data;
-    _familyTreeViewKey.currentState?.centerOnNodeWithId(node.id);
 
     final ownershipClaimed = node.ownedBy != null;
     if (!ownershipClaimed) {
@@ -182,6 +181,7 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
         },
       );
     } else {
+      _familyTreeViewKey.currentState?.centerOnNodeWithId(node.id);
       setState(() => _selectedNode = linkedNode.data);
     }
   }
