@@ -1,4 +1,5 @@
 import 'package:flutter/widgets.dart';
+import 'package:heritage/util.dart';
 import 'package:vector_math/vector_math_64.dart' hide Colors;
 
 class ZoomablePannableViewport extends StatefulWidget {
@@ -70,8 +71,8 @@ class ZoomablePannableViewportState extends State<ZoomablePannableViewport>
   }
 
   void centerOnWidgetWithKey(GlobalKey key) {
-    final targetRect = locate(key);
-    final childRect = locate(_childKey);
+    final targetRect = locateWidgetLocal(key);
+    final childRect = locateWidgetLocal(_childKey);
     if (targetRect == null || childRect == null) {
       return;
     }
@@ -97,16 +98,6 @@ class ZoomablePannableViewportState extends State<ZoomablePannableViewport>
       );
     });
     _animationController.forward(from: 0);
-  }
-
-  Rect? locate(GlobalKey key) {
-    final renderBox = key.currentContext?.findRenderObject() as RenderBox?;
-    if (renderBox == null) {
-      return null;
-    }
-    final offset = renderBox.globalToLocal(Offset.zero);
-    final size = renderBox.size;
-    return offset & size;
   }
 }
 
@@ -138,28 +129,18 @@ class _ViewportWatcherState extends State<_ViewportWatcher> {
   }
 
   void _onTransformed() {
-    final interactiveViewerRect = _getWidgetRect(widget.interactiveViewerKey);
+    final interactiveViewerRect = locateWidget(widget.interactiveViewerKey);
     if (interactiveViewerRect == null) {
       return;
     }
     final keysInViewport = widget.childKeys
-        .map((e) => (rect: _getWidgetRect(e), key: e))
+        .map((e) => (rect: locateWidget(e), key: e))
         .where((e) => e.rect != null)
         .where((e) => e.rect!.overlaps(interactiveViewerRect))
         .map((e) => e.key);
     if (keysInViewport.isNotEmpty) {
       widget.onWithinViewport(keysInViewport.toList());
     }
-  }
-
-  Rect? _getWidgetRect(GlobalKey key) {
-    final renderBox = key.currentContext?.findRenderObject() as RenderBox?;
-    final position = renderBox?.localToGlobal(Offset.zero);
-    final size = renderBox?.size;
-    if (position != null && size != null) {
-      return position & size;
-    }
-    return null;
   }
 
   Rect _transform(Matrix4 m, Rect rect) {

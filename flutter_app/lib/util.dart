@@ -4,6 +4,26 @@ import 'package:flutter/material.dart';
 import 'package:heritage/api.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+Rect? locateWidget(GlobalKey key) {
+  final renderBox = key.currentContext?.findRenderObject() as RenderBox?;
+  if (renderBox == null) {
+    return null;
+  }
+  final offset = renderBox.localToGlobal(Offset.zero);
+  final size = renderBox.size;
+  return offset & size;
+}
+
+Rect? locateWidgetLocal(GlobalKey key) {
+  final renderBox = key.currentContext?.findRenderObject() as RenderBox?;
+  if (renderBox == null) {
+    return null;
+  }
+  final offset = renderBox.globalToLocal(Offset.zero);
+  final size = renderBox.size;
+  return offset & size;
+}
+
 String genderedRelationship(Relationship relationship, Gender gender) {
   switch (relationship) {
     case Relationship.parent:

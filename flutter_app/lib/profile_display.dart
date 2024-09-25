@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:heritage/api.dart';
 import 'package:heritage/heritage_app.dart';
+import 'package:heritage/util.dart';
 
 class ProfileControls extends StatelessWidget {
   final bool show;
@@ -490,11 +491,9 @@ class _MouseHoverState extends State<MouseHover> {
             valueListenable: widget.transformNotifier,
             builder: (context, value, child) {
               final scale = value[0];
-              final renderBox =
-                  _childKey.currentContext?.findRenderObject() as RenderBox?;
-              final pos = renderBox?.localToGlobal(Offset.zero) ?? Offset.zero;
+              final rect = locateWidget(_childKey) ?? Rect.zero;
               final matrix = Matrix4.identity()
-                ..translate(pos.dx, pos.dy, 0.0)
+                ..translate(rect.left, rect.top, 0.0)
                 ..scale(scale);
               return Transform(
                 transform: matrix,

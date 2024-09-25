@@ -274,18 +274,12 @@ class FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
                     final isMe = widget.focalNode.id == node.id;
                     final canModify =
                         isMe || (linkedNode.isRelative && node.ownedBy == null);
-                    return ProfileControls(
-                      show: hovering && canModify,
-                      canAddParent: node.parents.isEmpty,
-                      onAddConnectionPressed: (relationship) =>
-                          widget.onAddConnectionPressed(node, relationship),
-                      child: MouseRegion(
-                        cursor: SystemMouseCursors.click,
-                        child: GestureDetector(
-                          onTap: () => widget.onProfileSelected(linkedNode),
-                          child: NodeProfile(
-                            node: node,
-                          ),
+                    return MouseRegion(
+                      cursor: SystemMouseCursors.click,
+                      child: GestureDetector(
+                        onTap: () => widget.onProfileSelected(linkedNode),
+                        child: NodeProfile(
+                          node: node,
                         ),
                       ),
                     );
@@ -484,7 +478,7 @@ class _AddConnectionModalState extends ConsumerState<BasicProfileModal> {
   }
 
   void _shareLink() {
-    final rect = _shareButtonRect();
+    final rect = locateWidget(_shareButtonKey);
     final graph = ref.read(graphProvider);
     final nodeId = graph.focalNode.id;
     final url = 'https://breakfastsearch.xyz/$nodeId';
@@ -493,14 +487,6 @@ class _AddConnectionModalState extends ConsumerState<BasicProfileModal> {
       subject: 'Join the family tree!',
       sharePositionOrigin: rect,
     );
-  }
-
-  Rect _shareButtonRect() {
-    final renderBox =
-        _shareButtonKey.currentContext?.findRenderObject() as RenderBox?;
-    final position = renderBox?.localToGlobal(Offset.zero) ?? Offset.zero;
-    final size = renderBox?.size ?? const Size(100, 100);
-    return position & size;
   }
 }
 
