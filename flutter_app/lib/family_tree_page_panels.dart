@@ -14,11 +14,13 @@ import 'package:heritage/util.dart';
 class Panels extends ConsumerStatefulWidget {
   final Node node;
   final VoidCallback onViewPerspective;
+  final VoidCallback onClose;
 
   const Panels({
     super.key,
     required this.node,
     required this.onViewPerspective,
+    required this.onClose,
   });
 
   @override
@@ -43,6 +45,7 @@ class _PanelsState extends ConsumerState<Panels> {
       hasDifferentOwner: widget.node.ownedBy != widget.node.id,
       padding: small ? const EdgeInsets.all(16) : const EdgeInsets.all(24),
       onViewPerspective: widget.onViewPerspective,
+      onClose: widget.onClose,
     );
     return Stack(
       children: [
@@ -128,6 +131,7 @@ class ProfileDisplay extends StatelessWidget {
   final ScrollController? scrollController;
   final EdgeInsets padding;
   final VoidCallback onViewPerspective;
+  final VoidCallback onClose;
 
   const ProfileDisplay({
     super.key,
@@ -139,6 +143,7 @@ class ProfileDisplay extends StatelessWidget {
     this.scrollController,
     required this.padding,
     required this.onViewPerspective,
+    required this.onClose,
   });
 
   @override
@@ -156,6 +161,7 @@ class ProfileDisplay extends StatelessWidget {
         scrollController: scrollController,
         padding: padding,
         onViewPerspective: onViewPerspective,
+        onClose: onClose,
       ),
     );
   }
@@ -169,6 +175,7 @@ class _ProfileDisplay extends ConsumerStatefulWidget {
   final ScrollController? scrollController;
   final EdgeInsets padding;
   final VoidCallback onViewPerspective;
+  final VoidCallback onClose;
 
   const _ProfileDisplay({
     super.key,
@@ -179,6 +186,7 @@ class _ProfileDisplay extends ConsumerStatefulWidget {
     this.scrollController,
     required this.padding,
     required this.onViewPerspective,
+    required this.onClose,
   });
 
   @override
@@ -236,12 +244,21 @@ class _ProfileEditorState extends ConsumerState<_ProfileDisplay> {
         children: [
           SizedBox(height: widget.padding.top),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8.0),
-            child: Text(
-              ref.watch(profileUpdateProvider.select((p) => p.name)),
-              style: const TextStyle(
-                fontSize: 24,
-              ),
+            padding: const EdgeInsets.only(left: 8.0),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    ref.watch(profileUpdateProvider.select((p) => p.name)),
+                    style: const TextStyle(
+                      fontSize: 24,
+                    ),
+                  ),
+                ),
+                CloseButton(
+                  onPressed: widget.onClose,
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 24),

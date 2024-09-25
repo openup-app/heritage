@@ -120,6 +120,7 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
                 );
               }
             },
+            onClose: () => setState(() => _node = null),
           ),
       ],
     );
