@@ -91,22 +91,28 @@ class _PanelsState extends ConsumerState<Panels> {
           Positioned(
             left: 16,
             top: 16 + MediaQuery.of(context).padding.top,
+            bottom: 16 + MediaQuery.of(context).padding.bottom,
             width: 390,
-            child: DecoratedBox(
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.all(Radius.circular(36)),
-                boxShadow: [
-                  BoxShadow(
-                    offset: Offset(0, 4),
-                    blurRadius: 16,
-                    color: Color.fromRGBO(0x00, 0x00, 0x00, 0.25),
+            child: Align(
+              alignment: Alignment.topCenter,
+              child: Container(
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.all(Radius.circular(36)),
+                  boxShadow: [
+                    BoxShadow(
+                      offset: Offset(0, 4),
+                      blurRadius: 16,
+                      color: Color.fromRGBO(0x00, 0x00, 0x00, 0.25),
+                    ),
+                  ],
+                ),
+                child: SingleChildScrollView(
+                  child: KeyedSubtree(
+                    key: _childKey,
+                    child: child,
                   ),
-                ],
-              ),
-              child: KeyedSubtree(
-                key: _childKey,
-                child: child,
+                ),
               ),
             ),
           ),
