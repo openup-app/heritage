@@ -271,7 +271,7 @@ class _ProfileEditorState extends ConsumerState<_ProfileDisplay> {
           MouseRegion(
             cursor: SystemMouseCursors.click,
             child: GestureDetector(
-              onTap: () => showBlockingModal(context, _pickPhoto()),
+              onTap: () => _pickPhotoWithSource(context),
               child: ClipRRect(
                 borderRadius: const BorderRadius.all(Radius.circular(16)),
                 child: ProfileImage(
@@ -439,8 +439,16 @@ class _ProfileEditorState extends ConsumerState<_ProfileDisplay> {
     );
   }
 
-  Future<void> _pickPhoto() async {
-    final file = await pickPhoto(context);
+  Future<void> _pickPhotoWithSource(BuildContext context) async {
+    final source = await pickPhotoSource(context);
+    if (!context.mounted || source == null) {
+      return;
+    }
+    await showBlockingModal(context, _pickPhoto(source: source));
+  }
+
+  Future<void> _pickPhoto({required PhotoSource source}) async {
+    final file = await pickPhoto(source: source);
     final image = await file?.readAsBytes();
     if (!mounted || image == null) {
       return;

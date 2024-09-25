@@ -96,7 +96,7 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
         FamilyTreeView(
           focalNode: graph.focalNode,
           nodes: graph.nodes.values.toList(),
-          onProfilePressed: _onProfilePressed,
+          onProfileSelected: _onProfileSelected,
           onAddConnectionPressed: _showAddConnectionModal,
           onFetchConnections: (ids) {},
         ),
@@ -152,7 +152,12 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
     );
   }
 
-  void _onProfilePressed(LinkedNode<Node> linkedNode) {
+  void _onProfileSelected(LinkedNode<Node>? linkedNode) {
+    if (linkedNode == null) {
+      setState(() => _node = null);
+      return;
+    }
+
     final node = linkedNode.data;
     final ownershipClaimed = node.ownedBy != null;
     if (!ownershipClaimed) {
@@ -179,7 +184,7 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
 class FamilyTreeView extends ConsumerStatefulWidget {
   final Node focalNode;
   final List<Node> nodes;
-  final void Function(LinkedNode<Node> node) onProfilePressed;
+  final void Function(LinkedNode<Node>? node) onProfileSelected;
   final void Function(Node node, Relationship relationship)
       onAddConnectionPressed;
   final void Function(List<Id> ids) onFetchConnections;
@@ -188,7 +193,7 @@ class FamilyTreeView extends ConsumerStatefulWidget {
     super.key,
     required this.focalNode,
     required this.nodes,
-    required this.onProfilePressed,
+    required this.onProfileSelected,
     required this.onAddConnectionPressed,
     required this.onFetchConnections,
   });
@@ -292,7 +297,7 @@ class _FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
                       child: MouseRegion(
                         cursor: SystemMouseCursors.click,
                         child: GestureDetector(
-                          onTap: () => widget.onProfilePressed(linkedNode),
+                          onTap: () => widget.onProfileSelected(linkedNode),
                           child: NodeProfile(
                             node: node,
                           ),
