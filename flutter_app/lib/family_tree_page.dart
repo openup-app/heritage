@@ -84,16 +84,18 @@ class FamilyTreePage extends ConsumerStatefulWidget {
 }
 
 class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
+  final _familyTreeViewKey = GlobalKey<FamilyTreeViewState>();
   Node? _selectedNode;
 
   @override
   Widget build(BuildContext context) {
-    final node = _selectedNode;
+    final selectedNode = _selectedNode;
     final graph = ref.watch(graphProvider);
     return Stack(
       fit: StackFit.expand,
       children: [
         FamilyTreeView(
+          key: _familyTreeViewKey,
           focalNode: graph.focalNode,
           nodes: graph.nodes.values.toList(),
           selectedNode: _selectedNode,
@@ -101,13 +103,14 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
           onAddConnectionPressed: _showAddConnectionModal,
           onFetchConnections: (ids) {},
         ),
-        if (node != null)
+        if (selectedNode != null)
           Panels(
-            node: node,
+            key: Key(selectedNode.id),
+            node: selectedNode,
             onViewPerspective: () {
               final pathParameters = {
                 'focalNodeId': graph.focalNode.id,
-                'perspectiveNodeId': node.id,
+                'perspectiveNodeId': selectedNode.id,
               };
               if (!widget.isPerspectiveMode) {
                 context.pushNamed(
@@ -160,6 +163,8 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
     }
 
     final node = linkedNode.data;
+    _familyTreeViewKey.currentState?.centerOnNodeWithId(node.id);
+
     final ownershipClaimed = node.ownedBy != null;
     if (!ownershipClaimed) {
       setState(() => _selectedNode = null);
@@ -202,12 +207,13 @@ class FamilyTreeView extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<FamilyTreeView> createState() => _FamilyTreeViewState();
+  ConsumerState<FamilyTreeView> createState() => FamilyTreeViewState();
 }
 
-class _FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
+class FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
   final _nodeKeys = <Id, GlobalKey>{};
   final _transformNotifier = ValueNotifier<Matrix4>(Matrix4.identity());
+  final _viewportKey = GlobalKey<ZoomablePannableViewportState>();
 
   @override
   void initState() {
@@ -239,15 +245,10 @@ class _FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
 
   @override
   Widget build(BuildContext context) {
-    final selectedId = widget.selectedNode?.id;
     return Center(
       child: ZoomablePannableViewport(
+        key: _viewportKey,
         childKeys: _nodeKeys.values.toList(),
-        selectedKey: selectedId == null
-            ? null
-            : _nodeKeys.entries
-                .firstWhereOrNull((e) => e.key == selectedId)
-                ?.value,
         onTransformed: (transform) => _transformNotifier.value = transform,
         child: Stack(
           children: [
@@ -296,6 +297,13 @@ class _FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
         ),
       ),
     );
+  }
+
+  void centerOnNodeWithId(Id id) {
+    final key = _nodeKeys[id];
+    if (key != null) {
+      _viewportKey.currentState?.centerOnWidgetWithKey(key);
+    }
   }
 
   void _showOwnershipModal() async {

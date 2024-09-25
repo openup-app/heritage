@@ -3,7 +3,6 @@ import 'package:vector_math/vector_math_64.dart' hide Colors;
 
 class ZoomablePannableViewport extends StatefulWidget {
   final List<GlobalKey> childKeys;
-  final GlobalKey? selectedKey;
   final void Function(Matrix4 transform) onTransformed;
   final void Function(List<GlobalKey> keys)? onWithinViewport;
   final Widget child;
@@ -11,7 +10,6 @@ class ZoomablePannableViewport extends StatefulWidget {
   const ZoomablePannableViewport({
     super.key,
     required this.childKeys,
-    required this.selectedKey,
     required this.onTransformed,
     this.onWithinViewport,
     required this.child,
@@ -19,10 +17,10 @@ class ZoomablePannableViewport extends StatefulWidget {
 
   @override
   State<ZoomablePannableViewport> createState() =>
-      _ZoomablePannableViewportState();
+      ZoomablePannableViewportState();
 }
 
-class _ZoomablePannableViewportState extends State<ZoomablePannableViewport>
+class ZoomablePannableViewportState extends State<ZoomablePannableViewport>
     with SingleTickerProviderStateMixin {
   final _interactiveViewerKey = GlobalKey();
   final _transformationController = TransformationController();
@@ -49,15 +47,6 @@ class _ZoomablePannableViewportState extends State<ZoomablePannableViewport>
   }
 
   @override
-  void didUpdateWidget(covariant ZoomablePannableViewport oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    final selectedKey = widget.selectedKey;
-    if (oldWidget.selectedKey != selectedKey && selectedKey != null) {
-      _centerOnWidgetWithKey(selectedKey);
-    }
-  }
-
-  @override
   void dispose() {
     _transformationController.dispose();
     _animationController.dispose();
@@ -80,7 +69,7 @@ class _ZoomablePannableViewportState extends State<ZoomablePannableViewport>
     );
   }
 
-  void _centerOnWidgetWithKey(GlobalKey key) {
+  void centerOnWidgetWithKey(GlobalKey key) {
     final targetRect = locate(key);
     final childRect = locate(_childKey);
     if (targetRect == null || childRect == null) {
