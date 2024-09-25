@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:heritage/api.dart';
 import 'package:heritage/date.dart';
+import 'package:heritage/family_tree_page.dart';
 import 'package:heritage/file_picker.dart';
 import 'package:heritage/graph_provider.dart';
 import 'package:heritage/image_croper.dart';
@@ -13,12 +14,15 @@ import 'package:heritage/util.dart';
 
 class Panels extends ConsumerStatefulWidget {
   final Node node;
+  final void Function(Node node, Relationship relationship)
+      onAddConnectionPressed;
   final VoidCallback onViewPerspective;
   final VoidCallback onClose;
 
   const Panels({
     super.key,
     required this.node,
+    required this.onAddConnectionPressed,
     required this.onViewPerspective,
     required this.onClose,
   });
@@ -33,20 +37,42 @@ class _PanelsState extends ConsumerState<Panels> {
   @override
   Widget build(BuildContext context) {
     final focalNode = ref.read(graphProvider).focalNode;
-    final isMe = focalNode.id == widget.node.id;
-    final isOwnedByMe = widget.node.ownedBy == widget.node.id;
+    final node = widget.node;
+    final isMe = focalNode.id == node.id;
+    final isOwnedByMe = node.ownedBy == node.id;
     final layout = Layout.of(context);
     final small = layout == LayoutType.small;
-    final child = ProfileDisplay(
-      id: widget.node.id,
-      profile: widget.node.profile,
-      isMe: isMe,
-      isEditable: isMe || isOwnedByMe,
-      hasDifferentOwner: widget.node.ownedBy != widget.node.id,
-      padding: small ? const EdgeInsets.all(16) : const EdgeInsets.all(24),
-      onViewPerspective: widget.onViewPerspective,
-      onClose: widget.onClose,
-    );
+
+    final Widget child;
+    final ownershipClaimed = node.ownedBy != null;
+    if (!ownershipClaimed) {
+      child = BasicProfileDisplay(
+        relationship: Relationship.sibling,
+        initialName: node.profile.name,
+        initialGender: node.profile.gender,
+        padding: small ? const EdgeInsets.all(16) : const EdgeInsets.all(24),
+        onSave: (_, __) {},
+      );
+    } else {
+      child = ProfileDisplay(
+        id: node.id,
+        profile: node.profile,
+        isMe: isMe,
+        isEditable: isMe || isOwnedByMe,
+        hasDifferentOwner: node.ownedBy != node.id,
+        padding: small ? const EdgeInsets.all(16) : const EdgeInsets.all(24),
+        header: !small
+            ? null
+            : AddNodeConnectionButtons(
+                canAddParent: node.parents.isEmpty,
+                onAddConnectionPressed: (relationship) =>
+                    widget.onAddConnectionPressed(node, relationship),
+              ),
+        onViewPerspective: widget.onViewPerspective,
+        onClose: widget.onClose,
+      );
+    }
+
     return Stack(
       children: [
         if (small)
@@ -87,7 +113,7 @@ class _PanelsState extends ConsumerState<Panels> {
               ),
             ),
           )
-        else
+        else ...[
           Positioned(
             left: 16,
             top: 16 + MediaQuery.of(context).padding.top,
@@ -116,6 +142,33 @@ class _PanelsState extends ConsumerState<Panels> {
               ),
             ),
           ),
+          Align(
+            alignment: Alignment.bottomCenter,
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: Container(
+                width: 447,
+                padding: const EdgeInsets.symmetric(vertical: 20),
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.all(Radius.circular(36)),
+                  boxShadow: [
+                    BoxShadow(
+                      offset: Offset(0, 4),
+                      blurRadius: 16,
+                      color: Color.fromRGBO(0x00, 0x00, 0x00, 0.25),
+                    ),
+                  ],
+                ),
+                child: AddNodeConnectionButtons(
+                  canAddParent: node.parents.isEmpty,
+                  onAddConnectionPressed: (relationship) =>
+                      widget.onAddConnectionPressed(node, relationship),
+                ),
+              ),
+            ),
+          ),
+        ],
       ],
     );
     // if (!mounted) {
@@ -136,6 +189,7 @@ class ProfileDisplay extends StatelessWidget {
   final bool hasDifferentOwner;
   final ScrollController? scrollController;
   final EdgeInsets padding;
+  final Widget? header;
   final VoidCallback onViewPerspective;
   final VoidCallback onClose;
 
@@ -148,6 +202,7 @@ class ProfileDisplay extends StatelessWidget {
     required this.hasDifferentOwner,
     this.scrollController,
     required this.padding,
+    this.header,
     required this.onViewPerspective,
     required this.onClose,
   });
@@ -166,6 +221,7 @@ class ProfileDisplay extends StatelessWidget {
         hasDifferentOwner: hasDifferentOwner,
         scrollController: scrollController,
         padding: padding,
+        header: header,
         onViewPerspective: onViewPerspective,
         onClose: onClose,
       ),
@@ -180,6 +236,7 @@ class _ProfileDisplay extends ConsumerStatefulWidget {
   final bool hasDifferentOwner;
   final ScrollController? scrollController;
   final EdgeInsets padding;
+  final Widget? header;
   final VoidCallback onViewPerspective;
   final VoidCallback onClose;
 
@@ -191,6 +248,7 @@ class _ProfileDisplay extends ConsumerStatefulWidget {
     required this.hasDifferentOwner,
     this.scrollController,
     required this.padding,
+    required this.header,
     required this.onViewPerspective,
     required this.onClose,
   });
@@ -238,6 +296,7 @@ class _ProfileEditorState extends ConsumerState<_ProfileDisplay> {
 
   @override
   Widget build(BuildContext context) {
+    final header = widget.header;
     return SingleChildScrollView(
       controller: widget.scrollController,
       padding: EdgeInsets.only(
@@ -267,6 +326,10 @@ class _ProfileEditorState extends ConsumerState<_ProfileDisplay> {
               ],
             ),
           ),
+          if (header != null) ...[
+            const SizedBox(height: 24),
+            header,
+          ],
           const SizedBox(height: 24),
           MouseRegion(
             cursor: SystemMouseCursors.click,

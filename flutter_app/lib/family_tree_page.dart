@@ -107,6 +107,7 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
           Panels(
             key: Key(selectedNode.id),
             node: selectedNode,
+            onAddConnectionPressed: _showAddConnectionModal,
             onViewPerspective: () {
               final pathParameters = {
                 'focalNodeId': graph.focalNode.id,
@@ -138,8 +139,9 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
         return AlertDialog(
           title: Text('Add a ${relationship.name}'),
           content: SingleChildScrollView(
-            child: BasicProfileModal(
+            child: BasicProfileDisplay(
               relationship: relationship,
+              padding: const EdgeInsets.all(16),
               onSave: (name, gender) {
                 Navigator.of(context).pop();
                 graphNotifier.addConnection(
@@ -163,27 +165,8 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
     }
 
     final node = linkedNode.data;
-
-    final ownershipClaimed = node.ownedBy != null;
-    if (!ownershipClaimed) {
-      setState(() => _selectedNode = null);
-      showDialog(
-        context: context,
-        builder: (context) {
-          return AlertDialog(
-            content: BasicProfileModal(
-              relationship: Relationship.sibling,
-              initialName: node.profile.name,
-              initialGender: node.profile.gender,
-              onSave: (_, __) {},
-            ),
-          );
-        },
-      );
-    } else {
-      _familyTreeViewKey.currentState?.centerOnNodeWithId(node.id);
-      setState(() => _selectedNode = linkedNode.data);
-    }
+    _familyTreeViewKey.currentState?.centerOnNodeWithId(node.id);
+    setState(() => _selectedNode = linkedNode.data);
   }
 }
 
@@ -324,27 +307,30 @@ class FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
   }
 }
 
-class BasicProfileModal extends ConsumerStatefulWidget {
+class BasicProfileDisplay extends ConsumerStatefulWidget {
   final bool isRootNodeCreation;
   final Relationship relationship;
   final String? initialName;
   final Gender? initialGender;
+  final EdgeInsets padding;
   final void Function(String name, Gender gender) onSave;
 
-  const BasicProfileModal({
+  const BasicProfileDisplay({
     super.key,
     this.isRootNodeCreation = false,
     required this.relationship,
     this.initialName,
     this.initialGender,
+    required this.padding,
     required this.onSave,
   });
 
   @override
-  ConsumerState<BasicProfileModal> createState() => _AddConnectionModalState();
+  ConsumerState<BasicProfileDisplay> createState() =>
+      _BasicProfileDisplayState();
 }
 
-class _AddConnectionModalState extends ConsumerState<BasicProfileModal> {
+class _BasicProfileDisplayState extends ConsumerState<BasicProfileDisplay> {
   late final TextEditingController _nameController;
   late Gender _gender;
   final _shareButtonKey = GlobalKey();
@@ -364,108 +350,117 @@ class _AddConnectionModalState extends ConsumerState<BasicProfileModal> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Center(
-          child: Icon(
-            Icons.person,
-            size: 200,
-            color: primaryColor,
-          ),
-        ),
-        const SelectableText('First & Last Name'),
-        const SizedBox(height: 4),
-        TextFormField(
-          controller: _nameController,
-        ),
-        const SizedBox(height: 16),
-        widget.isRootNodeCreation
-            ? const SelectableText('Your Gender')
-            : widget.relationship != Relationship.spouse
-                ? const SelectableText('Relationship')
-                : const Text('Gender'),
-        const SizedBox(height: 4),
-        Row(
-          children: [
-            Expanded(
-              child: FilledButton(
-                onPressed: () => setState(() => _gender = Gender.male),
-                style: FilledButton.styleFrom(
-                  fixedSize: const Size.fromHeight(44),
-                  backgroundColor:
-                      _gender == Gender.male ? primaryColor : unselectedColor,
-                ),
-                child: (widget.relationship != Relationship.spouse &&
-                        !widget.isRootNodeCreation)
-                    ? Text(
-                        genderedRelationship(widget.relationship, Gender.male))
-                    : const Text('Male'),
-              ),
+    return SingleChildScrollView(
+      padding: EdgeInsets.only(
+        left: widget.padding.left,
+        right: widget.padding.right,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(height: widget.padding.top),
+          const Center(
+            child: Icon(
+              Icons.person,
+              size: 200,
+              color: primaryColor,
             ),
-            const SizedBox(width: 24),
-            Expanded(
-              child: FilledButton(
-                onPressed: () => setState(() => _gender = Gender.female),
-                style: FilledButton.styleFrom(
-                  fixedSize: const Size.fromHeight(44),
-                  backgroundColor:
-                      _gender == Gender.male ? unselectedColor : primaryColor,
+          ),
+          const SelectableText('First & Last Name'),
+          const SizedBox(height: 4),
+          TextFormField(
+            controller: _nameController,
+          ),
+          const SizedBox(height: 16),
+          widget.isRootNodeCreation
+              ? const SelectableText('Your Gender')
+              : widget.relationship != Relationship.spouse
+                  ? const SelectableText('Relationship')
+                  : const Text('Gender'),
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              Expanded(
+                child: FilledButton(
+                  onPressed: () => setState(() => _gender = Gender.male),
+                  style: FilledButton.styleFrom(
+                    fixedSize: const Size.fromHeight(44),
+                    backgroundColor:
+                        _gender == Gender.male ? primaryColor : unselectedColor,
+                  ),
+                  child: (widget.relationship != Relationship.spouse &&
+                          !widget.isRootNodeCreation)
+                      ? Text(genderedRelationship(
+                          widget.relationship, Gender.male))
+                      : const Text('Male'),
                 ),
-                child: (widget.relationship != Relationship.spouse &&
-                        !widget.isRootNodeCreation)
-                    ? Text(genderedRelationship(
-                        widget.relationship, Gender.female))
-                    : const Text('Female'),
+              ),
+              const SizedBox(width: 24),
+              Expanded(
+                child: FilledButton(
+                  onPressed: () => setState(() => _gender = Gender.female),
+                  style: FilledButton.styleFrom(
+                    fixedSize: const Size.fromHeight(44),
+                    backgroundColor:
+                        _gender == Gender.male ? unselectedColor : primaryColor,
+                  ),
+                  child: (widget.relationship != Relationship.spouse &&
+                          !widget.isRootNodeCreation)
+                      ? Text(genderedRelationship(
+                          widget.relationship, Gender.female))
+                      : const Text('Female'),
+                ),
+              ),
+            ],
+          ),
+          if (!widget.isRootNodeCreation) ...[
+            const SizedBox(height: 24),
+            FilledButton(
+              key: _shareButtonKey,
+              onPressed: _shareLink,
+              style: _bigButtonStyle,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  const Icon(CupertinoIcons.share),
+                  Expanded(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                            'Only share this link with your ${widget.relationship.name}'),
+                        const Text('They can complete their profile'),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
-        ),
-        if (!widget.isRootNodeCreation) ...[
-          const SizedBox(height: 24),
-          FilledButton(
-            key: _shareButtonKey,
-            onPressed: _shareLink,
-            style: _bigButtonStyle,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                const Icon(CupertinoIcons.share),
-                Expanded(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                          'Only share this link with your ${widget.relationship.name}'),
-                      const Text('They can complete their profile'),
-                    ],
-                  ),
-                ),
-              ],
+          const SizedBox(height: 16),
+          Center(
+            child: AnimatedBuilder(
+              animation: _nameController,
+              builder: (context, child) {
+                return TextButton(
+                  onPressed: _nameController.text.isEmpty ? null : _done,
+                  child: const Text('Done'),
+                );
+              },
             ),
           ),
+          if (!widget.isRootNodeCreation) ...[
+            const SizedBox(height: 16),
+            TextButton(
+              onPressed: () {},
+              child:
+                  const Text('Tap here for a child or deceased family member'),
+            ),
+          ],
+          SizedBox(height: widget.padding.bottom),
         ],
-        const SizedBox(height: 16),
-        Center(
-          child: AnimatedBuilder(
-            animation: _nameController,
-            builder: (context, child) {
-              return TextButton(
-                onPressed: _nameController.text.isEmpty ? null : _done,
-                child: const Text('Done'),
-              );
-            },
-          ),
-        ),
-        if (!widget.isRootNodeCreation) ...[
-          const SizedBox(height: 16),
-          TextButton(
-            onPressed: () {},
-            child: const Text('Tap here for a child or deceased family member'),
-          ),
-        ],
-      ],
+      ),
     );
   }
 

@@ -3,6 +3,99 @@ import 'package:heritage/api.dart';
 import 'package:heritage/heritage_app.dart';
 import 'package:heritage/util.dart';
 
+class AddNodeConnectionButtons extends StatelessWidget {
+  final bool canAddParent;
+  final void Function(Relationship relationship) onAddConnectionPressed;
+
+  const AddNodeConnectionButtons({
+    super.key,
+    required this.canAddParent,
+    required this.onAddConnectionPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: [
+        _AddNodeConnectionButton(
+          onPressed: !canAddParent
+              ? null
+              : () => onAddConnectionPressed(Relationship.parent),
+          icon: const Icon(Icons.person_add),
+          label: const Text('Parent'),
+        ),
+        _AddNodeConnectionButton(
+          onPressed: () => onAddConnectionPressed(Relationship.spouse),
+          icon: const Icon(Icons.person_add),
+          label: const Text('Spouse'),
+        ),
+        _AddNodeConnectionButton(
+          onPressed: () => onAddConnectionPressed(Relationship.sibling),
+          icon: const Icon(Icons.person_add),
+          label: const Text('Sibling'),
+        ),
+        _AddNodeConnectionButton(
+          onPressed: () => onAddConnectionPressed(Relationship.child),
+          icon: const Icon(Icons.person_add),
+          label: const Text('Child'),
+        ),
+      ],
+    );
+  }
+}
+
+class _AddNodeConnectionButton extends StatelessWidget {
+  final Widget icon;
+  final Widget label;
+  final VoidCallback? onPressed;
+
+  const _AddNodeConnectionButton({
+    super.key,
+    required this.icon,
+    required this.label,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: onPressed,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            FilledButton(
+              onPressed: onPressed,
+              style: FilledButton.styleFrom(
+                fixedSize: const Size.square(60),
+                shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.all(
+                    Radius.circular(13),
+                  ),
+                ),
+                foregroundColor: const Color.fromRGBO(0x00, 0xAE, 0xFF, 1.0),
+                backgroundColor: const Color.fromRGBO(0xEB, 0xEB, 0xEB, 1.0),
+              ),
+              child: icon,
+            ),
+            const SizedBox(height: 4),
+            DefaultTextStyle.merge(
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+              child: label,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class ProfileControls extends StatelessWidget {
   final bool show;
   final bool canAddParent;
