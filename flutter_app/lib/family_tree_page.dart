@@ -84,11 +84,11 @@ class FamilyTreePage extends ConsumerStatefulWidget {
 }
 
 class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
-  Node? _node;
+  Node? _selectedNode;
 
   @override
   Widget build(BuildContext context) {
-    final node = _node;
+    final node = _selectedNode;
     final graph = ref.watch(graphProvider);
     return Stack(
       fit: StackFit.expand,
@@ -96,6 +96,7 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
         FamilyTreeView(
           focalNode: graph.focalNode,
           nodes: graph.nodes.values.toList(),
+          selectedNode: _selectedNode,
           onProfileSelected: _onProfileSelected,
           onAddConnectionPressed: _showAddConnectionModal,
           onFetchConnections: (ids) {},
@@ -120,7 +121,7 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
                 );
               }
             },
-            onClose: () => setState(() => _node = null),
+            onClose: () => setState(() => _selectedNode = null),
           ),
       ],
     );
@@ -154,14 +155,14 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
 
   void _onProfileSelected(LinkedNode<Node>? linkedNode) {
     if (linkedNode == null) {
-      setState(() => _node = null);
+      setState(() => _selectedNode = null);
       return;
     }
 
     final node = linkedNode.data;
     final ownershipClaimed = node.ownedBy != null;
     if (!ownershipClaimed) {
-      setState(() => _node = null);
+      setState(() => _selectedNode = null);
       showDialog(
         context: context,
         builder: (context) {
@@ -176,7 +177,7 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
         },
       );
     } else {
-      setState(() => _node = linkedNode.data);
+      setState(() => _selectedNode = linkedNode.data);
     }
   }
 }
@@ -184,6 +185,7 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
 class FamilyTreeView extends ConsumerStatefulWidget {
   final Node focalNode;
   final List<Node> nodes;
+  final Node? selectedNode;
   final void Function(LinkedNode<Node>? node) onProfileSelected;
   final void Function(Node node, Relationship relationship)
       onAddConnectionPressed;
@@ -193,6 +195,7 @@ class FamilyTreeView extends ConsumerStatefulWidget {
     super.key,
     required this.focalNode,
     required this.nodes,
+    required this.selectedNode,
     required this.onProfileSelected,
     required this.onAddConnectionPressed,
     required this.onFetchConnections,
@@ -204,7 +207,6 @@ class FamilyTreeView extends ConsumerStatefulWidget {
 
 class _FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
   final _nodeKeys = <Id, GlobalKey>{};
-  final _nodeKeysFlipped = <GlobalKey, Id>{};
   final _transformNotifier = ValueNotifier<Matrix4>(Matrix4.identity());
 
   @override
@@ -231,26 +233,21 @@ class _FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
 
   void _updateKeys() {
     for (final node in widget.nodes) {
-      _nodeKeys.putIfAbsent(node.id, () {
-        final key = GlobalKey();
-        _nodeKeysFlipped[key] = node.id;
-        return key;
-      });
+      _nodeKeys.putIfAbsent(node.id, () => GlobalKey());
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final selectedId = widget.selectedNode?.id;
     return Center(
       child: ZoomablePannableViewport(
         childKeys: _nodeKeys.values.toList(),
-        onWithinViewport: (keys) {
-          final ids =
-              keys.map((e) => _nodeKeysFlipped[e]).whereNotNull().toList();
-          if (ids.isNotEmpty) {
-            widget.onFetchConnections(ids);
-          }
-        },
+        selectedKey: selectedId == null
+            ? null
+            : _nodeKeys.entries
+                .firstWhereOrNull((e) => e.key == selectedId)
+                ?.value,
         onTransformed: (transform) => _transformNotifier.value = transform,
         child: Stack(
           children: [
@@ -263,19 +260,6 @@ class _FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
             GraphView(
               focalNodeId: widget.focalNode.id,
               nodes: widget.nodes,
-              // levelGap: 40,
-              // spouseGap: 4,
-              // siblingGap: 16,
-              // nodeBuilder: (context, node) {
-              //   return Consumer(
-              //     builder: (context, ref, child) {
-              //       return GestureDetector(
-              //         onTap: () => _sendTest(context, ref),
-              //         child: NodeDisplay(node: node),
-              //       );
-              //     },
-              //   );
-              // },
               levelGap: 302,
               spouseGap: 52,
               siblingGap: 297,

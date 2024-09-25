@@ -3,15 +3,17 @@ import 'package:vector_math/vector_math_64.dart' hide Colors;
 
 class ZoomablePannableViewport extends StatefulWidget {
   final List<GlobalKey> childKeys;
+  final GlobalKey? selectedKey;
   final void Function(Matrix4 transform) onTransformed;
-  final void Function(List<GlobalKey> keys) onWithinViewport;
+  final void Function(List<GlobalKey> keys)? onWithinViewport;
   final Widget child;
 
   const ZoomablePannableViewport({
     super.key,
     required this.childKeys,
+    required this.selectedKey,
     required this.onTransformed,
-    required this.onWithinViewport,
+    this.onWithinViewport,
     required this.child,
   });
 
@@ -20,9 +22,20 @@ class ZoomablePannableViewport extends StatefulWidget {
       _ZoomablePannableViewportState();
 }
 
-class _ZoomablePannableViewportState extends State<ZoomablePannableViewport> {
+class _ZoomablePannableViewportState extends State<ZoomablePannableViewport>
+    with SingleTickerProviderStateMixin {
   final _interactiveViewerKey = GlobalKey();
   final _transformationController = TransformationController();
+  final _childKey = GlobalKey();
+
+  late final _animationController = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 800),
+  );
+  Animation? _animation;
+
+  Matrix4 _oldMatrix = Matrix4.identity();
+  Matrix4 _targetMatrix = Matrix4.identity();
 
   @override
   void initState() {
@@ -30,11 +43,24 @@ class _ZoomablePannableViewportState extends State<ZoomablePannableViewport> {
     _transformationController.addListener(() {
       widget.onTransformed(_transformationController.value);
     });
+
+    _animationController
+        .addListener(() => _transformationController.value = _animation?.value);
+  }
+
+  @override
+  void didUpdateWidget(covariant ZoomablePannableViewport oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final selectedKey = widget.selectedKey;
+    if (oldWidget.selectedKey != selectedKey && selectedKey != null) {
+      _centerOnWidgetWithKey(selectedKey);
+    }
   }
 
   @override
   void dispose() {
     _transformationController.dispose();
+    _animationController.dispose();
     super.dispose();
   }
 
@@ -47,14 +73,51 @@ class _ZoomablePannableViewportState extends State<ZoomablePannableViewport> {
       maxScale: 4,
       minScale: 0.1,
       boundaryMargin: const EdgeInsets.all(500),
-      child: _ViewportWatcher(
-        controller: _transformationController,
-        interactiveViewerKey: _interactiveViewerKey,
-        childKeys: widget.childKeys,
-        onWithinViewport: widget.onWithinViewport,
+      child: KeyedSubtree(
+        key: _childKey,
         child: widget.child,
       ),
     );
+  }
+
+  void _centerOnWidgetWithKey(GlobalKey key) {
+    final targetRect = locate(key);
+    final childRect = locate(_childKey);
+    if (targetRect == null || childRect == null) {
+      return;
+    }
+
+    final windowSize = MediaQuery.of(context).size;
+    final relative = targetRect.shift(-childRect.topLeft);
+    _targetMatrix = Matrix4.identity()
+      ..translate(
+        relative.left + windowSize.width / 2 - targetRect.width / 2,
+        relative.top + windowSize.height / 2 - targetRect.height / 2,
+      );
+    _oldMatrix = Matrix4.copy(_transformationController.value);
+
+    setState(() {
+      _animation = Matrix4Tween(
+        begin: _oldMatrix,
+        end: _targetMatrix,
+      ).animate(
+        CurvedAnimation(
+          parent: _animationController,
+          curve: Curves.easeOutCubic,
+        ),
+      );
+    });
+    _animationController.forward(from: 0);
+  }
+
+  Rect? locate(GlobalKey key) {
+    final renderBox = key.currentContext?.findRenderObject() as RenderBox?;
+    if (renderBox == null) {
+      return null;
+    }
+    final offset = renderBox.globalToLocal(Offset.zero);
+    final size = renderBox.size;
+    return offset & size;
   }
 }
 
