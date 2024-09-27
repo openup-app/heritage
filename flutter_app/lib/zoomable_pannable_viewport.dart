@@ -56,13 +56,20 @@ class ZoomablePannableViewportState extends State<ZoomablePannableViewport>
 
   @override
   Widget build(BuildContext context) {
-    return InteractiveViewer(
-      key: _interactiveViewerKey,
-      transformationController: _transformationController,
-      constrained: false,
-      maxScale: 4,
-      minScale: 0.1,
-      boundaryMargin: const EdgeInsets.all(500),
+    return AnimatedBuilder(
+      animation: _transformationController,
+      builder: (context, child) {
+        return InteractiveViewer(
+          key: _interactiveViewerKey,
+          transformationController: _transformationController,
+          constrained: false,
+          maxScale: 4,
+          minScale: 0.1,
+          boundaryMargin: EdgeInsets.all(
+              500 + 200 / _transformationController.value.getMaxScaleOnAxis()),
+          child: child!,
+        );
+      },
       child: KeyedSubtree(
         key: _childKey,
         child: widget.child,

@@ -230,7 +230,7 @@ enum Gender { male, female }
 
 enum Relationship { parent, sibling, spouse, child }
 
-@freezed
+@Freezed(makeCollectionsUnmodifiable: false)
 class Node with _$Node implements GraphNode {
   const factory Node({
     required Id id,
@@ -243,7 +243,13 @@ class Node with _$Node implements GraphNode {
     required Profile profile,
   }) = _Node;
 
+  const Node._();
+
   factory Node.fromJson(Map<String, Object?> json) => _$NodeFromJson(json);
+
+  @override
+  bool operator <(GraphNode other) =>
+      createdAt.compareTo((other as Node).createdAt) == -1;
 }
 
 @freezed

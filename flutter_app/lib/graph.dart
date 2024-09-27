@@ -1,5 +1,7 @@
+import 'dart:collection';
 import 'dart:math';
 
+import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:heritage/api.dart';
 
@@ -8,6 +10,8 @@ abstract class GraphNode {
   List<Id> get parents;
   List<Id> get spouses;
   List<Id> get children;
+
+  bool operator <(GraphNode other);
 }
 
 class LinkedNode<T extends GraphNode> {
@@ -16,10 +20,8 @@ class LinkedNode<T extends GraphNode> {
   final List<LinkedNode<T>> spouses;
   final List<LinkedNode<T>> children;
   final T data;
-  bool leadsToFocalNode;
   bool isRelative;
   bool shouldBeRightChild;
-  bool shouldTraverseChildren;
 
   LinkedNode({
     required this.id,
@@ -27,16 +29,16 @@ class LinkedNode<T extends GraphNode> {
     required this.spouses,
     required this.children,
     required this.data,
-    this.leadsToFocalNode = false,
     this.isRelative = false,
     this.shouldBeRightChild = true,
-    this.shouldTraverseChildren = true,
   });
 
   LinkedNode<T>? get spouse => spouses.firstOrNull;
 
   @override
   String toString() => 'LinkedNode $id';
+
+  bool operator <(LinkedNode<T> other) => data < other.data;
 }
 
 class Couple<T extends GraphNode> {
@@ -54,18 +56,125 @@ class Couple<T extends GraphNode> {
     required this.spouse,
   });
 
-  bool get leadsToFocalNode => node.leadsToFocalNode;
-
-  String? get firstParentId => parents.isEmpty
+  Couple<T>? get firstParent => parents.isEmpty
       ? null
       : parents.length == 1
-          ? parents[0].id
-          : parents[0].id.compareTo(parents[1].id) == -1
-              ? parents[0].id
-              : parents[1].id;
+          ? parents[0]
+          : parents[0] < parents[1]
+              ? parents[0]
+              : parents[1];
 
   @override
   String toString() => 'Couple $id/${spouse?.id ?? '-'}';
+
+  bool operator <(Couple<T> other) {
+    final a = spouse == null
+        ? node
+        : node < spouse!
+            ? node
+            : spouse!;
+    final b = other.spouse == null
+        ? other.node
+        : other.node < other.spouse!
+            ? other.node
+            : other.spouse!;
+    return a < b;
+  }
+}
+
+Map<Id, LinkedNode<T>> linkNodes<T extends GraphNode>(
+    Iterable<T> unlinkedNodes) {
+  final nodes = unlinkedNodes.map((t) => _emptyLinkedNode(t.id, t)).toList();
+  final idToNode = Map.fromEntries(nodes.map((e) => MapEntry(e.id, e)));
+
+  for (final (index, unlinkedNode) in unlinkedNodes.indexed) {
+    final node = nodes[index];
+    for (final parentId in unlinkedNode.parents) {
+      final parentNode = idToNode[parentId];
+      if (parentNode != null) {
+        node.parents.add(parentNode);
+      }
+    }
+    for (final childId in unlinkedNode.children) {
+      final childNode = idToNode[childId];
+      if (childNode != null) {
+        node.children.add(childNode);
+      }
+    }
+    for (final spouseId in unlinkedNode.spouses) {
+      final spouseNode = idToNode[spouseId];
+      if (spouseNode != null) {
+        node.spouses.add(spouseNode);
+      }
+    }
+  }
+
+  return idToNode;
+}
+
+LinkedNode<T> _emptyLinkedNode<T extends GraphNode>(String id, T data) {
+  return LinkedNode<T>(
+    id: data.id,
+    parents: [],
+    spouses: [],
+    children: [],
+    data: data,
+  );
+}
+
+void markRelatives<T extends GraphNode>(Couple<T> focalCouple) {
+  final roots = findRootCouplesWithDistance(focalCouple).map((e) => e.$1);
+  final rootNodes = roots.expand((e) => [e.node, e.spouse]).whereNotNull();
+
+  // Breadth-first search marking children, but not spouses
+  final fringe = Queue<LinkedNode<T>>();
+  final visited = <Id>{};
+  fringe.addAll(rootNodes);
+  while (fringe.isNotEmpty) {
+    final node = fringe.removeFirst();
+    if (visited.contains(node.id)) {
+      continue;
+    }
+    visited.add(node.id);
+    node.isRelative = true;
+    fringe.addAll(node.children);
+  }
+}
+
+void markRelativesSingles<T extends GraphNode>(LinkedNode<T> focalNode) {
+  final rootNodes =
+      findRootsIncludingSpousesWithDistance(focalNode).map((e) => e.$1);
+
+  // Breadth-first search marking children, but not spouses
+  final fringe = Queue<LinkedNode<T>>();
+  final visited = <Id>{};
+  fringe.addAll(rootNodes);
+  while (fringe.isNotEmpty) {
+    final node = fringe.removeFirst();
+    if (visited.contains(node.id)) {
+      continue;
+    }
+    visited.add(node.id);
+    node.isRelative = true;
+    fringe.addAll(node.children);
+  }
+}
+
+void debugTraverse<T extends GraphNode>(
+    Couple<T> focalCouple, void Function(Couple<T> couple) visit) {
+  final fringe = Queue<Couple<T>>();
+  final visited = <Id>{};
+  fringe.add(focalCouple);
+  while (fringe.isNotEmpty) {
+    final couple = fringe.removeFirst();
+    if (visited.contains(couple.id)) {
+      continue;
+    }
+    visited.add(couple.id);
+    visit(couple);
+    fringe.addAll(couple.parents.map((e) => e));
+    fringe.addAll(couple.children.map((e) => e));
+  }
 }
 
 /// Roots and their distance away from the given [node].
@@ -126,28 +235,6 @@ Set<Couple> findCoupleRoots(Couple couple) {
     roots.addAll(findCoupleRoots(parent));
   }
   return roots;
-}
-
-/// Set of nodes with no parents.
-void markAncestorCouplesWithSeparateRoots<T extends GraphNode>(
-    LinkedNode<T> node) {
-  final spouse = node.spouses.firstOrNull;
-  final alreadyMarkedAsSpouse = node.shouldTraverseChildren == false;
-  if (spouse != null &&
-      spouse.parents.isNotEmpty &&
-      node.parents.isNotEmpty &&
-      !alreadyMarkedAsSpouse) {
-    spouse.shouldTraverseChildren = false;
-  }
-
-  // No more ancestors for either partner
-  if (spouse != null && node.parents.isEmpty && spouse.parents.isEmpty) {
-    return;
-  }
-
-  for (final parent in node.parents) {
-    markAncestorCouplesWithSeparateRoots(parent);
-  }
 }
 
 /// The height of the tree starting at [root].
@@ -252,8 +339,7 @@ List<LevelGroupCouples<T>> getLevelsBySiblingCouples<T extends GraphNode>(
         final children = <Couple<T>>[];
         for (final child in couple.children) {
           // Only one parent couple should add this child
-          if (child.parents.isNotEmpty &&
-              couple.id.compareTo(child.firstParentId!) <= 0) {
+          if (child.parents.isNotEmpty && couple < child.firstParent!) {
             children.add(child);
           }
         }
@@ -343,7 +429,6 @@ void markAncestors(LinkedNode node, bool isOnRight) {
     return;
   }
 
-  node.leadsToFocalNode = true;
   node.shouldBeRightChild = isOnRight;
   markAncestors(node.parents[0], true);
   markAncestors(node.parents[1], false);

@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -5,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:heritage/api.dart';
 import 'package:heritage/error_page.dart';
 import 'package:heritage/family_tree_page.dart';
+import 'package:heritage/graph_view.dart';
 import 'package:heritage/layout.dart';
 import 'package:heritage/menu_page.dart';
 import 'package:heritage/restart_app.dart';
@@ -136,25 +139,43 @@ class _RouterBuilderState extends State<_RouterBuilder> {
             return const MenuPage();
           },
         ),
-        // if (kDebugMode)
-        //   GoRoute(
-        //     path: '/test_layout',
-        //     name: 'test_layout',
-        //     builder: (context, state) {
-        //       final (:focalNode, :nodes) = _makeManyAncestoryTree();
-        //       // final focalNode = _makeWideTree();
-        //       // final focalNode = _makeTallTree();
-        //       return Scaffold(
-        //         body: FamilyTreeView(
-        //           focalNode: focalNode,
-        //           nodes: nodes,
-        //           onFetchConnections: (_) {},
-        //           onAddConnectionPressed: (_, __) {},
-        //           onProfilePressed: (_) {},
-        //         ),
-        //       );
-        //     },
-        //   ),
+        if (kDebugMode)
+          GoRoute(
+            path: '/test_layout',
+            name: 'test_layout',
+            builder: (context, state) {
+              final (:focalNode, :nodes) = _makeManyAncestoryTree();
+              // final (:focalNode, :nodes) = _makeWideTree();
+              // final (:focalNode, :nodes) = _makeTallTree();
+              return Scaffold(
+                body: GraphView<Node>(
+                  focalNodeId: focalNode.id,
+                  nodes: nodes,
+                  spacing: const Spacing(
+                    level: 40,
+                    sibling: 8,
+                    spouse: 2,
+                  ),
+                  nodeBuilder: (context, node, key) {
+                    return Container(
+                      key: key,
+                      width: 60,
+                      height: 60,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.blue.shade300,
+                      ),
+                      child: Text(
+                        node.id,
+                        style: const TextStyle(fontSize: 24),
+                      ),
+                    );
+                  },
+                ),
+              );
+            },
+          ),
         GoRoute(
           path: '/:focalNodeId',
           name: 'view',
@@ -196,164 +217,133 @@ class _RouterBuilderState extends State<_RouterBuilder> {
   }
 }
 
-// ({Node focalNode, List<Node> nodes}) _generateRandomTree(int totalNodes) {
-//   final random = Random();
-//   final nodes = List.generate(totalNodes, (i) => _createNode('$i'));
+({Node focalNode, List<Node> nodes}) _generateRandomTree(int totalNodes) {
+  final random = Random();
+  final nodes = List.generate(totalNodes, (i) => _createNode('$i'));
 
-//   for (var i = 1; i < totalNodes; i++) {
-//     final parentIndex = random.nextInt(i);
-//     final parent = nodes[parentIndex];
-//     final child = nodes[i];
-//     parent.children.add(child.id);
-//   }
+  for (var i = 1; i < totalNodes; i++) {
+    final parentIndex = random.nextInt(i);
+    final parent = nodes[parentIndex];
+    final child = nodes[i];
+    parent.children.add(child.id);
+  }
 
-//   return (focalNode: nodes[random.nextInt(totalNodes)], nodes: nodes);
-// }
+  return (focalNode: nodes[random.nextInt(totalNodes)], nodes: nodes);
+}
 
-// ({Node focalNode, List<Node> nodes}) _makeTallTree() {
-//   final nodes = List.generate(28, (i) => _createNode('$i'));
+({Node focalNode, List<Node> nodes}) _makeTallTree() {
+  final nodes = List.generate(34, (i) => _createNode('$i'));
 
-//   void connect({
-//     required int spouseA,
-//     required int spouseB,
-//     required List<int> children,
-//   }) {
-//     nodes[spouseA].spouses.add(nodes[spouseB].id);
-//     nodes[spouseB].spouses.add(nodes[spouseA].id);
-//     nodes[spouseA].children.addAll(children.map((e) => nodes[e].id));
-//     nodes[spouseB].children.addAll(children.map((e) => nodes[e].id));
-//     for (final childIndex in children) {
-//       nodes[childIndex].parents.addAll([nodes[spouseA].id, nodes[spouseB].id]);
-//     }
-//   }
+  connect(nodes, spouseA: 0, spouseB: 1, children: [2, 4]);
+  connect(nodes, spouseA: 3, spouseB: 4, children: [7, 8, 10]);
+  connect(nodes, spouseA: 9, spouseB: 10, children: [16]);
+  connect(nodes, spouseA: 15, spouseB: 16, children: [19]);
+  connect(nodes, spouseA: 19, spouseB: 20, children: [24, 25, 27]);
+  connect(nodes, spouseA: 23, spouseB: 24, children: []);
+  connect(nodes, spouseA: 26, spouseB: 27, children: [28, 29, 30]);
 
-//   connect(spouseA: 0, spouseB: 1, children: [2, 4]);
-//   connect(spouseA: 3, spouseB: 4, children: [7, 8, 10]);
-//   connect(spouseA: 9, spouseB: 10, children: [16]);
-//   connect(spouseA: 15, spouseB: 16, children: [19]);
-//   connect(spouseA: 19, spouseB: 20, children: [24, 25, 27]);
-//   connect(spouseA: 23, spouseB: 24, children: []);
-//   connect(spouseA: 26, spouseB: 27, children: []);
+  connect(nodes, spouseA: 5, spouseB: 6, children: [/*12*,*/ 13]);
+  // connect(spouseA: 11, spouseB: 12, children: []);
+  connect(nodes, spouseA: 13, spouseB: 14, children: [18]);
+  connect(nodes, spouseA: 17, spouseB: 18, children: [20, 22]);
+  connect(nodes, spouseA: 21, spouseB: 22, children: []);
 
-//   connect(spouseA: 5, spouseB: 6, children: [/*12*,*/ 13]);
-//   // connect(spouseA: 11, spouseB: 12, children: []);
-//   connect(spouseA: 13, spouseB: 14, children: [18]);
-//   connect(spouseA: 17, spouseB: 18, children: [20, 22]);
-//   connect(spouseA: 21, spouseB: 22, children: []);
+  connect(nodes, spouseA: 25, spouseB: 31, children: [32, 33]);
 
-//   final focalNode = nodes[25];
-//   markAncestorCouplesWithSeparateRoots(focalNode);
-//   markAncestors(focalNode, true);
+  final focalNode = nodes[25];
+  return (focalNode: focalNode, nodes: nodes);
+}
 
-//   return (focalNode: focalNode, nodes: nodes);
-// }
+({Node focalNode, List<Node> nodes}) _makeWideTree() {
+  final nodes = List.generate(40, (i) => _createNode('$i'));
 
-// ({Node focalNode, List<Node> nodes}) _makeWideTree() {
-//   final nodes = List.generate(40, (i) => _createNode('$i'));
+  connect(nodes,
+      spouseA: 0,
+      spouseB: 1,
+      children: [5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 24]);
+  connect(nodes, spouseA: 2, spouseB: 3, children: [25, 27]);
 
-//   void connect({
-//     required int spouseA,
-//     required int spouseB,
-//     required List<int> children,
-//   }) {
-//     nodes[spouseA].spouses.add(nodes[spouseB].id);
-//     nodes[spouseB].spouses.add(nodes[spouseA].id);
-//     nodes[spouseA].children.addAll(children.map((e) => nodes[e].id));
-//     nodes[spouseB].children.addAll(children.map((e) => nodes[e].id));
-//     for (final childIndex in children) {
-//       nodes[childIndex].parents.addAll([nodes[spouseA].id, nodes[spouseB].id]);
-//     }
-//   }
+  connect(nodes, spouseA: 4, spouseB: 5, children: []);
+  connect(nodes, spouseA: 6, spouseB: 7, children: []);
+  connect(nodes,
+      spouseA: 8, spouseB: 9, children: [28, 29, 30, 31, 32, 33, 34, 35]);
+  connect(nodes, spouseA: 10, spouseB: 11, children: []);
+  connect(nodes, spouseA: 12, spouseB: 13, children: []);
+  connect(nodes, spouseA: 14, spouseB: 15, children: []);
+  connect(nodes, spouseA: 16, spouseB: 17, children: []);
+  connect(nodes, spouseA: 18, spouseB: 19, children: []);
+  connect(nodes, spouseA: 20, spouseB: 21, children: []);
+  connect(nodes, spouseA: 22, spouseB: 23, children: []);
+  connect(nodes, spouseA: 24, spouseB: 25, children: [37, 39]);
 
-//   connect(
-//       spouseA: 0,
-//       spouseB: 1,
-//       children: [5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 24]);
-//   connect(spouseA: 2, spouseB: 3, children: [25, 27]);
+  connect(nodes, spouseA: 26, spouseB: 27, children: []);
 
-//   connect(spouseA: 4, spouseB: 5, children: []);
-//   connect(spouseA: 6, spouseB: 7, children: []);
-//   connect(spouseA: 8, spouseB: 9, children: [28, 29, 30, 31, 32, 33, 34, 35]);
-//   connect(spouseA: 10, spouseB: 11, children: []);
-//   connect(spouseA: 12, spouseB: 13, children: []);
-//   connect(spouseA: 14, spouseB: 15, children: []);
-//   connect(spouseA: 16, spouseB: 17, children: []);
-//   connect(spouseA: 18, spouseB: 19, children: []);
-//   connect(spouseA: 20, spouseB: 21, children: []);
-//   connect(spouseA: 22, spouseB: 23, children: []);
-//   connect(spouseA: 24, spouseB: 25, children: [37, 39]);
+  connect(nodes, spouseA: 36, spouseB: 37, children: []);
+  connect(nodes, spouseA: 38, spouseB: 39, children: []);
 
-//   connect(spouseA: 26, spouseB: 27, children: []);
+  final focalNode = nodes[37];
+  return (focalNode: focalNode, nodes: nodes);
+}
 
-//   connect(spouseA: 36, spouseB: 37, children: []);
-//   connect(spouseA: 38, spouseB: 39, children: []);
+({Node focalNode, List<Node> nodes}) _makeManyAncestoryTree() {
+  final nodes = List.generate(35, (i) => _createNode('$i'));
 
-//   final focalNode = nodes[37];
-//   markAncestorCouplesWithSeparateRoots(focalNode);
-//   markAncestors(focalNode, true);
+  connect(nodes, spouseA: 0, spouseB: 1, children: [5]);
+  connect(nodes, spouseA: 2, spouseB: 3, children: [9, 11]);
 
-//   return (focalNode: focalNode, nodes: nodes);
-// }
+  connect(nodes, spouseA: 4, spouseB: 5, children: [14, 15]);
+  connect(nodes, spouseA: 6, spouseB: 7, children: [16, 17]);
+  connect(nodes, spouseA: 8, spouseB: 9, children: [18, 19]);
+  connect(nodes, spouseA: 10, spouseB: 11, children: []);
+  connect(nodes, spouseA: 12, spouseB: 13, children: [20, 22]);
 
-// ({Node focalNode, List<Node> nodes}) _makeManyAncestoryTree() {
-//   final nodes = List.generate(33, (i) => _createNode('$i'));
+  connect(nodes, spouseA: 15, spouseB: 16, children: [23, 24, 25]);
+  connect(nodes, spouseA: 19, spouseB: 20, children: [26, 28, 30]);
+  connect(nodes, spouseA: 21, spouseB: 22, children: []);
+  connect(nodes, spouseA: 25, spouseB: 26, children: [32]);
+  connect(nodes, spouseA: 27, spouseB: 28, children: []);
 
-//   void connect({
-//     required int spouseA,
-//     required int spouseB,
-//     required List<int> children,
-//   }) {
-//     nodes[spouseA].spouses.add(nodes[spouseB].id);
-//     nodes[spouseB].spouses.add(nodes[spouseA].id);
-//     nodes[spouseA].children.addAll(children.map((e) => nodes[e].id));
-//     nodes[spouseB].children.addAll(children.map((e) => nodes[e].id));
-//     for (final childIndex in children) {
-//       nodes[childIndex].parents.addAll([nodes[spouseA].id, nodes[spouseB].id]);
-//     }
-//   }
+  connect(nodes, spouseA: 29, spouseB: 30, children: []);
 
-//   connect(spouseA: 0, spouseB: 1, children: [5]);
-//   connect(spouseA: 2, spouseB: 3, children: [9, 11]);
+  connect(nodes, spouseA: 31, spouseB: 32, children: []);
+  connect(nodes, spouseA: 33, spouseB: 34, children: [8]);
 
-//   connect(spouseA: 4, spouseB: 5, children: [14, 15]);
-//   connect(spouseA: 6, spouseB: 7, children: [16, 17]);
-//   connect(spouseA: 8, spouseB: 9, children: [18, 19]);
-//   connect(spouseA: 10, spouseB: 11, children: []);
-//   connect(spouseA: 12, spouseB: 13, children: [20, 22]);
+  final focalNode = nodes[32];
+  return (focalNode: focalNode, nodes: nodes);
+}
 
-//   connect(spouseA: 15, spouseB: 16, children: [23, 24, 25]);
-//   connect(spouseA: 19, spouseB: 20, children: [26, 28, 30]);
-//   connect(spouseA: 21, spouseB: 22, children: []);
-//   connect(spouseA: 25, spouseB: 26, children: [32]);
-//   connect(spouseA: 27, spouseB: 28, children: []);
+void connect(
+  List<Node> nodes, {
+  required int spouseA,
+  required int spouseB,
+  required List<int> children,
+}) {
+  nodes[spouseA].spouses.add(nodes[spouseB].id);
+  nodes[spouseB].spouses.add(nodes[spouseA].id);
+  nodes[spouseA].children.addAll(children.map((e) => nodes[e].id));
+  nodes[spouseB].children.addAll(children.map((e) => nodes[e].id));
+  for (final childIndex in children) {
+    nodes[childIndex].parents.addAll([nodes[spouseA].id, nodes[spouseB].id]);
+  }
+}
 
-//   connect(spouseA: 29, spouseB: 30, children: []);
-
-//   connect(spouseA: 31, spouseB: 32, children: []);
-
-//   final focalNode = nodes[32];
-//   markAncestorCouplesWithSeparateRoots(focalNode);
-//   markAncestors(focalNode, true);
-
-//   return (focalNode: focalNode, nodes: nodes);
-// }
-
-// Node _createNode(String id) {
-//   return Node(
-//     id: id,
-//     parents: [],
-//     children: [],
-//     spouses: [],
-//     addedBy: '',
-//     ownedBy: '',
-//     createdAt: DateTime.now(),
-//     profile: ApiProfile(
-//       name: 'name',
-//       gender: Gender.male,
-//       imageUrl: '',
-//       birthday: null,
-//       deathday: null,
-//       birthplace: '',
-//     ),
-//   );
-// }
+Node _createNode(String id) {
+  return Node(
+    id: id,
+    parents: [],
+    children: [],
+    spouses: [],
+    addedBy: '',
+    ownedBy: '',
+    createdAt: DateTime.now(),
+    profile: Profile(
+      name: id,
+      gender: Gender.male,
+      imageUrl:
+          'https://d2xzkuyodufiic.cloudfront.net/avatars/${int.parse(id) + 1 % 70}.jpg',
+      birthday: null,
+      deathday: null,
+      birthplace: '',
+    ),
+  );
+}
