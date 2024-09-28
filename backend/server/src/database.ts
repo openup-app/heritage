@@ -10,192 +10,192 @@ export class Database {
     this.firestore = getFirestore();
   }
 
-  public async addConnection(sourceId: Id, name: string, gender: Gender, relationship: Relationship, creatorId: Id): Promise<Node[]> {
+  public async addConnection(sourceId: Id, name: string, gender: Gender, relationship: Relationship, creatorId: Id): Promise<Person[]> {
     return this.firestore.runTransaction(async (t: Transaction) => {
-      const sourceRef = this.nodeRef(sourceId);
+      const sourceRef = this.personRef(sourceId);
       const sourceDoc = await t.get(sourceRef);
-      const sourceNode = nodeSchema.parse(sourceDoc.data());
-      const createdNodes: Node[] = [];
-      const updatedNodes: Node[] = [];
+      const source = personSchema.parse(sourceDoc.data());
+      const createdPeople: Person[] = [];
+      const updatedPeople: Person[] = [];
 
       // Invariants
       if (relationship === "parent") {
-        if (sourceNode.parents.length !== 0) {
+        if (source.parents.length !== 0) {
           return [];
         }
       } else if (relationship === "spouse") {
         // TODO: Remove restriction when this is better understood
-        if (sourceNode.spouses.length > 0) {
+        if (source.spouses.length > 0) {
           return [];
         }
       }
 
       // TODO: Don't allow adding of any spouse's family
 
-      const node = this.newEmptyNode(gender, creatorId);
-      node.profile.name = name;
-      createdNodes.push(node);
+      const newPerson = this.newEmptyPerson(gender, creatorId);
+      newPerson.profile.name = name;
+      createdPeople.push(newPerson);
 
       if (relationship == "parent") {
-        const spouseNode = this.newEmptyNode(node.profile.gender === "male" ? "female" : "male", creatorId);
-        createdNodes.push(spouseNode);
+        const spouse = this.newEmptyPerson(newPerson.profile.gender === "male" ? "female" : "male", creatorId);
+        createdPeople.push(spouse);
 
-        spouseNode.spouses.push(node.id);
-        node.spouses.push(spouseNode.id);
-        spouseNode.children.push(sourceId);
-        node.children.push(sourceId);
+        spouse.spouses.push(newPerson.id);
+        newPerson.spouses.push(spouse.id);
+        spouse.children.push(sourceId);
+        newPerson.children.push(sourceId);
 
-        sourceNode.parents.push(node.id, spouseNode.id);
-        updatedNodes.push(sourceNode);
-        t.update(sourceRef, sourceNode);
+        source.parents.push(newPerson.id, spouse.id);
+        updatedPeople.push(source);
+        t.update(sourceRef, source);
       } else if (relationship == "sibling") {
-        let parent1Node: Node;
-        let parent2Node: Node;
+        let parent1: Person;
+        let parent2: Person;
         var didCreateParents = false;
-        if (sourceNode.parents.length === 0) {
+        if (source.parents.length === 0) {
           didCreateParents = true;
 
-          parent1Node = this.newEmptyNode("male", creatorId);
-          parent2Node = this.newEmptyNode("female", creatorId);
-          createdNodes.push(parent1Node, parent2Node);
+          parent1 = this.newEmptyPerson("male", creatorId);
+          parent2 = this.newEmptyPerson("female", creatorId);
+          createdPeople.push(parent1, parent2);
 
-          parent1Node.spouses.push(parent2Node.id);
-          parent2Node.spouses.push(parent1Node.id);
-          parent1Node.children.push(sourceId);
-          parent2Node.children.push(sourceId);
+          parent1.spouses.push(parent2.id);
+          parent2.spouses.push(parent1.id);
+          parent1.children.push(sourceId);
+          parent2.children.push(sourceId);
 
-          sourceNode.parents.push(parent1Node.id, parent2Node.id);
-          updatedNodes.push(sourceNode);
-          t.update(sourceRef, sourceNode);
+          source.parents.push(parent1.id, parent2.id);
+          updatedPeople.push(source);
+          t.update(sourceRef, source);
         } else {
-          const [parent1Snapshot, parent2Snapshot] = await t.getAll(...sourceNode.parents.map(e => this.nodeRef(e)));
+          const [parent1Snapshot, parent2Snapshot] = await t.getAll(...source.parents.map(e => this.personRef(e)));
           if (!parent1Snapshot.exists || !parent2Snapshot.exists) {
             throw "Missing parent";
           }
-          parent1Node = nodeSchema.parse(parent1Snapshot.data());
-          parent2Node = nodeSchema.parse(parent2Snapshot.data());
+          parent1 = personSchema.parse(parent1Snapshot.data());
+          parent2 = personSchema.parse(parent2Snapshot.data());
         }
 
-        parent1Node.children.push(node.id);
-        parent2Node.children.push(node.id);
+        parent1.children.push(newPerson.id);
+        parent2.children.push(newPerson.id);
         if (!didCreateParents) {
-          updatedNodes.push(parent1Node);
-          updatedNodes.push(parent2Node);
-          t.update(this.nodeRef(parent1Node.id), parent1Node);
-          t.update(this.nodeRef(parent2Node.id), parent2Node);
+          updatedPeople.push(parent1);
+          updatedPeople.push(parent2);
+          t.update(this.personRef(parent1.id), parent1);
+          t.update(this.personRef(parent2.id), parent2);
         }
 
-        node.parents.push(parent1Node.id, parent2Node.id);
+        newPerson.parents.push(parent1.id, parent2.id);
       } else if (relationship == "child") {
-        let spouseNode: Node;
+        let spouse: Person;
         var didCreateSpouse = false;
-        if (sourceNode.spouses.length === 0) {
+        if (source.spouses.length === 0) {
           didCreateSpouse = true;
-          spouseNode = this.newEmptyNode(sourceNode.profile.gender === "male" ? "female" : "male", creatorId);
-          createdNodes.push(spouseNode);
+          spouse = this.newEmptyPerson(source.profile.gender === "male" ? "female" : "male", creatorId);
+          createdPeople.push(spouse);
 
-          spouseNode.spouses.push(sourceId);
-          sourceNode.spouses.push(spouseNode.id);
+          spouse.spouses.push(sourceId);
+          source.spouses.push(spouse.id);
         } else {
-          const spouseRef = this.nodeRef(sourceNode.spouses[0]);
+          const spouseRef = this.personRef(source.spouses[0]);
           const spouseSnapshot = await t.get(spouseRef);
-          spouseNode = nodeSchema.parse(spouseSnapshot.data());
+          spouse = personSchema.parse(spouseSnapshot.data());
         }
-        spouseNode.children.push(node.id);
-        sourceNode.children.push(node.id);
-        updatedNodes.push(spouseNode);
-        updatedNodes.push(sourceNode);
-        t.update(sourceRef, sourceNode);
+        spouse.children.push(newPerson.id);
+        source.children.push(newPerson.id);
+        updatedPeople.push(spouse);
+        updatedPeople.push(source);
+        t.update(sourceRef, source);
         if (!didCreateSpouse) {
-          t.update(this.nodeRef(spouseNode.id), spouseNode);
+          t.update(this.personRef(spouse.id), spouse);
         }
 
-        node.parents.push(sourceId, spouseNode.id);
+        newPerson.parents.push(sourceId, spouse.id);
       } else if (relationship == "spouse") {
-        node.spouses.push(sourceId);
+        newPerson.spouses.push(sourceId);
 
-        sourceNode.spouses.push(node.id);
-        updatedNodes.push(sourceNode);
-        t.update(sourceRef, sourceNode);
+        source.spouses.push(newPerson.id);
+        updatedPeople.push(source);
+        t.update(sourceRef, source);
       }
 
-      for (const node of createdNodes) {
-        t.create(this.nodeRef(node.id), node);
+      for (const person of createdPeople) {
+        t.create(this.personRef(person.id), person);
       }
 
-      return [...createdNodes, ...updatedNodes];
+      return [...createdPeople, ...updatedPeople];
     });
   }
 
-  public async createRootNode(name: string, gender: Gender): Promise<Node> {
-    const node = this.newEmptyNode(gender, "root");
-    node.profile.name = name;
-    node.ownedBy = node.id;
-    await this.nodeRef(node.id).create(node);
-    return node;
+  public async createRootPerson(name: string, gender: Gender): Promise<Person> {
+    const person = this.newEmptyPerson(gender, "root");
+    person.profile.name = name;
+    person.ownedBy = person.id;
+    await this.personRef(person.id).create(person);
+    return person;
   }
 
-  public async getLimitedGraph(id: Id): Promise<Node[]> {
+  public async getLimitedGraph(id: Id): Promise<Person[]> {
     return this.fetchUpToDistance(id, { maxDistance: 3, noChildrenOfSiblingsOfAncestorDistance: 2 });
   }
 
-  public async getNode(id: Id): Promise<Node> {
-    const nodes = await this.getNodes([id]);
-    if (nodes.length === 0) {
-      throw "Unable to fetch node";
+  public async getPerson(id: Id): Promise<Person> {
+    const people = await this.getPeople([id]);
+    if (people.length === 0) {
+      throw "Unable to fetch person";
     }
-    return nodes[0];
+    return people[0];
   }
 
-  public async getNodes(ids: Id[]): Promise<Node[]> {
-    const nodeRefs = ids.map(e => this.nodeRef(e));
-    const snapshot = await this.firestore.getAll(...nodeRefs);
-    const nodes: Node[] = [];
+  public async getPeople(ids: Id[]): Promise<Person[]> {
+    const personRefs = ids.map(e => this.personRef(e));
+    const snapshot = await this.firestore.getAll(...personRefs);
+    const people: Person[] = [];
     for (const doc of snapshot) {
       try {
         const data = doc.data() ?? {};
-        nodes.push(nodeSchema.parse(data));
+        people.push(personSchema.parse(data));
       } catch (e) {
-        logger.warn(`Failed to get or parse node ${doc.id}`);
+        logger.warn(`Failed to get or parse person ${doc.id}`);
       }
     }
-    return nodes;
+    return people;
   }
 
-  public async getRoots(): Promise<Node[]> {
-    const snapshot = await this.firestore.collection("nodes").where("addedBy", "==", "root").get();
-    const nodes: Node[] = [];
+  public async getRoots(): Promise<Person[]> {
+    const snapshot = await this.firestore.collection("people").where("addedBy", "==", "root").get();
+    const people: Person[] = [];
     for (const doc of snapshot.docs) {
       try {
         const data = doc.data() ?? {};
-        nodes.push(nodeSchema.parse(data));
+        people.push(personSchema.parse(data));
       } catch (e) {
-        logger.warn(`Failed to get or parse node ${doc.id}`);
+        logger.warn(`Failed to get or parse person ${doc.id}`);
       }
     }
-    return nodes;
+    return people;
   }
 
-  public async fetchUpToDistance(id: Id, options: { maxDistance: number, noChildrenOfSiblingsOfAncestorDistance: number }): Promise<Node[]> {
+  public async fetchUpToDistance(id: Id, options: { maxDistance: number, noChildrenOfSiblingsOfAncestorDistance: number }): Promise<Person[]> {
     const visited = new Set<Id>();
     const spouses = new Set<Id>();
     const fringe: { id: Id; level: number }[] = [{ id, level: 0 }];
-    const output: Node[] = [];
+    const output: Person[] = [];
 
     while (fringe.length > 0) {
       // Fetch fringe in a single request
       const currentFringe = fringe.splice(0, fringe.length);
       const fringeIds = currentFringe.map(f => f.id);
       const fringeIdToLevel = new Map<Id, number>(currentFringe.map(f => [f.id, f.level]));
-      const nodeRefs = fringeIds.map(id => this.nodeRef(id));
-      const snapshots = await this.firestore.getAll(...nodeRefs);
+      const personRefs = fringeIds.map(id => this.personRef(id));
+      const snapshots = await this.firestore.getAll(...personRefs);
 
       for (const snapshot of snapshots) {
         if (!snapshot.exists) {
           continue;
         }
 
-        const node = nodeSchema.parse(snapshot.data());
+        const person = personSchema.parse(snapshot.data());
         const id = snapshot.id;
         const level = fringeIdToLevel.get(id)!;
 
@@ -204,7 +204,7 @@ export class Database {
         }
 
         visited.add(id);
-        output.push(node);
+        output.push(person);
 
         // Traversal limited at spouses and max depth
         if (spouses.has(id) || level >= options.maxDistance) {
@@ -212,9 +212,9 @@ export class Database {
         }
 
         const neighbourIds = new Set<Id>([
-          ...node.parents,
-          ...node.spouses,
-          ...((level < options.noChildrenOfSiblingsOfAncestorDistance) ? node.children : []),
+          ...person.parents,
+          ...person.spouses,
+          ...((level < options.noChildrenOfSiblingsOfAncestorDistance) ? person.children : []),
         ]);
 
         // Next level fringe
@@ -224,8 +224,8 @@ export class Database {
           }
         }
 
-        if (node.spouses.length > 0) {
-          for (const spouseId of node.spouses) {
+        if (person.spouses.length > 0) {
+          for (const spouseId of person.spouses) {
             spouses.add(spouseId);
           }
         }
@@ -235,24 +235,24 @@ export class Database {
     return output;
   }
 
-  public async updateProfile(id: Id, profile: Profile): Promise<Node> {
-    const nodeRef = this.nodeRef(id);
-    await nodeRef.update({ "profile": profile });
-    const snapshot = await nodeRef.get();
+  public async updateProfile(id: Id, profile: Profile): Promise<Person> {
+    const personRef = this.personRef(id);
+    await personRef.update({ "profile": profile });
+    const snapshot = await personRef.get();
     const data = snapshot.data();
-    return nodeSchema.parse(data);
+    return personSchema.parse(data);
   }
 
-  public async updateOwnership(id: Id, newOwnerId: Id): Promise<Node> {
-    const nodeRef = this.nodeRef(id);
-    await nodeRef.update({ "ownedBy": id });
-    const snapshot = await nodeRef.get();
+  public async updateOwnership(id: Id, newOwnerId: Id): Promise<Person> {
+    const personRef = this.personRef(id);
+    await personRef.update({ "ownedBy": id });
+    const snapshot = await personRef.get();
     const data = snapshot.data();
-    return nodeSchema.parse(data);
+    return personSchema.parse(data);
   }
 
 
-  private newEmptyNode(gender: Gender, creatorId: Id): Node {
+  private newEmptyPerson(gender: Gender, creatorId: Id): Person {
     return {
       "id": shortUUID.generate(),
       "parents": [],
@@ -272,8 +272,8 @@ export class Database {
     }
   }
 
-  private nodeRef(id: Id): DocumentReference {
-    return this.firestore.collection("nodes").doc(id);
+  private personRef(id: Id): DocumentReference {
+    return this.firestore.collection("people").doc(id);
   }
 }
 
@@ -292,7 +292,7 @@ export const profileSchema = z.object({
   birthplace: z.string(),
 });
 
-const nodeSchema = z.object({
+const personSchema = z.object({
   id: idSchema,
   parents: z.array(idSchema),
   spouses: z.array(idSchema),
@@ -311,4 +311,4 @@ type Relationship = z.infer<typeof relationshipSchema>;
 
 export type Profile = z.infer<typeof profileSchema>;
 
-export type Node = z.infer<typeof nodeSchema>;
+export type Person = z.infer<typeof personSchema>;

@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:heritage/api.dart';
 import 'package:heritage/family_tree_page_panels.dart';
-import 'package:heritage/graph.dart';
 import 'package:heritage/graph_provider.dart';
 import 'package:heritage/graph_view.dart';
 import 'package:heritage/heritage_app.dart';
@@ -15,12 +14,12 @@ import 'package:heritage/zoomable_pannable_viewport.dart';
 import 'package:share_plus/share_plus.dart';
 
 class FamilyTreeLoadingPage extends ConsumerStatefulWidget {
-  final Id focalNodeId;
+  final Id focalPersonId;
   final Widget child;
 
   const FamilyTreeLoadingPage({
     super.key,
-    required this.focalNodeId,
+    required this.focalPersonId,
     required this.child,
   });
 
@@ -35,7 +34,7 @@ class ViewPageState extends ConsumerState<FamilyTreeLoadingPage> {
   void initState() {
     super.initState();
     ref.listenManual(
-      hasNodesProvider,
+      hasPeopleProvider,
       (previous, next) {
         if (next) {
           setState(() => _ready = true);
@@ -44,7 +43,7 @@ class ViewPageState extends ConsumerState<FamilyTreeLoadingPage> {
     );
     WidgetsBinding.instance.endOfFrame.then((_) {
       if (mounted) {
-        ref.read(focalNodeIdProvider.notifier).state = widget.focalNodeId;
+        ref.read(focalPersonIdProvider.notifier).state = widget.focalPersonId;
       }
     });
   }
@@ -60,7 +59,7 @@ class ViewPageState extends ConsumerState<FamilyTreeLoadingPage> {
         leading: BackButton(
           onPressed: () => Navigator.of(context).pop(),
         ),
-        title: Text('Family Tree - ${widget.focalNodeId}'),
+        title: Text('Family Tree - ${widget.focalPersonId}'),
       ),
       body: !_ready
           ? const Center(
@@ -85,33 +84,33 @@ class FamilyTreePage extends ConsumerStatefulWidget {
 
 class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
   final _familyTreeViewKey = GlobalKey<FamilyTreeViewState>();
-  Node? _selectedNode;
+  Person? _selectedPerson;
 
   @override
   Widget build(BuildContext context) {
-    final selectedNode = _selectedNode;
+    final selectedPerson = _selectedPerson;
     final graph = ref.watch(graphProvider);
     return Stack(
       fit: StackFit.expand,
       children: [
         FamilyTreeView(
           key: _familyTreeViewKey,
-          focalNode: graph.focalNode,
-          nodes: graph.nodes.values.toList(),
-          selectedNode: _selectedNode,
+          focalPerson: graph.focalPerson,
+          people: graph.people.values.toList(),
+          selectedPerson: _selectedPerson,
           onProfileSelected: _onProfileSelected,
           onAddConnectionPressed: _showAddConnectionModal,
           onFetchConnections: (ids) {},
         ),
-        if (selectedNode != null)
+        if (selectedPerson != null)
           Panels(
-            key: Key(selectedNode.id),
-            node: selectedNode,
+            key: Key(selectedPerson.id),
+            person: selectedPerson,
             onAddConnectionPressed: _showAddConnectionModal,
             onViewPerspective: () {
               final pathParameters = {
-                'focalNodeId': graph.focalNode.id,
-                'perspectiveNodeId': selectedNode.id,
+                'focalPersonId': graph.focalPerson.id,
+                'perspectivePersonId': selectedPerson.id,
               };
               if (!widget.isPerspectiveMode) {
                 context.pushNamed(
@@ -125,13 +124,13 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
                 );
               }
             },
-            onClose: () => setState(() => _selectedNode = null),
+            onClose: () => setState(() => _selectedPerson = null),
           ),
       ],
     );
   }
 
-  void _showAddConnectionModal(Node node, Relationship relationship) {
+  void _showAddConnectionModal(Person person, Relationship relationship) {
     final graphNotifier = ref.read(graphProvider.notifier);
     showDialog(
       context: context,
@@ -145,7 +144,7 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
               onSave: (name, gender) {
                 Navigator.of(context).pop();
                 graphNotifier.addConnection(
-                  source: node.id,
+                  source: person.id,
                   name: name,
                   gender: gender,
                   relationship: relationship,
@@ -158,32 +157,31 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
     );
   }
 
-  void _onProfileSelected(LinkedNode<Node>? linkedNode) {
-    if (linkedNode == null) {
-      setState(() => _selectedNode = null);
+  void _onProfileSelected(Person? person) {
+    if (person == null) {
+      setState(() => _selectedPerson = null);
       return;
     }
 
-    final node = linkedNode.data;
-    _familyTreeViewKey.currentState?.centerOnNodeWithId(node.id);
-    setState(() => _selectedNode = linkedNode.data);
+    _familyTreeViewKey.currentState?.centerOnPersonWithId(person.id);
+    setState(() => _selectedPerson = person);
   }
 }
 
 class FamilyTreeView extends ConsumerStatefulWidget {
-  final Node focalNode;
-  final List<Node> nodes;
-  final Node? selectedNode;
-  final void Function(LinkedNode<Node>? node) onProfileSelected;
-  final void Function(Node node, Relationship relationship)
+  final Person focalPerson;
+  final List<Person> people;
+  final Person? selectedPerson;
+  final void Function(Person? person) onProfileSelected;
+  final void Function(Person person, Relationship relationship)
       onAddConnectionPressed;
   final void Function(List<Id> ids) onFetchConnections;
 
   const FamilyTreeView({
     super.key,
-    required this.focalNode,
-    required this.nodes,
-    required this.selectedNode,
+    required this.focalPerson,
+    required this.people,
+    required this.selectedPerson,
     required this.onProfileSelected,
     required this.onAddConnectionPressed,
     required this.onFetchConnections,
@@ -194,7 +192,7 @@ class FamilyTreeView extends ConsumerStatefulWidget {
 }
 
 class FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
-  final _nodeKeys = <Id, GlobalKey>{};
+  final _peopleKeys = <Id, GlobalKey>{};
   final _transformNotifier = ValueNotifier<Matrix4>(Matrix4.identity());
   final _viewportKey = GlobalKey<ZoomablePannableViewportState>();
   final _graphViewKey = GlobalKey();
@@ -203,7 +201,7 @@ class FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
   void initState() {
     super.initState();
     _updateKeys();
-    if (widget.focalNode.ownedBy == null) {
+    if (widget.focalPerson.ownedBy == null) {
       WidgetsBinding.instance.endOfFrame.then((_) {
         if (mounted) {
           _showOwnershipModal();
@@ -216,14 +214,14 @@ class FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
   void didUpdateWidget(covariant FamilyTreeView oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (!const DeepCollectionEquality.unordered()
-        .equals(oldWidget.nodes, widget.nodes)) {
+        .equals(oldWidget.people, widget.people)) {
       _updateKeys();
     }
   }
 
   void _updateKeys() {
-    for (final node in widget.nodes) {
-      _nodeKeys.putIfAbsent(node.id, () => GlobalKey());
+    for (final person in widget.people) {
+      _peopleKeys.putIfAbsent(person.id, () => GlobalKey());
     }
   }
 
@@ -232,7 +230,7 @@ class FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
     return Center(
       child: ZoomablePannableViewport(
         key: _viewportKey,
-        childKeys: _nodeKeys.values.toList(),
+        childKeys: _peopleKeys.values.toList(),
         onTransformed: (transform) => _transformNotifier.value = transform,
         child: Stack(
           children: [
@@ -242,21 +240,21 @@ class FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
                 fit: BoxFit.cover,
               ),
             ),
-            GraphView<Node>(
+            GraphView<Person>(
               key: _graphViewKey,
-              focalNodeId: widget.focalNode.id,
-              nodes: widget.nodes,
+              focalNodeId: widget.focalPerson.id,
+              nodes: widget.people,
               spacing: const Spacing(
                 level: 302,
                 spouse: 52,
                 sibling: 297,
               ),
-              nodeBuilder: (context, node, key) {
-                return HoverableNode(
+              nodeBuilder: (context, data, key) {
+                return HoverableNodeProfile(
                   key: key,
-                  node: node,
+                  person: data,
                   transformNotifier: _transformNotifier,
-                  onTap: () => widget.onProfileSelected(node),
+                  onTap: () => widget.onProfileSelected(data),
                 );
               },
             ),
@@ -266,22 +264,22 @@ class FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
     );
   }
 
-  void centerOnNodeWithId(Id id) {
-    final key = _nodeKeys[id];
+  void centerOnPersonWithId(Id id) {
+    final key = _peopleKeys[id];
     if (key != null) {
       _viewportKey.currentState?.centerOnWidgetWithKey(key);
     }
   }
 
   void _showOwnershipModal() async {
-    final addedBy =
-        widget.nodes.firstWhereOrNull((e) => e.id == widget.focalNode.addedBy);
+    final addedBy = widget.people
+        .firstWhereOrNull((e) => e.id == widget.focalPerson.addedBy);
     final tookOwnership = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
       builder: (context) {
         return OwnershipDialog(
-          focalNode: widget.focalNode,
+          focalPerson: widget.focalPerson,
           addedBy: addedBy,
         );
       },
@@ -290,21 +288,21 @@ class FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
       return;
     }
     if (tookOwnership == true) {
-      ref.read(graphProvider.notifier).takeOwnership(widget.focalNode.id);
+      ref.read(graphProvider.notifier).takeOwnership(widget.focalPerson.id);
     } else {
       context.goNamed('menu');
     }
   }
 }
 
-class HoverableNode extends StatelessWidget {
-  final LinkedNode<Node> node;
+class HoverableNodeProfile extends StatelessWidget {
+  final Person person;
   final ValueNotifier<Matrix4> transformNotifier;
   final VoidCallback onTap;
 
-  const HoverableNode({
+  const HoverableNodeProfile({
     super.key,
-    required this.node,
+    required this.person,
     required this.transformNotifier,
     required this.onTap,
   });
@@ -320,7 +318,7 @@ class HoverableNode extends StatelessWidget {
           child: GestureDetector(
             onTap: onTap,
             child: NodeProfile(
-              node: node.data,
+              person: person,
             ),
           ),
         );
@@ -330,7 +328,7 @@ class HoverableNode extends StatelessWidget {
 }
 
 class BasicProfileDisplay extends ConsumerStatefulWidget {
-  final bool isRootNodeCreation;
+  final bool isRootCreation;
   final Relationship relationship;
   final String? initialName;
   final Gender? initialGender;
@@ -339,7 +337,7 @@ class BasicProfileDisplay extends ConsumerStatefulWidget {
 
   const BasicProfileDisplay({
     super.key,
-    this.isRootNodeCreation = false,
+    this.isRootCreation = false,
     required this.relationship,
     this.initialName,
     this.initialGender,
@@ -395,7 +393,7 @@ class _BasicProfileDisplayState extends ConsumerState<BasicProfileDisplay> {
             controller: _nameController,
           ),
           const SizedBox(height: 16),
-          widget.isRootNodeCreation
+          widget.isRootCreation
               ? const SelectableText('Your Gender')
               : widget.relationship != Relationship.spouse
                   ? const SelectableText('Relationship')
@@ -412,7 +410,7 @@ class _BasicProfileDisplayState extends ConsumerState<BasicProfileDisplay> {
                         _gender == Gender.male ? primaryColor : unselectedColor,
                   ),
                   child: (widget.relationship != Relationship.spouse &&
-                          !widget.isRootNodeCreation)
+                          !widget.isRootCreation)
                       ? Text(genderedRelationship(
                           widget.relationship, Gender.male))
                       : const Text('Male'),
@@ -428,7 +426,7 @@ class _BasicProfileDisplayState extends ConsumerState<BasicProfileDisplay> {
                         _gender == Gender.male ? unselectedColor : primaryColor,
                   ),
                   child: (widget.relationship != Relationship.spouse &&
-                          !widget.isRootNodeCreation)
+                          !widget.isRootCreation)
                       ? Text(genderedRelationship(
                           widget.relationship, Gender.female))
                       : const Text('Female'),
@@ -436,7 +434,7 @@ class _BasicProfileDisplayState extends ConsumerState<BasicProfileDisplay> {
               ),
             ],
           ),
-          if (!widget.isRootNodeCreation) ...[
+          if (!widget.isRootCreation) ...[
             const SizedBox(height: 24),
             FilledButton(
               key: _shareButtonKey,
@@ -472,7 +470,7 @@ class _BasicProfileDisplayState extends ConsumerState<BasicProfileDisplay> {
               },
             ),
           ),
-          if (!widget.isRootNodeCreation) ...[
+          if (!widget.isRootCreation) ...[
             const SizedBox(height: 16),
             TextButton(
               onPressed: () {},
@@ -497,8 +495,8 @@ class _BasicProfileDisplayState extends ConsumerState<BasicProfileDisplay> {
   void _shareLink() {
     final rect = locateWidget(_shareButtonKey);
     final graph = ref.read(graphProvider);
-    final nodeId = graph.focalNode.id;
-    final url = 'https://breakfastsearch.xyz/$nodeId';
+    final personId = graph.focalPerson.id;
+    final url = 'https://breakfastsearch.xyz/$personId';
     Share.share(
       url,
       subject: 'Join the family tree!',
@@ -508,12 +506,12 @@ class _BasicProfileDisplayState extends ConsumerState<BasicProfileDisplay> {
 }
 
 class OwnershipDialog extends StatelessWidget {
-  final Node focalNode;
-  final Node? addedBy;
+  final Person focalPerson;
+  final Person? addedBy;
 
   const OwnershipDialog({
     super.key,
-    required this.focalNode,
+    required this.focalPerson,
     required this.addedBy,
   });
 
@@ -522,21 +520,22 @@ class OwnershipDialog extends StatelessWidget {
     final addedBy = this.addedBy;
     return AlertDialog(
       title: addedBy == null
-          ? Text('${focalNode.profile.name} has been added to the family tree')
+          ? Text(
+              '${focalPerson.profile.name} has been added to the family tree')
           : Text(
-              '${focalNode.profile.name} has been added to the family tree by ${addedBy.profile.name}'),
+              '${focalPerson.profile.name} has been added to the family tree by ${addedBy.profile.name}'),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Center(
-            child: Text('Are you ${focalNode.profile.name}?'),
+            child: Text('Are you ${focalPerson.profile.name}?'),
           ),
           const SizedBox(height: 16),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: _bigButtonStyle,
-            child: Text('Yes, I am ${focalNode.profile.name}'),
+            child: Text('Yes, I am ${focalPerson.profile.name}'),
           ),
           const SizedBox(height: 16),
           TextButton(

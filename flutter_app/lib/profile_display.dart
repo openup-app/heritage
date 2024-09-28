@@ -3,11 +3,11 @@ import 'package:heritage/api.dart';
 import 'package:heritage/heritage_app.dart';
 import 'package:heritage/util.dart';
 
-class AddNodeConnectionButtons extends StatelessWidget {
+class AddConnectionButtons extends StatelessWidget {
   final bool canAddParent;
   final void Function(Relationship relationship) onAddConnectionPressed;
 
-  const AddNodeConnectionButtons({
+  const AddConnectionButtons({
     super.key,
     required this.canAddParent,
     required this.onAddConnectionPressed,
@@ -19,24 +19,24 @@ class AddNodeConnectionButtons extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
-        _AddNodeConnectionButton(
+        _AddConnectionButton(
           onPressed: !canAddParent
               ? null
               : () => onAddConnectionPressed(Relationship.parent),
           icon: const Icon(Icons.person_add),
           label: const Text('Parent'),
         ),
-        _AddNodeConnectionButton(
+        _AddConnectionButton(
           onPressed: () => onAddConnectionPressed(Relationship.spouse),
           icon: const Icon(Icons.person_add),
           label: const Text('Spouse'),
         ),
-        _AddNodeConnectionButton(
+        _AddConnectionButton(
           onPressed: () => onAddConnectionPressed(Relationship.sibling),
           icon: const Icon(Icons.person_add),
           label: const Text('Sibling'),
         ),
-        _AddNodeConnectionButton(
+        _AddConnectionButton(
           onPressed: () => onAddConnectionPressed(Relationship.child),
           icon: const Icon(Icons.person_add),
           label: const Text('Child'),
@@ -46,12 +46,12 @@ class AddNodeConnectionButtons extends StatelessWidget {
   }
 }
 
-class _AddNodeConnectionButton extends StatelessWidget {
+class _AddConnectionButton extends StatelessWidget {
   final Widget icon;
   final Widget label;
   final VoidCallback? onPressed;
 
-  const _AddNodeConnectionButton({
+  const _AddConnectionButton({
     super.key,
     required this.icon,
     required this.label,
@@ -302,19 +302,19 @@ class ProfileControlDot extends StatelessWidget {
   }
 }
 
-class HoverNodeDisplay extends StatefulWidget {
+class HoverPersonDisplay extends StatefulWidget {
   final Widget child;
 
-  const HoverNodeDisplay({
+  const HoverPersonDisplay({
     super.key,
     required this.child,
   });
 
   @override
-  State<HoverNodeDisplay> createState() => _HoverNodeDisplayState();
+  State<HoverPersonDisplay> createState() => _HoverPersonDisplayState();
 }
 
-class _HoverNodeDisplayState extends State<HoverNodeDisplay> {
+class _HoverPersonDisplayState extends State<HoverPersonDisplay> {
   bool _hover = false;
 
   @override
@@ -333,11 +333,11 @@ class _HoverNodeDisplayState extends State<HoverNodeDisplay> {
 }
 
 class NodeProfile extends StatelessWidget {
-  final Node node;
+  final Person person;
 
   const NodeProfile({
     super.key,
-    required this.node,
+    required this.person,
   });
 
   @override
@@ -373,25 +373,25 @@ class NodeProfile extends StatelessWidget {
               ],
             ),
             child: ImageAspect(
-              child: ProfileImage(node.profile.imageUrl),
+              child: ProfileImage(person.profile.imageUrl),
             ),
           ),
           Text(
-            node.profile.name,
+            person.profile.name,
             style: const TextStyle(
               fontSize: 27,
               fontWeight: FontWeight.w700,
             ),
           ),
           Text(
-            node.id,
+            person.id,
             style: const TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.w500,
             ),
           ),
           Text(
-            node.profile.birthday?.year.toString() ?? '',
+            person.profile.birthday?.year.toString() ?? '',
             style: const TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.w500,
@@ -472,7 +472,7 @@ class _MouseHoverAnimationState extends State<MouseHoverAnimation> {
   Widget build(BuildContext context) {
     return Scaler(
       duration: const Duration(milliseconds: 300),
-      isScaling: _isScaling,
+      shouldScale: _isScaling,
       scale: 1.5,
       onEnd: () {
         if (!_isScaling) {
@@ -497,7 +497,7 @@ class _MouseHoverAnimationState extends State<MouseHoverAnimation> {
 
 class Scaler extends StatefulWidget {
   final Duration duration;
-  final bool isScaling;
+  final bool shouldScale;
   final double scale;
   final VoidCallback onEnd;
   final Widget child;
@@ -505,7 +505,7 @@ class Scaler extends StatefulWidget {
   const Scaler({
     super.key,
     required this.duration,
-    required this.isScaling,
+    required this.shouldScale,
     required this.scale,
     required this.onEnd,
     required this.child,
@@ -523,7 +523,7 @@ class _HoverState extends State<Scaler> {
     super.initState();
     WidgetsBinding.instance.endOfFrame.then((_) {
       if (mounted) {
-        if (widget.isScaling) {
+        if (widget.shouldScale) {
           setState(() => _targetScale = widget.scale);
         }
       }
@@ -532,8 +532,8 @@ class _HoverState extends State<Scaler> {
 
   @override
   void didUpdateWidget(covariant Scaler oldWidget) {
-    if (widget.isScaling != oldWidget.isScaling) {
-      _targetScale = widget.isScaling ? widget.scale : 1.0;
+    if (widget.shouldScale != oldWidget.shouldScale) {
+      _targetScale = widget.shouldScale ? widget.scale : 1.0;
     }
     super.didUpdateWidget(oldWidget);
   }
@@ -545,7 +545,7 @@ class _HoverState extends State<Scaler> {
       curve: Curves.easeOutQuart,
       scale: _targetScale,
       onEnd: () {
-        if (!widget.isScaling) {
+        if (!widget.shouldScale) {
           widget.onEnd();
         }
       },

@@ -14,7 +14,7 @@ class MenuPage extends ConsumerStatefulWidget {
 class _MenuPageState extends ConsumerState<MenuPage> {
   bool _loading = false;
 
-  List<Node>? _roots;
+  List<Person>? _roots;
 
   @override
   void initState() {
@@ -45,7 +45,7 @@ class _MenuPageState extends ConsumerState<MenuPage> {
                             title: const Text('Start a family tree'),
                             content: Consumer(builder: (context, ref, child) {
                               return BasicProfileDisplay(
-                                isRootNodeCreation: true,
+                                isRootCreation: true,
                                 relationship: Relationship.child,
                                 padding: const EdgeInsets.all(16),
                                 onSave: (name, gender) {
@@ -86,12 +86,12 @@ class _MenuPageState extends ConsumerState<MenuPage> {
               child: ListView.builder(
                 itemCount: roots.length,
                 itemBuilder: (context, index) {
-                  final node = roots[index];
+                  final person = roots[index];
                   return ListTile(
-                    onTap: () => _navigate(node.id),
+                    onTap: () => _navigate(person.id),
                     title: Text(
-                        '${node.profile.name} (${node.profile.gender.name})'),
-                    subtitle: Text(node.id),
+                        '${person.profile.name} (${person.profile.gender.name})'),
+                    subtitle: Text(person.id),
                   );
                 },
               ),
@@ -128,11 +128,11 @@ class _MenuPageState extends ConsumerState<MenuPage> {
     );
   }
 
-  void _navigate(String focalNodeId) async {
+  void _navigate(String focalPersonId) async {
     context.goNamed(
       'view',
       pathParameters: {
-        'focalNodeId': focalNodeId,
+        'focalPersonId': focalPersonId,
       },
     );
   }

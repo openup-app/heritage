@@ -26,7 +26,7 @@ class GraphView<T extends GraphNode> extends StatefulWidget {
   final Spacing spacing;
   final Widget Function(
     BuildContext context,
-    LinkedNode<T> node,
+    T data,
     Key key,
   ) nodeBuilder;
 
@@ -127,7 +127,7 @@ class _GraphViewState<T extends GraphNode> extends State<GraphView<T>> {
                       if (key == null) {
                         throw 'Missing key';
                       }
-                      return widget.nodeBuilder(context, node, key);
+                      return widget.nodeBuilder(context, node.data, key);
                     },
                   ),
                 ),
@@ -147,7 +147,7 @@ class _GraphViewState<T extends GraphNode> extends State<GraphView<T>> {
                     if (key == null) {
                       throw 'Missing key';
                     }
-                    return widget.nodeBuilder(context, node, key);
+                    return widget.nodeBuilder(context, node.data, key);
                   },
                 ),
               ),

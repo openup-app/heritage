@@ -41,7 +41,7 @@ class Api {
     }
   }
 
-  Future<Either<Error, List<Node>>> addConnection({
+  Future<Either<Error, List<Person>>> addConnection({
     required Id sourceId,
     required String name,
     required Gender gender,
@@ -49,7 +49,7 @@ class Api {
   }) {
     return _makeRequest(
       request: () => http.post(
-        Uri.parse('$_baseUrl/v1/nodes/$sourceId/connections'),
+        Uri.parse('$_baseUrl/v1/people/$sourceId/connections'),
         headers: _headers,
         body: jsonEncode({
           'name': name,
@@ -59,19 +59,19 @@ class Api {
       ),
       handleResponse: (response) {
         final json = jsonDecode(response.body);
-        final nodes = json['nodes'] as List;
-        return right(nodes.map((e) => Node.fromJson(e)).toList());
+        final people = json['people'] as List;
+        return right(people.map((e) => Person.fromJson(e)).toList());
       },
     );
   }
 
-  Future<Either<Error, Node>> createRoot({
+  Future<Either<Error, Person>> createRoot({
     required String name,
     required Gender gender,
   }) {
     return _makeRequest(
       request: () => http.post(
-        Uri.parse('$_baseUrl/v1/nodes'),
+        Uri.parse('$_baseUrl/v1/people'),
         headers: _headers,
         body: jsonEncode({
           'name': name,
@@ -80,43 +80,43 @@ class Api {
       ),
       handleResponse: (response) {
         final json = jsonDecode(response.body);
-        return right(Node.fromJson(json['node']));
+        return right(Person.fromJson(json['person']));
       },
     );
   }
 
-  Future<Either<Error, List<Node>>> getLimitedGraph(Id id) {
+  Future<Either<Error, List<Person>>> getLimitedGraph(Id id) {
     return _makeRequest(
       request: () => http.get(
-        Uri.parse('$_baseUrl/v1/nodes/$id'),
+        Uri.parse('$_baseUrl/v1/people/$id'),
         headers: _headers,
       ),
       handleResponse: (response) {
         final json = jsonDecode(response.body);
-        final nodes = json['nodes'] as List;
-        return right(nodes.map((e) => Node.fromJson(e)).toList());
+        final people = json['people'] as List;
+        return right(people.map((e) => Person.fromJson(e)).toList());
       },
     );
   }
 
-  Future<Either<Error, List<Node>>> getNodes(List<Id> ids) {
+  Future<Either<Error, List<Person>>> getPeople(List<Id> ids) {
     if (ids.isEmpty) {
       return Future.value(right([]));
     }
     return _makeRequest(
       request: () => http.get(
-        Uri.parse('$_baseUrl/v1/nodes?ids=${ids.join(',')}'),
+        Uri.parse('$_baseUrl/v1/people?ids=${ids.join(',')}'),
         headers: _headers,
       ),
       handleResponse: (response) {
         final json = jsonDecode(response.body);
-        final nodes = json['nodes'] as List;
-        return right(nodes.map((e) => Node.fromJson(e)).toList());
+        final people = json['people'] as List;
+        return right(people.map((e) => Person.fromJson(e)).toList());
       },
     );
   }
 
-  Future<Either<Error, List<Node>>> getRoots() {
+  Future<Either<Error, List<Person>>> getRoots() {
     return _makeRequest(
       request: () => http.get(
         Uri.parse('$_baseUrl/v1/roots'),
@@ -124,13 +124,13 @@ class Api {
       ),
       handleResponse: (response) {
         final json = jsonDecode(response.body);
-        final nodes = json['nodes'] as List;
-        return right(nodes.map((e) => Node.fromJson(e)).toList());
+        final people = json['people'] as List;
+        return right(people.map((e) => Person.fromJson(e)).toList());
       },
     );
   }
 
-  Future<Either<Error, Node>> updateProfile(
+  Future<Either<Error, Person>> updateProfile(
     String id, {
     Profile? profile,
     Uint8List? image,
@@ -139,7 +139,7 @@ class Api {
       return left('No data');
     }
 
-    final uri = Uri.parse('$_baseUrl/v1/nodes/$id/profile');
+    final uri = Uri.parse('$_baseUrl/v1/people/$id/profile');
     final request = http.MultipartRequest('PUT', uri);
     if (profile != null) {
       request.fields['profile'] = jsonEncode(profile.toJson());
@@ -165,7 +165,7 @@ class Api {
       // Handle the response
       final responseBody = await http.Response.fromStream(response);
       final json = jsonDecode(responseBody.body);
-      return right(Node.fromJson(json['node']));
+      return right(Person.fromJson(json['person']));
     } on http.ClientException {
       return left('Client Exception');
     } on SocketException {
@@ -177,15 +177,15 @@ class Api {
     }
   }
 
-  Future<Either<Error, Node>> takeOwnership(String id) {
+  Future<Either<Error, Person>> takeOwnership(String id) {
     return _makeRequest(
       request: () => http.put(
-        Uri.parse('$_baseUrl/v1/nodes/$id/take_ownership'),
+        Uri.parse('$_baseUrl/v1/people/$id/take_ownership'),
         headers: _headers,
       ),
       handleResponse: (response) {
         final json = jsonDecode(response.body);
-        return right(Node.fromJson(json['node']));
+        return right(Person.fromJson(json['person']));
       },
     );
   }
@@ -231,8 +231,8 @@ enum Gender { male, female }
 enum Relationship { parent, sibling, spouse, child }
 
 @Freezed(makeCollectionsUnmodifiable: false)
-class Node with _$Node implements GraphNode {
-  const factory Node({
+class Person with _$Person implements GraphNode {
+  const factory Person({
     required Id id,
     required List<Id> parents,
     required List<Id> spouses,
@@ -241,15 +241,15 @@ class Node with _$Node implements GraphNode {
     required Id? ownedBy,
     @DateTimeConverter() required DateTime createdAt,
     required Profile profile,
-  }) = _Node;
+  }) = _Person;
 
-  const Node._();
+  const Person._();
 
-  factory Node.fromJson(Map<String, Object?> json) => _$NodeFromJson(json);
+  factory Person.fromJson(Map<String, Object?> json) => _$PersonFromJson(json);
 
   @override
   bool operator <(GraphNode other) =>
-      createdAt.compareTo((other as Node).createdAt) == -1;
+      createdAt.compareTo((other as Person).createdAt) == -1;
 }
 
 @freezed

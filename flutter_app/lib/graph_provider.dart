@@ -3,55 +3,55 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:heritage/api.dart';
 import 'package:heritage/profile_update.dart';
 
-final focalNodeIdProvider = StateProvider<Id?>((ref) => null);
+final focalPersonIdProvider = StateProvider<Id?>((ref) => null);
 
-final _nodesProvider = FutureProvider<List<Node>>((ref) async {
-  final focalNodeId = ref.watch(focalNodeIdProvider);
-  if (focalNodeId == null) {
-    throw 'No focal node id set';
+final _peopleProvider = FutureProvider<List<Person>>((ref) async {
+  final focalPersonId = ref.watch(focalPersonIdProvider);
+  if (focalPersonId == null) {
+    throw 'No focal person id set';
   }
   final api = ref.watch(apiProvider);
-  final result = await api.getLimitedGraph(focalNodeId);
+  final result = await api.getLimitedGraph(focalPersonId);
   return result.fold(
     (l) => throw l,
     (r) => r,
   );
 });
 
-final hasNodesProvider = Provider<bool>(
-    (ref) => ref.watch(_nodesProvider.select((s) => s.hasValue)));
+final hasPeopleProvider = Provider<bool>(
+    (ref) => ref.watch(_peopleProvider.select((s) => s.hasValue)));
 
 final graphProvider = StateNotifierProvider<GraphNotifier, Graph>((ref) {
   final api = ref.watch(apiProvider);
-  final focalNodeId = ref.watch(focalNodeIdProvider);
-  final value = ref.watch(_nodesProvider);
-  final nodes = value.valueOrNull;
-  if (nodes == null) {
-    throw 'Initial nodes have not yet loaded';
+  final focalPersonId = ref.watch(focalPersonIdProvider);
+  final value = ref.watch(_peopleProvider);
+  final people = value.valueOrNull;
+  if (people == null) {
+    throw 'Initial people have not yet loaded';
   }
 
-  final nodeMap = Map.fromEntries(nodes.map((e) => MapEntry(e.id, e)));
-  final focalNode = nodeMap[focalNodeId];
-  if (focalNode == null) {
-    throw 'Missing focal node';
+  final peopleMap = Map.fromEntries(people.map((e) => MapEntry(e.id, e)));
+  final focalPerson = peopleMap[focalPersonId];
+  if (focalPerson == null) {
+    throw 'Missing focal person';
   }
   return GraphNotifier(
     api: api,
     initialGraph: Graph(
-      focalNode: focalNode,
-      nodes: nodeMap,
+      focalPerson: focalPerson,
+      people: peopleMap,
     ),
   );
 });
 
 class GraphNotifier extends StateNotifier<Graph> {
   final Api api;
-  final String _focalNodeId;
+  final String _focalPersonId;
 
   GraphNotifier({
     required this.api,
     required Graph initialGraph,
-  })  : _focalNodeId = initialGraph.focalNode.id,
+  })  : _focalPersonId = initialGraph.focalPerson.id,
         super(initialGraph);
 
   Future<void> addConnection({
@@ -71,43 +71,9 @@ class GraphNotifier extends StateNotifier<Graph> {
     }
     result.fold(
       (l) => debugPrint(l),
-      _updateNodes,
+      _updatePeople,
     );
   }
-
-  // Future<void> fetchGraph(Id id) async => _fetchNodes({id});
-
-  // Future<void> fetchConnectionsOf(List<Id> ids) async {
-  //   final nodes = ids.map((e) => _nodes[e]).whereNotNull();
-  //   if (nodes.isEmpty) {
-  //     return;
-  //   }
-  //   final connectionIds = [
-  //     for (final node in nodes) ...[
-  //       ...node.parentIds,
-  //       ...node.spouseIds,
-  //       ...node.childIds,
-  //     ],
-  //   ];
-  //   connectionIds
-  //     ..removeWhere((e) => _nodes.keys.contains(e))
-  //     ..removeWhere((e) => _connectionsFetched.contains(e));
-  //   _connectionsFetched.addAll(connectionIds);
-  //   return _fetchNodes(connectionIds.toSet());
-  // }
-
-  // Future<void> _fetchNodes(Set<Id> ids) async {
-  //   final start = DateTime.now();
-  //   final result = await api.getNodes(ids.toList());
-  //   print('End ${DateTime.now().difference(start).inMilliseconds / 1000}s');
-  //   if (!mounted) {
-  //     return;
-  //   }
-  //   result.fold(
-  //     (l) => debugPrint(l),
-  //     _addNodes,
-  //   );
-  // }
 
   Future<void> updateProfile(String id, ProfileUpdate update) async {
     final result = await api.updateProfile(
@@ -120,7 +86,7 @@ class GraphNotifier extends StateNotifier<Graph> {
     }
     result.fold(
       debugPrint,
-      (r) => _updateNodes([r]),
+      (r) => _updatePeople([r]),
     );
   }
 
@@ -131,32 +97,32 @@ class GraphNotifier extends StateNotifier<Graph> {
     }
     result.fold(
       debugPrint,
-      (r) => _updateNodes([r]),
+      (r) => _updatePeople([r]),
     );
   }
 
-  void _updateNodes(List<Node> updates) {
-    final nodes =
-        Map.fromEntries(state.nodes.values.map((e) => MapEntry(e.id, e)));
-    // Overwrite old nodes with any updates
-    nodes.addEntries(updates.map((e) => MapEntry(e.id, e)));
-    final focalNode = nodes[_focalNodeId];
-    if (focalNode == null) {
-      throw 'Missing focal node after update';
+  void _updatePeople(List<Person> updates) {
+    final people =
+        Map.fromEntries(state.people.values.map((e) => MapEntry(e.id, e)));
+    // Overwrite previous people with any updates
+    people.addEntries(updates.map((e) => MapEntry(e.id, e)));
+    final focalPerson = people[_focalPersonId];
+    if (focalPerson == null) {
+      throw 'Missing focal person after update';
     }
     state = Graph(
-      focalNode: focalNode,
-      nodes: nodes,
+      focalPerson: focalPerson,
+      people: people,
     );
   }
 }
 
 class Graph {
-  final Node focalNode;
-  final Map<Id, Node> nodes;
+  final Person focalPerson;
+  final Map<Id, Person> people;
 
   Graph({
-    required this.focalNode,
-    required this.nodes,
+    required this.focalPerson,
+    required this.people,
   });
 }

@@ -1,5 +1,5 @@
 import { Request, Response, Router } from "express";
-import { Database, Node, Profile, genderSchema, profileSchema, relationshipSchema } from "./database.js";
+import { Database, Person, Profile, genderSchema, profileSchema, relationshipSchema } from "./database.js";
 import { Storage } from "./storage/storage.js";
 import { Auth } from "./auth.js";
 import { z } from "zod";
@@ -10,7 +10,7 @@ import shortUUID from "short-uuid";
 export function router(auth: Auth, database: Database, storage: Storage): Router {
   const router = Router();
 
-  router.post('/nodes/:sourceId/connections', async (req: Request, res: Response) => {
+  router.post('/people/:sourceId/connections', async (req: Request, res: Response) => {
     const sourceId = req.params.sourceId;
     const creatorId = req.headers["x-app-uid"] as string | undefined;
 
@@ -26,9 +26,9 @@ export function router(auth: Auth, database: Database, storage: Storage): Router
     }
 
     try {
-      const nodes = await database.addConnection(sourceId, body.name, body.gender, body.relationship, creatorId);
+      const people = await database.addConnection(sourceId, body.name, body.gender, body.relationship, creatorId);
       return res.json({
-        'nodes': nodes.map(e => constructURLs(e, storage)),
+        'people': people.map(e => constructURLs(e, storage)),
       });
     } catch (e) {
       console.log(e);
@@ -36,7 +36,7 @@ export function router(auth: Auth, database: Database, storage: Storage): Router
     }
   });
 
-  router.post('/nodes', async (req: Request, res: Response) => {
+  router.post('/people', async (req: Request, res: Response) => {
     let body: CreateRootBody;
     try {
       body = createRootSchema.parse(req.body);
@@ -45,9 +45,9 @@ export function router(auth: Auth, database: Database, storage: Storage): Router
     }
 
     try {
-      const node = await database.createRootNode(body.name, body.gender);
+      const person = await database.createRootPerson(body.name, body.gender);
       return res.json({
-        'node': constructURLs(node, storage),
+        'person': constructURLs(person, storage),
       })
     } catch (e) {
       console.log(e);
@@ -55,12 +55,12 @@ export function router(auth: Auth, database: Database, storage: Storage): Router
     }
   });
 
-  router.get('/nodes/:id', async (req: Request, res: Response) => {
+  router.get('/people/:id', async (req: Request, res: Response) => {
     const id = req.params.id;
     try {
-      const nodes = await database.getLimitedGraph(id);
+      const people = await database.getLimitedGraph(id);
       return res.json({
-        'nodes': nodes.map(e => constructURLs(e, storage)),
+        'people': people.map(e => constructURLs(e, storage)),
       })
     } catch (e) {
       console.log(e);
@@ -68,7 +68,7 @@ export function router(auth: Auth, database: Database, storage: Storage): Router
     }
   });
 
-  router.put('/nodes/:id/profile', async (req: Request, res: Response) => {
+  router.put('/people/:id/profile', async (req: Request, res: Response) => {
     const id = req.params.id;
 
     let profile: Profile;
@@ -88,7 +88,7 @@ export function router(auth: Auth, database: Database, storage: Storage): Router
     try {
       if (imageFile) {
         const buffer = await fs.readFile(imageFile.filepath);
-        const oldProfile = await database.getNode(id);
+        const oldProfile = await database.getPerson(id);
         const oldImageKey = oldProfile.profile.imageKey;
         const imageKey = `images/${shortUUID.generate()}.jpg`;
         await storage.upload(imageKey, buffer);
@@ -98,9 +98,9 @@ export function router(auth: Auth, database: Database, storage: Storage): Router
         profile.imageKey = imageKey;
       }
 
-      const node = await database.updateProfile(id, profile);
+      const person = await database.updateProfile(id, profile);
       return res.json({
-        'node': constructURLs(node, storage),
+        'person': constructURLs(person, storage),
       })
     } catch (e) {
       console.log(e);
@@ -108,13 +108,13 @@ export function router(auth: Auth, database: Database, storage: Storage): Router
     }
   });
 
-  router.put('/nodes/:id/take_ownership', async (req: Request, res: Response) => {
+  router.put('/people/:id/take_ownership', async (req: Request, res: Response) => {
     const id = req.params.id;
 
     try {
-      const node = await database.updateOwnership(id, id);
+      const person = await database.updateOwnership(id, id);
       return res.json({
-        'node': constructURLs(node, storage),
+        'person': constructURLs(person, storage),
       })
     } catch (e) {
       console.log(e);
@@ -124,9 +124,9 @@ export function router(auth: Auth, database: Database, storage: Storage): Router
 
   router.get('/roots', async (req: Request, res: Response) => {
     try {
-      const nodes = await database.getRoots();
+      const people = await database.getRoots();
       return res.json({
-        'nodes': nodes.map(e => constructURLs(e, storage)),
+        'people': people.map(e => constructURLs(e, storage)),
       })
     } catch (e) {
       console.log(e);
@@ -137,9 +137,9 @@ export function router(auth: Auth, database: Database, storage: Storage): Router
   return router;
 }
 
-function constructURLs(node: Node, storage: Storage) {
+function constructURLs(person: Person, storage: Storage) {
   const object: any = {
-    ...node,
+    ...person,
 
   }
   const imageKey = object.profile.imageKey ?? "public/no_image.png";

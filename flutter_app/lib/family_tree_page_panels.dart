@@ -13,15 +13,15 @@ import 'package:heritage/profile_update.dart';
 import 'package:heritage/util.dart';
 
 class Panels extends ConsumerStatefulWidget {
-  final Node node;
-  final void Function(Node node, Relationship relationship)
+  final Person person;
+  final void Function(Person person, Relationship relationship)
       onAddConnectionPressed;
   final VoidCallback onViewPerspective;
   final VoidCallback onClose;
 
   const Panels({
     super.key,
-    required this.node,
+    required this.person,
     required this.onAddConnectionPressed,
     required this.onViewPerspective,
     required this.onClose,
@@ -36,37 +36,37 @@ class _PanelsState extends ConsumerState<Panels> {
 
   @override
   Widget build(BuildContext context) {
-    final focalNode = ref.read(graphProvider).focalNode;
-    final node = widget.node;
-    final isMe = focalNode.id == node.id;
-    final isOwnedByMe = node.ownedBy == node.id;
+    final focalPerson = ref.read(graphProvider).focalPerson;
+    final person = widget.person;
+    final isMe = focalPerson.id == person.id;
+    final isOwnedByMe = person.ownedBy == person.id;
     final layout = Layout.of(context);
     final small = layout == LayoutType.small;
 
     final Widget child;
-    final ownershipClaimed = node.ownedBy != null;
+    final ownershipClaimed = person.ownedBy != null;
     if (!ownershipClaimed) {
       child = BasicProfileDisplay(
         relationship: Relationship.sibling,
-        initialName: node.profile.name,
-        initialGender: node.profile.gender,
+        initialName: person.profile.name,
+        initialGender: person.profile.gender,
         padding: small ? const EdgeInsets.all(16) : const EdgeInsets.all(24),
         onSave: (_, __) {},
       );
     } else {
       child = ProfileDisplay(
-        id: node.id,
-        profile: node.profile,
+        id: person.id,
+        profile: person.profile,
         isMe: isMe,
         isEditable: isMe || isOwnedByMe,
-        hasDifferentOwner: node.ownedBy != node.id,
+        hasDifferentOwner: person.ownedBy != person.id,
         padding: small ? const EdgeInsets.all(16) : const EdgeInsets.all(24),
         header: !small
             ? null
-            : AddNodeConnectionButtons(
-                canAddParent: node.parents.isEmpty,
+            : AddConnectionButtons(
+                canAddParent: person.parents.isEmpty,
                 onAddConnectionPressed: (relationship) =>
-                    widget.onAddConnectionPressed(node, relationship),
+                    widget.onAddConnectionPressed(person, relationship),
               ),
         onViewPerspective: widget.onViewPerspective,
         onClose: widget.onClose,
@@ -160,10 +160,10 @@ class _PanelsState extends ConsumerState<Panels> {
                     ),
                   ],
                 ),
-                child: AddNodeConnectionButtons(
-                  canAddParent: node.parents.isEmpty,
+                child: AddConnectionButtons(
+                  canAddParent: person.parents.isEmpty,
                   onAddConnectionPressed: (relationship) =>
-                      widget.onAddConnectionPressed(node, relationship),
+                      widget.onAddConnectionPressed(person, relationship),
                 ),
               ),
             ),
@@ -176,7 +176,7 @@ class _PanelsState extends ConsumerState<Panels> {
     // }
 
     // if (profile != null) {
-    //   // ref.read(graphProvider.notifier).updateProfile(node.id, profile);
+    //   // ref.read(graphProvider.notifier).updateProfile(person.id, profile);
     // }
   }
 }

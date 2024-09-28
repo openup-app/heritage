@@ -144,19 +144,19 @@ class _RouterBuilderState extends State<_RouterBuilder> {
             path: '/test_layout',
             name: 'test_layout',
             builder: (context, state) {
-              final (:focalNode, :nodes) = _makeManyAncestoryTree();
-              // final (:focalNode, :nodes) = _makeWideTree();
-              // final (:focalNode, :nodes) = _makeTallTree();
+              final (:focalPerson, :people) = _makeManyAncestoryTree();
+              // final (:focalPerson, :people) = _makeWideTree();
+              // final (:focalPerson, :people) = _makeTallTree();
               return Scaffold(
-                body: GraphView<Node>(
-                  focalNodeId: focalNode.id,
-                  nodes: nodes,
+                body: GraphView<Person>(
+                  focalNodeId: focalPerson.id,
+                  nodes: people,
                   spacing: const Spacing(
                     level: 40,
                     sibling: 8,
                     spouse: 2,
                   ),
-                  nodeBuilder: (context, node, key) {
+                  nodeBuilder: (context, data, key) {
                     return Container(
                       key: key,
                       width: 60,
@@ -167,7 +167,7 @@ class _RouterBuilderState extends State<_RouterBuilder> {
                         color: Colors.blue.shade300,
                       ),
                       child: Text(
-                        node.id,
+                        data.id,
                         style: const TextStyle(fontSize: 24),
                       ),
                     );
@@ -177,33 +177,34 @@ class _RouterBuilderState extends State<_RouterBuilder> {
             },
           ),
         GoRoute(
-          path: '/:focalNodeId',
+          path: '/:focalPersonId',
           name: 'view',
           onExit: (context, state) {
             RestartApp.of(context).restart();
             return Future.value(true);
           },
           builder: (context, state) {
-            final focalNodeId = state.pathParameters['focalNodeId'];
-            if (focalNodeId == null) {
-              throw 'Missing focalNodeId';
+            final focalPersonId = state.pathParameters['focalPersonId'];
+            if (focalPersonId == null) {
+              throw 'Missing focalPersonId';
             }
             return FamilyTreeLoadingPage(
-              focalNodeId: focalNodeId,
+              focalPersonId: focalPersonId,
               child: const FamilyTreePage(),
             );
           },
           routes: [
             GoRoute(
-              path: 'perspective/:perspectiveNodeId',
+              path: 'perspective/:perspectivePersonId',
               name: 'perspective',
               builder: (context, state) {
-                final focalNodeId = state.pathParameters['perspectiveNodeId'];
-                if (focalNodeId == null) {
-                  throw 'Missing focalNodeId';
+                final focalPersonId =
+                    state.pathParameters['perspectivePersonId'];
+                if (focalPersonId == null) {
+                  throw 'Missing focalPersonId';
                 }
                 return FamilyTreeLoadingPage(
-                  focalNodeId: focalNodeId,
+                  focalPersonId: focalPersonId,
                   child: const FamilyTreePage(
                     isPerspectiveMode: true,
                   ),
@@ -217,118 +218,119 @@ class _RouterBuilderState extends State<_RouterBuilder> {
   }
 }
 
-({Node focalNode, List<Node> nodes}) _generateRandomTree(int totalNodes) {
+({Person focalPerson, List<Person> people}) _generateRandomTree(
+    int totalPeople) {
   final random = Random();
-  final nodes = List.generate(totalNodes, (i) => _createNode('$i'));
+  final people = List.generate(totalPeople, (i) => _createPerson('$i'));
 
-  for (var i = 1; i < totalNodes; i++) {
+  for (var i = 1; i < totalPeople; i++) {
     final parentIndex = random.nextInt(i);
-    final parent = nodes[parentIndex];
-    final child = nodes[i];
+    final parent = people[parentIndex];
+    final child = people[i];
     parent.children.add(child.id);
   }
 
-  return (focalNode: nodes[random.nextInt(totalNodes)], nodes: nodes);
+  return (focalPerson: people[random.nextInt(totalPeople)], people: people);
 }
 
-({Node focalNode, List<Node> nodes}) _makeTallTree() {
-  final nodes = List.generate(34, (i) => _createNode('$i'));
+({Person focalPerson, List<Person> people}) _makeTallTree() {
+  final people = List.generate(34, (i) => _createPerson('$i'));
 
-  connect(nodes, spouseA: 0, spouseB: 1, children: [2, 4]);
-  connect(nodes, spouseA: 3, spouseB: 4, children: [7, 8, 10]);
-  connect(nodes, spouseA: 9, spouseB: 10, children: [16]);
-  connect(nodes, spouseA: 15, spouseB: 16, children: [19]);
-  connect(nodes, spouseA: 19, spouseB: 20, children: [24, 25, 27]);
-  connect(nodes, spouseA: 23, spouseB: 24, children: []);
-  connect(nodes, spouseA: 26, spouseB: 27, children: [28, 29, 30]);
+  connect(people, spouseA: 0, spouseB: 1, children: [2, 4]);
+  connect(people, spouseA: 3, spouseB: 4, children: [7, 8, 10]);
+  connect(people, spouseA: 9, spouseB: 10, children: [16]);
+  connect(people, spouseA: 15, spouseB: 16, children: [19]);
+  connect(people, spouseA: 19, spouseB: 20, children: [24, 25, 27]);
+  connect(people, spouseA: 23, spouseB: 24, children: []);
+  connect(people, spouseA: 26, spouseB: 27, children: [28, 29, 30]);
 
-  connect(nodes, spouseA: 5, spouseB: 6, children: [/*12*,*/ 13]);
+  connect(people, spouseA: 5, spouseB: 6, children: [/*12*,*/ 13]);
   // connect(spouseA: 11, spouseB: 12, children: []);
-  connect(nodes, spouseA: 13, spouseB: 14, children: [18]);
-  connect(nodes, spouseA: 17, spouseB: 18, children: [20, 22]);
-  connect(nodes, spouseA: 21, spouseB: 22, children: []);
+  connect(people, spouseA: 13, spouseB: 14, children: [18]);
+  connect(people, spouseA: 17, spouseB: 18, children: [20, 22]);
+  connect(people, spouseA: 21, spouseB: 22, children: []);
 
-  connect(nodes, spouseA: 25, spouseB: 31, children: [32, 33]);
+  connect(people, spouseA: 25, spouseB: 31, children: [32, 33]);
 
-  final focalNode = nodes[25];
-  return (focalNode: focalNode, nodes: nodes);
+  final focalPerson = people[25];
+  return (focalPerson: focalPerson, people: people);
 }
 
-({Node focalNode, List<Node> nodes}) _makeWideTree() {
-  final nodes = List.generate(40, (i) => _createNode('$i'));
+({Person focalPerson, List<Person> people}) _makeWideTree() {
+  final people = List.generate(40, (i) => _createPerson('$i'));
 
-  connect(nodes,
+  connect(people,
       spouseA: 0,
       spouseB: 1,
       children: [5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 24]);
-  connect(nodes, spouseA: 2, spouseB: 3, children: [25, 27]);
+  connect(people, spouseA: 2, spouseB: 3, children: [25, 27]);
 
-  connect(nodes, spouseA: 4, spouseB: 5, children: []);
-  connect(nodes, spouseA: 6, spouseB: 7, children: []);
-  connect(nodes,
+  connect(people, spouseA: 4, spouseB: 5, children: []);
+  connect(people, spouseA: 6, spouseB: 7, children: []);
+  connect(people,
       spouseA: 8, spouseB: 9, children: [28, 29, 30, 31, 32, 33, 34, 35]);
-  connect(nodes, spouseA: 10, spouseB: 11, children: []);
-  connect(nodes, spouseA: 12, spouseB: 13, children: []);
-  connect(nodes, spouseA: 14, spouseB: 15, children: []);
-  connect(nodes, spouseA: 16, spouseB: 17, children: []);
-  connect(nodes, spouseA: 18, spouseB: 19, children: []);
-  connect(nodes, spouseA: 20, spouseB: 21, children: []);
-  connect(nodes, spouseA: 22, spouseB: 23, children: []);
-  connect(nodes, spouseA: 24, spouseB: 25, children: [37, 39]);
+  connect(people, spouseA: 10, spouseB: 11, children: []);
+  connect(people, spouseA: 12, spouseB: 13, children: []);
+  connect(people, spouseA: 14, spouseB: 15, children: []);
+  connect(people, spouseA: 16, spouseB: 17, children: []);
+  connect(people, spouseA: 18, spouseB: 19, children: []);
+  connect(people, spouseA: 20, spouseB: 21, children: []);
+  connect(people, spouseA: 22, spouseB: 23, children: []);
+  connect(people, spouseA: 24, spouseB: 25, children: [37, 39]);
 
-  connect(nodes, spouseA: 26, spouseB: 27, children: []);
+  connect(people, spouseA: 26, spouseB: 27, children: []);
 
-  connect(nodes, spouseA: 36, spouseB: 37, children: []);
-  connect(nodes, spouseA: 38, spouseB: 39, children: []);
+  connect(people, spouseA: 36, spouseB: 37, children: []);
+  connect(people, spouseA: 38, spouseB: 39, children: []);
 
-  final focalNode = nodes[37];
-  return (focalNode: focalNode, nodes: nodes);
+  final focalPerson = people[37];
+  return (focalPerson: focalPerson, people: people);
 }
 
-({Node focalNode, List<Node> nodes}) _makeManyAncestoryTree() {
-  final nodes = List.generate(35, (i) => _createNode('$i'));
+({Person focalPerson, List<Person> people}) _makeManyAncestoryTree() {
+  final people = List.generate(35, (i) => _createPerson('$i'));
 
-  connect(nodes, spouseA: 0, spouseB: 1, children: [5]);
-  connect(nodes, spouseA: 2, spouseB: 3, children: [9, 11]);
+  connect(people, spouseA: 0, spouseB: 1, children: [5]);
+  connect(people, spouseA: 2, spouseB: 3, children: [9, 11]);
 
-  connect(nodes, spouseA: 4, spouseB: 5, children: [14, 15]);
-  connect(nodes, spouseA: 6, spouseB: 7, children: [16, 17]);
-  connect(nodes, spouseA: 8, spouseB: 9, children: [18, 19]);
-  connect(nodes, spouseA: 10, spouseB: 11, children: []);
-  connect(nodes, spouseA: 12, spouseB: 13, children: [20, 22]);
+  connect(people, spouseA: 4, spouseB: 5, children: [14, 15]);
+  connect(people, spouseA: 6, spouseB: 7, children: [16, 17]);
+  connect(people, spouseA: 8, spouseB: 9, children: [18, 19]);
+  connect(people, spouseA: 10, spouseB: 11, children: []);
+  connect(people, spouseA: 12, spouseB: 13, children: [20, 22]);
 
-  connect(nodes, spouseA: 15, spouseB: 16, children: [23, 24, 25]);
-  connect(nodes, spouseA: 19, spouseB: 20, children: [26, 28, 30]);
-  connect(nodes, spouseA: 21, spouseB: 22, children: []);
-  connect(nodes, spouseA: 25, spouseB: 26, children: [32]);
-  connect(nodes, spouseA: 27, spouseB: 28, children: []);
+  connect(people, spouseA: 15, spouseB: 16, children: [23, 24, 25]);
+  connect(people, spouseA: 19, spouseB: 20, children: [26, 28, 30]);
+  connect(people, spouseA: 21, spouseB: 22, children: []);
+  connect(people, spouseA: 25, spouseB: 26, children: [32]);
+  connect(people, spouseA: 27, spouseB: 28, children: []);
 
-  connect(nodes, spouseA: 29, spouseB: 30, children: []);
+  connect(people, spouseA: 29, spouseB: 30, children: []);
 
-  connect(nodes, spouseA: 31, spouseB: 32, children: []);
-  connect(nodes, spouseA: 33, spouseB: 34, children: [8]);
+  connect(people, spouseA: 31, spouseB: 32, children: []);
+  connect(people, spouseA: 33, spouseB: 34, children: [8]);
 
-  final focalNode = nodes[32];
-  return (focalNode: focalNode, nodes: nodes);
+  final focalPerson = people[32];
+  return (focalPerson: focalPerson, people: people);
 }
 
 void connect(
-  List<Node> nodes, {
+  List<Person> people, {
   required int spouseA,
   required int spouseB,
   required List<int> children,
 }) {
-  nodes[spouseA].spouses.add(nodes[spouseB].id);
-  nodes[spouseB].spouses.add(nodes[spouseA].id);
-  nodes[spouseA].children.addAll(children.map((e) => nodes[e].id));
-  nodes[spouseB].children.addAll(children.map((e) => nodes[e].id));
+  people[spouseA].spouses.add(people[spouseB].id);
+  people[spouseB].spouses.add(people[spouseA].id);
+  people[spouseA].children.addAll(children.map((e) => people[e].id));
+  people[spouseB].children.addAll(children.map((e) => people[e].id));
   for (final childIndex in children) {
-    nodes[childIndex].parents.addAll([nodes[spouseA].id, nodes[spouseB].id]);
+    people[childIndex].parents.addAll([people[spouseA].id, people[spouseB].id]);
   }
 }
 
-Node _createNode(String id) {
-  return Node(
+Person _createPerson(String id) {
+  return Person(
     id: id,
     parents: [],
     children: [],
