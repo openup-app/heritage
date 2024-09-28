@@ -3,6 +3,7 @@ import 'dart:math';
 
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:heritage/api.dart';
 import 'package:heritage/graph.dart';
 import 'package:heritage/util.dart';
@@ -98,55 +99,28 @@ class _GraphViewState<T extends GraphNode> extends State<GraphView<T>> {
   Widget build(BuildContext context) {
     // At most two upRoots, the couple grandparent on each side
     final upRoots = _focalCouple.parents.expand((e) => e.parents).toList();
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        border: Border.all(width: 10),
-      ),
-      child: _GraphLines(
-        key: _graphKey,
-        spacing: widget.spacing,
-        nodeMap: _nodeMap,
-        child: CustomMultiChildLayout(
-          delegate: _GraphDelegate(
-            parentFocalId: _focalCouple.parents.isEmpty
-                ? ''
-                : _focalCouple.parents.first.id,
-            leftGrandparent: upRoots.firstOrNull,
-            rightGrandparent: upRoots.length > 1 ? upRoots[1] : null,
-            parentLevelRoots: _downRoots,
-          ),
-          children: [
-            for (final node in upRoots)
-              LayoutId(
-                id: node.id,
+    return _Edges(
+      key: _graphKey,
+      nodeMap: _nodeMap,
+      spacing: widget.spacing,
+      child: _MultiTreeWidget(
+        parentFocalId:
+            _focalCouple.parents.isEmpty ? '' : _focalCouple.parents.first.id,
+        leftGrandparent: upRoots.firstOrNull,
+        rightGrandparent: upRoots.length > 1 ? upRoots[1] : null,
+        parentLevelRoots: _downRoots,
+        children: [
+          for (final node in upRoots)
+            _TreeRootIdWidget(
+              id: node.id,
+              child: Padding(
+                padding:
+                    EdgeInsets.symmetric(horizontal: widget.spacing.sibling),
                 child: Padding(
-                  padding:
-                      EdgeInsets.symmetric(horizontal: widget.spacing.sibling),
-                  child: Padding(
-                    padding: EdgeInsets.only(bottom: widget.spacing.level),
-                    child: SimpleTree(
-                      node: node,
-                      reverse: true,
-                      spacing: widget.spacing,
-                      nodeBuilder: (context, node) {
-                        final key = _nodeKeys[node.id];
-                        if (key == null) {
-                          throw 'Missing key';
-                        }
-                        return widget.nodeBuilder(context, node, key);
-                      },
-                    ),
-                  ),
-                ),
-              ),
-            for (final node in _downRoots)
-              LayoutId(
-                id: node.id,
-                child: Padding(
-                  padding:
-                      EdgeInsets.symmetric(horizontal: widget.spacing.sibling),
+                  padding: EdgeInsets.only(bottom: widget.spacing.level),
                   child: SimpleTree(
                     node: node,
+                    reverse: true,
                     spacing: widget.spacing,
                     nodeBuilder: (context, node) {
                       final key = _nodeKeys[node.id];
@@ -158,8 +132,27 @@ class _GraphViewState<T extends GraphNode> extends State<GraphView<T>> {
                   ),
                 ),
               ),
-          ],
-        ),
+            ),
+          for (final node in _downRoots)
+            _TreeRootIdWidget(
+              id: node.id,
+              child: Padding(
+                padding:
+                    EdgeInsets.symmetric(horizontal: widget.spacing.sibling),
+                child: SimpleTree(
+                  node: node,
+                  spacing: widget.spacing,
+                  nodeBuilder: (context, node) {
+                    final key = _nodeKeys[node.id];
+                    if (key == null) {
+                      throw 'Missing key';
+                    }
+                    return widget.nodeBuilder(context, node, key);
+                  },
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -348,11 +341,15 @@ class SimpleTree<T extends GraphNode> extends StatelessWidget {
                   right:
                       index == node.children.length - 1 ? 0 : spacing.sibling,
                 ),
-                child: SimpleTree(
-                  node: child,
-                  reverse: reverse,
-                  spacing: spacing,
-                  nodeBuilder: nodeBuilder,
+                child: Padding(
+                  padding: EdgeInsets
+                      .zero, //EdgeInsets.only(right: node.children.length == 1 ? 310.0 : 0),
+                  child: SimpleTree(
+                    node: child,
+                    reverse: reverse,
+                    spacing: spacing,
+                    nodeBuilder: nodeBuilder,
+                  ),
                 ),
               ),
           ],
@@ -400,68 +397,132 @@ class _NodeAndSpouse<T extends GraphNode> extends StatelessWidget {
   }
 }
 
-class _GraphDelegate<T extends GraphNode> extends MultiChildLayoutDelegate {
-  final Id parentFocalId;
-  final Couple<T>? leftGrandparent;
-  final Couple<T>? rightGrandparent;
-  final List<Couple<T>> parentLevelRoots;
+/// Positions its down roots below its up roots, and sized to contain them all.
+class _MultiTreeRenderBox<T extends GraphNode> extends RenderBox
+    with
+        ContainerRenderObjectMixin<RenderBox, _TreeParentData>,
+        RenderBoxContainerDefaultsMixin<RenderBox, _TreeParentData> {
+  _MultiTreeRenderBox({
+    required Id focalDownRootid,
+    required Couple<T>? leftUpRoot,
+    required Couple<T>? rightUpRoot,
+    required List<Couple<T>> downRoots,
+  })  : _focalDownRootId = focalDownRootid,
+        _leftUpRoot = leftUpRoot,
+        _rightUpRoot = rightUpRoot,
+        _downRoots = downRoots;
 
-  _GraphDelegate({
-    required this.parentFocalId,
-    required this.leftGrandparent,
-    required this.rightGrandparent,
-    required this.parentLevelRoots,
-  });
+  Id get focalDownRootId => _focalDownRootId;
+  Id _focalDownRootId;
+  set focalDownRootId(Id value) {
+    if (value == _focalDownRootId) {
+      return;
+    }
+    _focalDownRootId = value;
+    markNeedsLayout();
+  }
+
+  Couple<T>? get leftUpRoot => _leftUpRoot;
+  Couple<T>? _leftUpRoot;
+  set leftUpRoot(Couple<T>? value) {
+    if (value == _leftUpRoot) {
+      return;
+    }
+    _leftUpRoot = value;
+    markNeedsLayout();
+  }
+
+  Couple<T>? get rightUpRoot => _rightUpRoot;
+  Couple<T>? _rightUpRoot;
+  set rightUpRoot(Couple<T>? value) {
+    if (value == _rightUpRoot) {
+      return;
+    }
+    _rightUpRoot = value;
+    markNeedsLayout();
+  }
+
+  List<Couple<T>> get downRoots => _downRoots;
+  List<Couple<T>> _downRoots;
+  set downRoots(List<Couple<T>> value) {
+    if (value == _downRoots) {
+      return;
+    }
+    _downRoots = value;
+    markNeedsLayout();
+  }
 
   @override
-  void performLayout(Size size) {
-    final constraints = BoxConstraints.loose(size);
+  void setupParentData(RenderBox child) {
+    if (child.parentData is! _TreeParentData) {
+      child.parentData = _TreeParentData();
+    }
+  }
 
-    final gp1 = leftGrandparent;
-    final gp2 = rightGrandparent;
-    final gp1Size = gp1 == null ? Size.zero : layoutChild(gp1.id, constraints);
-    final gp2Size = gp2 == null ? Size.zero : layoutChild(gp2.id, constraints);
-    final grandparentHeight = max(gp1Size.height, gp2Size.height);
-    final grandparentVerticalShift = Offset(0, grandparentHeight);
+  @override
+  void performLayout() {
+    final constraints = this.constraints.loosen();
 
-    final parentLevelSizes = Map.fromEntries(parentLevelRoots
-        .map((e) => MapEntry(e.id, layoutChild(e.id, constraints))));
+    // Layout all children
+    final childMap = <Id, RenderBox>{};
+    RenderBox? child = firstChild;
+    while (child != null) {
+      final childParentData = child.parentData as _TreeParentData;
+      child.layout(constraints, parentUsesSize: true);
+      childMap[childParentData.id] = child;
+      assert(child.parentData == childParentData);
+      child = childParentData.nextSibling;
+    }
 
-    // Compute just the main root offset relative to itself
-    Offset relativeMainRootOffset = Offset.zero;
+    // Calculate position of the focal down root relative to first down root
+    Offset relativeFocalDownRootOffset = Offset.zero;
     int mainRootIndex = 0;
     Size mainRootSize = Size.zero;
-    Offset tempOffset = Offset.zero;
-    for (final (index, entry) in parentLevelSizes.entries.indexed) {
-      final (id, size) = (entry.key, entry.value);
-      if (id == parentFocalId) {
-        relativeMainRootOffset = tempOffset;
+    final downRootSizes = <Id, Size>{};
+    for (var couple in downRoots) {
+      final child = childMap[couple.id];
+      if (child != null) {
+        downRootSizes[couple.id] = child.size;
+      }
+    }
+    for (var index = 0; index < downRoots.length; index++) {
+      final id = downRoots[index].id;
+      final size = downRootSizes[id] ?? Size.zero;
+      if (id == focalDownRootId) {
         mainRootSize = size;
         mainRootIndex = index;
         break;
       }
-      tempOffset += Offset(size.width, 0);
+      relativeFocalDownRootOffset += Offset(size.width, 0);
     }
 
-    final grandparentPivotWidth = gp1Size.width;
-    final parentPivotWidth = relativeMainRootOffset.dx + mainRootSize.width / 2;
-    final grandparentsShiftToPivot = grandparentPivotWidth < parentPivotWidth;
-    final parentShift = grandparentsShiftToPivot
-        ? Offset.zero
-        : Offset(grandparentPivotWidth - parentPivotWidth, 0);
-    final grandparentHorizontalShift = !grandparentsShiftToPivot
-        ? Offset.zero
-        : Offset(parentPivotWidth - grandparentPivotWidth, 0);
+    // Up roots
+    final up1 = leftUpRoot;
+    final up2 = rightUpRoot;
+    final up1Size =
+        up1 == null ? Size.zero : childMap[up1.id]?.size ?? Size.zero;
+    final up2Size =
+        up2 == null ? Size.zero : childMap[up2.id]?.size ?? Size.zero;
+    final upHeight = max(up1Size.height, up2Size.height);
+    final upPivot = up1Size.width;
+    final downPivot = relativeFocalDownRootOffset.dx + mainRootSize.width / 2;
+    final upShouldShiftToPivot = upPivot < downPivot;
+    final downRootsHorizontalShift =
+        upShouldShiftToPivot ? Offset.zero : Offset(upPivot - downPivot, 0);
+    final upRootsHorizontalShift =
+        !upShouldShiftToPivot ? Offset.zero : Offset(downPivot - upPivot, 0);
 
-    // Position the down root trees
-    Offset parentRootOffset = parentShift + grandparentVerticalShift;
-    for (final id in parentLevelSizes.keys) {
-      final childSize = parentLevelSizes[id];
-      positionChild(id, parentRootOffset);
-      parentRootOffset += Offset(childSize?.width ?? 0, 0);
+    // Position the parent roots
+    Offset downRootOffset = downRootsHorizontalShift + Offset(0, upHeight);
+    for (var id in downRootSizes.keys) {
+      final child = childMap[id];
+      if (child != null) {
+        (child.parentData as _TreeParentData).offset = downRootOffset;
+        downRootOffset += Offset(child.size.width, 0);
+      }
     }
 
-    final sizeEntries = parentLevelSizes.entries.toList();
+    final sizeEntries = downRootSizes.entries.toList();
     final leftWidth = sizeEntries
         .take(max(0, mainRootIndex - 1))
         .fold(0.0, (p, e) => p + e.value.width);
@@ -469,48 +530,148 @@ class _GraphDelegate<T extends GraphNode> extends MultiChildLayoutDelegate {
         .skip(mainRootIndex + 1)
         .fold(0.0, (p, e) => p + e.value.width);
 
-    // Position the up root trees
-    if (gp1 != null) {
-      final centerAboveLeft = !grandparentsShiftToPivot
+    // Position the grandparents
+    if (up1 != null) {
+      final centerAboveLeft = !upShouldShiftToPivot
           ? Offset.zero
-          : Offset(gp1Size.width / 2, 0) +
+          : Offset(up1Size.width / 2, 0) +
               Offset(-(leftWidth + mainRootSize.width), 0) / 2;
-      positionChild(
-        gp1.id,
-        grandparentHorizontalShift +
-            grandparentVerticalShift +
-            Offset(0, -gp1Size.height) +
-            centerAboveLeft,
-      );
+      final up1Child = childMap[up1.id];
+      if (up1Child != null) {
+        (up1Child.parentData as _TreeParentData).offset =
+            upRootsHorizontalShift +
+                Offset(0, upHeight) +
+                Offset(0, -up1Size.height) +
+                centerAboveLeft;
+      }
     }
-    if (gp2 != null) {
-      final centerAboveRight = !grandparentsShiftToPivot
+    if (up2 != null) {
+      final centerAboveRight = !upShouldShiftToPivot
           ? Offset.zero
-          : Offset(-gp2Size.width / 2, 0) +
+          : Offset(-up2Size.width / 2, 0) +
               Offset(rightWidth + mainRootSize.width / 2, 0) / 2;
-      positionChild(
-        gp2.id,
-        grandparentHorizontalShift +
-            Offset(gp1Size.width, 0) +
-            grandparentVerticalShift +
-            Offset(0, -gp2Size.height) +
-            centerAboveRight,
-      );
+      final up2child = childMap[up2.id];
+      if (up2child != null) {
+        (up2child.parentData as _TreeParentData).offset =
+            upRootsHorizontalShift +
+                Offset(up1Size.width, 0) +
+                Offset(0, upHeight) +
+                Offset(0, -up2Size.height) +
+                centerAboveRight;
+      }
+    }
+
+    // Size the parent
+    final totalWidth = max(
+      up1Size.width + up2Size.width + upRootsHorizontalShift.dx,
+      leftWidth + mainRootSize.width + rightWidth + downRootsHorizontalShift.dx,
+    );
+    final totalHeight = upHeight + mainRootSize.height;
+    size = Size(totalWidth, totalHeight);
+  }
+
+  @override
+  void paint(PaintingContext context, Offset offset) {
+    RenderBox? child = firstChild;
+    while (child != null) {
+      final childParentData = child.parentData as _TreeParentData;
+      context.paintChild(child, offset + childParentData.offset);
+      child = childParentData.nextSibling;
     }
   }
 
   @override
-  bool shouldRelayout(covariant MultiChildLayoutDelegate oldDelegate) {
-    return true;
+  bool hitTestChildren(BoxHitTestResult result, {required Offset position}) {
+    RenderBox? child = lastChild;
+    while (child != null) {
+      final childParentData = child.parentData as _TreeParentData;
+      if (child.hitTest(result, position: position - childParentData.offset)) {
+        return true;
+      }
+      child = childParentData.previousSibling;
+    }
+    return false;
   }
 }
 
-class _GraphLines<T extends GraphNode> extends StatefulWidget {
+class _TreeParentData extends ContainerBoxParentData<RenderBox> {
+  Id id = 'ID has not been set';
+}
+
+/// Contains tree-shaped children, and renders them with [_MultiTreeRenderBox].
+class _MultiTreeWidget<T extends GraphNode>
+    extends MultiChildRenderObjectWidget {
+  final Id parentFocalId;
+  final Couple<T>? leftGrandparent;
+  final Couple<T>? rightGrandparent;
+  final List<Couple<T>> parentLevelRoots;
+
+  const _MultiTreeWidget({
+    super.key,
+    required this.parentFocalId,
+    this.leftGrandparent,
+    this.rightGrandparent,
+    required this.parentLevelRoots,
+    required super.children,
+  });
+
+  @override
+  RenderObject createRenderObject(BuildContext context) {
+    return _MultiTreeRenderBox<T>(
+      focalDownRootid: parentFocalId,
+      leftUpRoot: leftGrandparent,
+      rightUpRoot: rightGrandparent,
+      downRoots: parentLevelRoots,
+    );
+  }
+
+  @override
+  void updateRenderObject(
+      BuildContext context, _MultiTreeRenderBox<T> renderObject) {
+    renderObject
+      ..focalDownRootId = parentFocalId
+      ..leftUpRoot = leftGrandparent
+      ..rightUpRoot = rightGrandparent
+      ..downRoots = parentLevelRoots;
+  }
+
+  @override
+  MultiChildRenderObjectElement createElement() {
+    return MultiChildRenderObjectElement(this);
+  }
+}
+
+/// Identifies each child in a [GraphView] so that [_MultiTreeRenderBox] can
+/// position them according to their purpose defined by [_MultiTreeWidget].
+class _TreeRootIdWidget extends ParentDataWidget<_TreeParentData> {
+  final Id id;
+
+  const _TreeRootIdWidget({
+    super.key,
+    required this.id,
+    required super.child,
+  });
+
+  @override
+  void applyParentData(RenderObject renderObject) {
+    final parentData = renderObject.parentData as _TreeParentData;
+    if (parentData.id != id) {
+      parentData.id = id;
+      final targetParent = renderObject.parent;
+      targetParent?.markNeedsLayout();
+    }
+  }
+
+  @override
+  Type get debugTypicalAncestorWidgetClass => _MultiTreeWidget;
+}
+
+class _Edges<T extends GraphNode> extends StatefulWidget {
   final Map<Id, (LinkedNode<T>, GlobalKey)> nodeMap;
   final Spacing spacing;
   final Widget child;
 
-  const _GraphLines({
+  const _Edges({
     super.key,
     required this.nodeMap,
     required this.spacing,
@@ -518,10 +679,10 @@ class _GraphLines<T extends GraphNode> extends StatefulWidget {
   });
 
   @override
-  State<_GraphLines> createState() => _GraphLinesState();
+  State<_Edges> createState() => _EdgesState();
 }
 
-class _GraphLinesState<T extends GraphNode> extends State<_GraphLines<T>> {
+class _EdgesState<T extends GraphNode> extends State<_Edges<T>> {
   final _nodeRects = <Id, (LinkedNode<T>, Rect)>{};
 
   @override
@@ -549,7 +710,7 @@ class _GraphLinesState<T extends GraphNode> extends State<_GraphLines<T>> {
   @override
   Widget build(BuildContext context) {
     return CustomPaint(
-      foregroundPainter: _LinePainter(
+      foregroundPainter: _EdgePainter(
         nodeRects: _nodeRects,
         spacing: widget.spacing,
       ),
@@ -558,11 +719,11 @@ class _GraphLinesState<T extends GraphNode> extends State<_GraphLines<T>> {
   }
 }
 
-class _LinePainter<T extends GraphNode> extends CustomPainter {
+class _EdgePainter<T extends GraphNode> extends CustomPainter {
   final Map<Id, (LinkedNode<T>, Rect)> nodeRects;
   final Spacing spacing;
 
-  _LinePainter({
+  _EdgePainter({
     required this.nodeRects,
     required this.spacing,
   });

@@ -198,7 +198,6 @@ class FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
   final _transformNotifier = ValueNotifier<Matrix4>(Matrix4.identity());
   final _viewportKey = GlobalKey<ZoomablePannableViewportState>();
   final _graphViewKey = GlobalKey();
-  Size _graphSize = Size.zero;
 
   @override
   void initState() {
@@ -211,14 +210,6 @@ class FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
         }
       });
     }
-
-    WidgetsBinding.instance.endOfFrame.then((_) {
-      final rect = locateWidget(_graphViewKey);
-      if (rect != null) {
-        setState(() => _graphSize = rect.size);
-      }
-      print('### Rect $rect');
-    });
   }
 
   @override
@@ -239,79 +230,40 @@ class FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: InteractiveViewer(
-        constrained: false,
-        child: GraphView<Node>(
-          key: _graphViewKey,
-          focalNodeId: widget.focalNode.id,
-          nodes: widget.nodes,
-          // spacing: const Spacing(
-          //   level: 302,
-          //   spouse: 52,
-          //   sibling: 297,
-          // ),
-          spacing: const Spacing(
-            level: 40,
-            spouse: 4,
-            sibling: 8,
-          ),
-          nodeBuilder: (context, node, key) {
-            return HoverableNode(
-              key: key,
-              node: node,
-              transformNotifier: _transformNotifier,
-              onTap: () => widget.onProfileSelected(node),
-            );
-          },
+      child: ZoomablePannableViewport(
+        key: _viewportKey,
+        childKeys: _nodeKeys.values.toList(),
+        onTransformed: (transform) => _transformNotifier.value = transform,
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: Image.asset(
+                'assets/images/tree_background.jpg',
+                fit: BoxFit.cover,
+              ),
+            ),
+            GraphView<Node>(
+              key: _graphViewKey,
+              focalNodeId: widget.focalNode.id,
+              nodes: widget.nodes,
+              spacing: const Spacing(
+                level: 302,
+                spouse: 52,
+                sibling: 297,
+              ),
+              nodeBuilder: (context, node, key) {
+                return HoverableNode(
+                  key: key,
+                  node: node,
+                  transformNotifier: _transformNotifier,
+                  onTap: () => widget.onProfileSelected(node),
+                );
+              },
+            ),
+          ],
         ),
       ),
     );
-    // return Center(
-    //   child: ZoomablePannableViewport(
-    //     key: _viewportKey,
-    //     childKeys: _nodeKeys.values.toList(),
-    //     onTransformed: (transform) => _transformNotifier.value = transform,
-    //     child: SizedBox(
-    //       width: 2000,
-    //       height: 2000,
-    //       child: Stack(
-    //         children: [
-    //           Positioned.fill(
-    //             child: Image.asset(
-    //               'assets/images/tree_background.jpg',
-    //               fit: BoxFit.cover,
-    //             ),
-    //           ),
-    //           UnconstrainedBox(
-    //             child: GraphView<Node>(
-    //               key: _graphViewKey,
-    //               focalNodeId: widget.focalNode.id,
-    //               nodes: widget.nodes,
-    //               // spacing: const Spacing(
-    //               //   level: 302,
-    //               //   spouse: 52,
-    //               //   sibling: 297,
-    //               // ),
-    //               spacing: const Spacing(
-    //                 level: 40,
-    //                 spouse: 4,
-    //                 sibling: 8,
-    //               ),
-    //               nodeBuilder: (context, node, key) {
-    //                 return HoverableNode(
-    //                   key: key,
-    //                   node: node,
-    //                   transformNotifier: _transformNotifier,
-    //                   onTap: () => widget.onProfileSelected(node),
-    //                 );
-    //               },
-    //             ),
-    //           ),
-    //         ],
-    //       ),
-    //     ),
-    //   ),
-    // );
   }
 
   void centerOnNodeWithId(Id id) {
