@@ -193,7 +193,6 @@ class FamilyTreeView extends ConsumerStatefulWidget {
 
 class FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
   final _peopleKeys = <Id, GlobalKey>{};
-  final _transformNotifier = ValueNotifier<Matrix4>(Matrix4.identity());
   final _viewportKey = GlobalKey<ZoomablePannableViewportState>();
   final _graphViewKey = GlobalKey();
 
@@ -228,37 +227,38 @@ class FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: ZoomablePannableViewport(
-        key: _viewportKey,
-        childKeys: _peopleKeys.values.toList(),
-        onTransformed: (transform) => _transformNotifier.value = transform,
-        child: Stack(
-          children: [
-            Positioned.fill(
-              child: Image.asset(
-                'assets/images/tree_background.jpg',
-                fit: BoxFit.cover,
+      child: Overlay.wrap(
+        child: ZoomablePannableViewport(
+          key: _viewportKey,
+          childKeys: _peopleKeys.values.toList(),
+          onTransformed: (_) {},
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: Image.asset(
+                  'assets/images/tree_background.jpg',
+                  fit: BoxFit.cover,
+                ),
               ),
-            ),
-            GraphView<Person>(
-              key: _graphViewKey,
-              focalNodeId: widget.focalPerson.id,
-              nodes: widget.people,
-              spacing: const Spacing(
-                level: 302,
-                spouse: 52,
-                sibling: 297,
+              GraphView<Person>(
+                key: _graphViewKey,
+                focalNodeId: widget.focalPerson.id,
+                nodes: widget.people,
+                spacing: const Spacing(
+                  level: 302,
+                  spouse: 52,
+                  sibling: 297,
+                ),
+                nodeBuilder: (context, data, key) {
+                  return HoverableNodeProfile(
+                    key: key,
+                    person: data,
+                    onTap: () => widget.onProfileSelected(data),
+                  );
+                },
               ),
-              nodeBuilder: (context, data, key) {
-                return HoverableNodeProfile(
-                  key: key,
-                  person: data,
-                  transformNotifier: _transformNotifier,
-                  onTap: () => widget.onProfileSelected(data),
-                );
-              },
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -297,20 +297,17 @@ class FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
 
 class HoverableNodeProfile extends StatelessWidget {
   final Person person;
-  final ValueNotifier<Matrix4> transformNotifier;
   final VoidCallback onTap;
 
   const HoverableNodeProfile({
     super.key,
     required this.person,
-    required this.transformNotifier,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     return MouseHover(
-      transformNotifier: transformNotifier,
       builder: (context, hovering) {
         // TODO: Need accounts
         return MouseRegion(

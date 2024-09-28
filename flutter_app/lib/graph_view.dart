@@ -21,7 +21,7 @@ class Spacing {
 }
 
 class GraphView<T extends GraphNode> extends StatefulWidget {
-  final String focalNodeId;
+  final Id focalNodeId;
   final List<T> nodes;
   final Spacing spacing;
   final Widget Function(
@@ -403,11 +403,11 @@ class _MultiTreeRenderBox<T extends GraphNode> extends RenderBox
         ContainerRenderObjectMixin<RenderBox, _TreeParentData>,
         RenderBoxContainerDefaultsMixin<RenderBox, _TreeParentData> {
   _MultiTreeRenderBox({
-    required Id focalDownRootid,
+    required Id focalDownRootId,
     required Couple<T>? leftUpRoot,
     required Couple<T>? rightUpRoot,
     required List<Couple<T>> downRoots,
-  })  : _focalDownRootId = focalDownRootid,
+  })  : _focalDownRootId = focalDownRootId,
         _leftUpRoot = leftUpRoot,
         _rightUpRoot = rightUpRoot,
         _downRoots = downRoots;
@@ -618,7 +618,7 @@ class _MultiTreeWidget<T extends GraphNode>
   @override
   RenderObject createRenderObject(BuildContext context) {
     return _MultiTreeRenderBox<T>(
-      focalDownRootid: parentFocalId,
+      focalDownRootId: parentFocalId,
       leftUpRoot: leftGrandparent,
       rightUpRoot: rightGrandparent,
       downRoots: parentLevelRoots,

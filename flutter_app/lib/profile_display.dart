@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:heritage/api.dart';
 import 'package:heritage/heritage_app.dart';
-import 'package:heritage/util.dart';
 
 class AddConnectionButtons extends StatelessWidget {
   final bool canAddParent;
@@ -555,12 +554,10 @@ class _HoverState extends State<Scaler> {
 }
 
 class MouseHover extends StatefulWidget {
-  final ValueNotifier<Matrix4> transformNotifier;
   final Widget Function(BuildContext context, bool hovering) builder;
 
   const MouseHover({
     super.key,
-    required this.transformNotifier,
     required this.builder,
   });
 
@@ -571,55 +568,44 @@ class MouseHover extends StatefulWidget {
 class _MouseHoverState extends State<MouseHover> {
   bool _hovering = false;
   final _controller = OverlayPortalController();
-  final _childKey = GlobalKey();
+  final _layerLink = LayerLink();
 
   @override
   Widget build(BuildContext context) {
-    return OverlayPortal(
-      controller: _controller,
-      overlayChildBuilder: (context) {
-        return Align(
-          alignment: Alignment.topLeft,
-          child: ValueListenableBuilder(
-            valueListenable: widget.transformNotifier,
-            builder: (context, value, child) {
-              final scale = value[0];
-              final rect = locateWidget(_childKey) ?? Rect.zero;
-              final matrix = Matrix4.identity()
-                ..translate(rect.left, rect.top, 0.0)
-                ..scale(scale);
-              return Transform(
-                transform: matrix,
-                child: child,
-              );
-            },
-            child: MouseHoverAnimation(
-              onMouseEnter: () => setState(() => _hovering = true),
-              onMouseExit: () => setState(() => _hovering = false),
-              onHoverAnimationEnd: () => setState(() => _controller.hide()),
-              child: widget.builder(context, _hovering),
+    return CompositedTransformTarget(
+      link: _layerLink,
+      child: OverlayPortal(
+        controller: _controller,
+        overlayChildBuilder: (context) {
+          return Align(
+            alignment: Alignment.topLeft,
+            child: CompositedTransformFollower(
+              link: _layerLink,
+              child: MouseHoverAnimation(
+                onMouseEnter: () => setState(() => _hovering = true),
+                onMouseExit: () => setState(() => _hovering = false),
+                onHoverAnimationEnd: () => setState(() => _controller.hide()),
+                child: widget.builder(context, _hovering),
+              ),
             ),
-          ),
-        );
-      },
-      child: MouseRegion(
-        opaque: false,
-        onEnter: (_) {
-          setState(() {
-            _hovering = true;
-            _controller.show();
-          });
+          );
         },
-        child: Visibility(
-          visible: !_controller.isShowing,
-          maintainSize: true,
-          maintainState: true,
-          maintainAnimation: true,
-          maintainSemantics: true,
-          child: IgnorePointer(
-            ignoring: _hovering,
-            child: KeyedSubtree(
-              key: _childKey,
+        child: MouseRegion(
+          opaque: false,
+          onEnter: (_) {
+            setState(() {
+              _hovering = true;
+              _controller.show();
+            });
+          },
+          child: Visibility(
+            visible: !_controller.isShowing,
+            maintainSize: true,
+            maintainState: true,
+            maintainAnimation: true,
+            maintainSemantics: true,
+            child: IgnorePointer(
+              ignoring: _hovering,
               child: widget.builder(context, _hovering),
             ),
           ),
