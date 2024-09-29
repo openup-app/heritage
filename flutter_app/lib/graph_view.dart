@@ -178,7 +178,7 @@ class _GraphViewState<T extends GraphNode> extends State<GraphView<T>> {
 
     // Remove duplicate down roots
     final unique = <Id>{};
-    for (var i = downRoots.length - 1; i > 0; i--) {
+    for (var i = downRoots.length - 1; i >= 0; i--) {
       final couple = downRoots[i];
       if (unique.contains(couple.id)) {
         downRoots.removeAt(i);
@@ -487,13 +487,13 @@ class _MultiTreeRenderBox<T extends GraphNode> extends RenderBox
     }
     for (var index = 0; index < downRoots.length; index++) {
       final id = downRoots[index].id;
-      final size = downRootSizes[id] ?? Size.zero;
+      final downRootSize = downRootSizes[id] ?? Size.zero;
       if (id == focalDownRootId) {
-        mainRootSize = size;
+        mainRootSize = downRootSize;
         mainRootIndex = index;
         break;
       }
-      relativeFocalDownRootOffset += Offset(size.width, 0);
+      relativeFocalDownRootOffset += Offset(downRootSize.width, 0);
     }
 
     // Up roots
