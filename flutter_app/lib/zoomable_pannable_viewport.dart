@@ -54,17 +54,21 @@ class ZoomablePannableViewportState extends State<ZoomablePannableViewport>
 
   @override
   Widget build(BuildContext context) {
+    final windowSize = MediaQuery.of(context).size;
     return AnimatedBuilder(
       animation: _transformationController,
       builder: (context, child) {
+        final scale = _transformationController.value.getMaxScaleOnAxis();
         return InteractiveViewer(
           key: _interactiveViewerKey,
           transformationController: _transformationController,
           constrained: false,
           maxScale: 4,
           minScale: 0.1,
-          boundaryMargin: EdgeInsets.all(
-              500 + 200 / _transformationController.value.getMaxScaleOnAxis()),
+          boundaryMargin: EdgeInsets.symmetric(
+            horizontal: windowSize.width / 2 / scale,
+            vertical: windowSize.height / 2 / scale,
+          ),
           child: child!,
         );
       },
