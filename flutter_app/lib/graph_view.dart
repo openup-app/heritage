@@ -39,10 +39,10 @@ class GraphView<T extends GraphNode> extends StatefulWidget {
   });
 
   @override
-  State<GraphView<T>> createState() => _GraphViewState<T>();
+  State<GraphView<T>> createState() => GraphViewState<T>();
 }
 
-class _GraphViewState<T extends GraphNode> extends State<GraphView<T>> {
+class GraphViewState<T extends GraphNode> extends State<GraphView<T>> {
   final _nodeMap = <Id, (LinkedNode<T>, GlobalKey)>{};
   late Couple<T> _focalCouple;
   late List<Couple<T>> _downRoots;
@@ -71,7 +71,7 @@ class _GraphViewState<T extends GraphNode> extends State<GraphView<T>> {
   void _rebuildGraph() {
     _graphKey = UniqueKey();
     final (focalCouple, idToCouple, downRoots) =
-        createCouples(widget.nodes, widget.focalNodeId);
+        _createCouples(widget.nodes, widget.focalNodeId);
     _focalCouple = focalCouple;
     _downRoots = downRoots;
     _nodeKeys =
@@ -161,7 +161,9 @@ class _GraphViewState<T extends GraphNode> extends State<GraphView<T>> {
     );
   }
 
-  (Couple<T>, Map<Id, Couple<T>>, List<Couple<T>>) createCouples(
+  GlobalKey? getKeyForNode(Id id) => _nodeKeys[id];
+
+  (Couple<T>, Map<Id, Couple<T>>, List<Couple<T>>) _createCouples(
       Iterable<T> unlinkedNodes, Id focalNodeId) {
     final linkedNodes = linkNodes(unlinkedNodes);
     final focalNode = linkedNodes[focalNodeId];
@@ -575,13 +577,24 @@ class _MultiTreeRenderBox<T extends GraphNode> extends RenderBox
       }
     }
 
-    // Size the parent
-    final totalWidth = max(
+    final upSize = Size(
       up1Size.width + up2Size.width + upRootsHorizontalShift.dx,
-      leftWidth + mainRootSize.width + rightWidth + downRootsHorizontalShift.dx,
+      upHeight,
     );
-    final totalHeight = upHeight + mainRootSize.height;
-    size = Size(totalWidth, totalHeight);
+    final downSize = Size(
+      leftWidth + mainRootSize.width + rightWidth + downRootsHorizontalShift.dx,
+      mainRootSize.height,
+    );
+
+    // Size the parent
+    if (up1 == null && up2 == null) {
+      size = downSize;
+    } else {
+      size = Size(
+        max(upSize.width, downSize.width),
+        upSize.height + downSize.height,
+      );
+    }
   }
 
   @override

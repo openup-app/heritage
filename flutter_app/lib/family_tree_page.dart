@@ -194,37 +194,23 @@ class FamilyTreeView extends ConsumerStatefulWidget {
 }
 
 class FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
-  final _peopleKeys = <Id, GlobalKey>{};
   final _viewportKey = GlobalKey<ZoomablePannableViewportState>();
-  final _graphViewKey = GlobalKey();
+  final _graphViewKey = GlobalKey<GraphViewState>();
   final _transformNotifier = ValueNotifier<Matrix4>(Matrix4.identity());
+  bool _ready = false;
 
   @override
   void initState() {
     super.initState();
-    _updateKeys();
-    if (widget.focalPerson.ownedBy == null) {
-      WidgetsBinding.instance.endOfFrame.then((_) {
-        if (mounted) {
+    WidgetsBinding.instance.endOfFrame.then((_) {
+      if (mounted) {
+        if (widget.focalPerson.ownedBy == null) {
           _showOwnershipModal();
         }
-      });
-    }
-  }
-
-  @override
-  void didUpdateWidget(covariant FamilyTreeView oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (!const DeepCollectionEquality.unordered()
-        .equals(oldWidget.people, widget.people)) {
-      _updateKeys();
-    }
-  }
-
-  void _updateKeys() {
-    for (final person in widget.people) {
-      _peopleKeys.putIfAbsent(person.id, () => GlobalKey());
-    }
+        centerOnPersonWithId(widget.focalPerson.id, animate: false);
+        setState(() => _ready = true);
+      }
+    });
   }
 
   @override
@@ -237,46 +223,54 @@ class FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
   Widget build(BuildContext context) {
     return Center(
       child: Overlay.wrap(
-        child: ZoomablePannableViewport(
-          key: _viewportKey,
-          childKeys: _peopleKeys.values.toList(),
-          onTransformed: (transform) => _transformNotifier.value = transform,
-          child: Stack(
-            children: [
-              Positioned.fill(
-                child: Image.asset(
-                  'assets/images/tree_background.jpg',
-                  fit: BoxFit.cover,
+        child: Opacity(
+          opacity: _ready ? 1.0 : 0.0,
+          child: ZoomablePannableViewport(
+            key: _viewportKey,
+            onTransformed: (transform) => _transformNotifier.value = transform,
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  child: Image.asset(
+                    'assets/images/tree_background.jpg',
+                    fit: BoxFit.cover,
+                  ),
                 ),
-              ),
-              GraphView<Person>(
-                key: _graphViewKey,
-                focalNodeId: widget.focalPerson.id,
-                nodes: widget.people,
-                spacing: const Spacing(
-                  level: 302,
-                  spouse: 52,
-                  sibling: 297,
+                GraphView<Person>(
+                  key: _graphViewKey,
+                  focalNodeId: widget.focalPerson.id,
+                  nodes: widget.people,
+                  spacing: const Spacing(
+                    level: 302,
+                    spouse: 52,
+                    sibling: 297,
+                  ),
+                  nodeBuilder: (context, data, key) {
+                    return HoverableNodeProfile(
+                      key: key,
+                      person: data,
+                      onTap: () => widget.onProfileSelected(data),
+                    );
+                  },
                 ),
-                nodeBuilder: (context, data, key) {
-                  return HoverableNodeProfile(
-                    key: key,
-                    person: data,
-                    onTap: () => widget.onProfileSelected(data),
-                  );
-                },
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  void centerOnPersonWithId(Id id) {
-    final key = _peopleKeys[id];
+  void centerOnPersonWithId(
+    Id id, {
+    bool animate = true,
+  }) {
+    final key = _graphViewKey.currentState?.getKeyForNode(id);
     if (key != null) {
-      _viewportKey.currentState?.centerOnWidgetWithKey(key);
+      _viewportKey.currentState?.centerOnWidgetWithKey(
+        key,
+        animate: animate,
+      );
     }
   }
 

@@ -3,14 +3,12 @@ import 'package:heritage/util.dart';
 import 'package:vector_math/vector_math_64.dart' hide Colors;
 
 class ZoomablePannableViewport extends StatefulWidget {
-  final List<GlobalKey> childKeys;
   final void Function(Matrix4 transform) onTransformed;
   final void Function(List<GlobalKey> keys)? onWithinViewport;
   final Widget child;
 
   const ZoomablePannableViewport({
     super.key,
-    required this.childKeys,
     required this.onTransformed,
     this.onWithinViewport,
     required this.child,
@@ -79,7 +77,10 @@ class ZoomablePannableViewportState extends State<ZoomablePannableViewport>
     );
   }
 
-  void centerOnWidgetWithKey(GlobalKey key) {
+  void centerOnWidgetWithKey(
+    GlobalKey key, {
+    bool animate = true,
+  }) {
     final targetRect = locateWidgetLocal(key);
     final childRect = locateWidgetLocal(_childKey);
     if (targetRect == null || childRect == null) {
@@ -95,17 +96,21 @@ class ZoomablePannableViewportState extends State<ZoomablePannableViewport>
       );
     _oldMatrix = Matrix4.copy(_transformationController.value);
 
-    setState(() {
-      _animation = Matrix4Tween(
-        begin: _oldMatrix,
-        end: _targetMatrix,
-      ).animate(
-        CurvedAnimation(
-          parent: _animationController,
-          curve: Curves.easeOutCubic,
-        ),
-      );
-    });
+    if (animate) {
+      setState(() {
+        _animation = Matrix4Tween(
+          begin: _oldMatrix,
+          end: _targetMatrix,
+        ).animate(
+          CurvedAnimation(
+            parent: _animationController,
+            curve: Curves.easeOutCubic,
+          ),
+        );
+      });
+    } else {
+      setState(() => _animation = AlwaysStoppedAnimation(_targetMatrix));
+    }
     _animationController.forward(from: 0);
   }
 }
