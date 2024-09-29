@@ -26,9 +26,13 @@ export function router(auth: Auth, database: Database, storage: Storage): Router
     }
 
     try {
-      const people = await database.addConnection(sourceId, body.name, body.gender, body.relationship, creatorId);
+      const result = await database.addConnection(sourceId, body.name, body.gender, body.relationship, creatorId);
+      if (!result) {
+        return res.sendStatus(400);
+      }
       return res.json({
-        'people': people.map(e => constructURLs(e, storage)),
+        'id': result.id,
+        'people': result.people.map(e => constructURLs(e, storage)),
       });
     } catch (e) {
       console.log(e);

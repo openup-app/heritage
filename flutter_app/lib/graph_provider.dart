@@ -54,7 +54,7 @@ class GraphNotifier extends StateNotifier<Graph> {
   })  : _focalPersonId = initialGraph.focalPerson.id,
         super(initialGraph);
 
-  Future<void> addConnection({
+  Future<Id?> addConnection({
     required Id source,
     required String name,
     required Gender gender,
@@ -67,12 +67,15 @@ class GraphNotifier extends StateNotifier<Graph> {
       relationship: relationship,
     );
     if (!mounted) {
-      return;
+      return null;
     }
-    result.fold(
-      (l) => debugPrint(l),
-      _updatePeople,
-    );
+    return result.fold((l) {
+      debugPrint(l);
+      return null;
+    }, (r) {
+      _updatePeople(r.$2);
+      return r.$1;
+    });
   }
 
   Future<void> updateProfile(String id, ProfileUpdate update) async {

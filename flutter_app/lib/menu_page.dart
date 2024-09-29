@@ -46,6 +46,7 @@ class _MenuPageState extends ConsumerState<MenuPage> {
                             content: Consumer(builder: (context, ref, child) {
                               return BasicProfileDisplay(
                                 isRootCreation: true,
+                                isNewPerson: true,
                                 relationship: Relationship.child,
                                 padding: const EdgeInsets.all(16),
                                 onSave: (name, gender) {

@@ -10,7 +10,7 @@ export class Database {
     this.firestore = getFirestore();
   }
 
-  public async addConnection(sourceId: Id, name: string, gender: Gender, relationship: Relationship, creatorId: Id): Promise<Person[]> {
+  public async addConnection(sourceId: Id, name: string, gender: Gender, relationship: Relationship, creatorId: Id): Promise<{ id: Id, people: Person[] } | undefined> {
     return this.firestore.runTransaction(async (t: Transaction) => {
       const sourceRef = this.personRef(sourceId);
       const sourceDoc = await t.get(sourceRef);
@@ -21,12 +21,12 @@ export class Database {
       // Invariants
       if (relationship === "parent") {
         if (source.parents.length !== 0) {
-          return [];
+          return undefined;
         }
       } else if (relationship === "spouse") {
         // TODO: Remove restriction when this is better understood
         if (source.spouses.length > 0) {
-          return [];
+          return undefined;
         }
       }
 
@@ -123,7 +123,7 @@ export class Database {
         t.create(this.personRef(person.id), person);
       }
 
-      return [...createdPeople, ...updatedPeople];
+      return { id: newPerson.id, people: [...createdPeople, ...updatedPeople] };
     });
   }
 

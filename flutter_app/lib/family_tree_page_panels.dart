@@ -15,8 +15,8 @@ import 'package:heritage/util.dart';
 class Panels extends ConsumerStatefulWidget {
   final Person person;
   final bool isRelative;
-  final void Function(Person person, Relationship relationship)
-      onAddConnectionPressed;
+  final void Function(Relationship relationship) onAddConnectionPressed;
+  final void Function(String name, Gender gender) onUpdate;
   final VoidCallback onViewPerspective;
   final VoidCallback onClose;
 
@@ -25,6 +25,7 @@ class Panels extends ConsumerStatefulWidget {
     required this.person,
     required this.isRelative,
     required this.onAddConnectionPressed,
+    required this.onUpdate,
     required this.onViewPerspective,
     required this.onClose,
   });
@@ -49,11 +50,12 @@ class _PanelsState extends ConsumerState<Panels> {
     final ownershipClaimed = person.ownedBy != null;
     if (!ownershipClaimed) {
       child = BasicProfileDisplay(
+        isNewPerson: false,
         relationship: Relationship.sibling,
         initialName: person.profile.name,
         initialGender: person.profile.gender,
         padding: small ? const EdgeInsets.all(16) : const EdgeInsets.all(24),
-        onSave: (_, __) {},
+        onSave: widget.onUpdate,
       );
     } else {
       child = ProfileDisplay(
@@ -68,8 +70,7 @@ class _PanelsState extends ConsumerState<Panels> {
             : AddConnectionButtons(
                 enabled: widget.isRelative,
                 canAddParent: person.parents.isEmpty,
-                onAddConnectionPressed: (relationship) =>
-                    widget.onAddConnectionPressed(person, relationship),
+                onAddConnectionPressed: widget.onAddConnectionPressed,
               ),
         onViewPerspective: widget.onViewPerspective,
         onClose: widget.onClose,
@@ -166,8 +167,7 @@ class _PanelsState extends ConsumerState<Panels> {
                 child: AddConnectionButtons(
                   enabled: widget.isRelative,
                   canAddParent: person.parents.isEmpty,
-                  onAddConnectionPressed: (relationship) =>
-                      widget.onAddConnectionPressed(person, relationship),
+                  onAddConnectionPressed: widget.onAddConnectionPressed,
                 ),
               ),
             ),

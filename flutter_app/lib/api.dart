@@ -41,7 +41,7 @@ class Api {
     }
   }
 
-  Future<Either<Error, List<Person>>> addConnection({
+  Future<Either<Error, (Id id, List<Person> people)>> addConnection({
     required Id sourceId,
     required String name,
     required Gender gender,
@@ -59,8 +59,9 @@ class Api {
       ),
       handleResponse: (response) {
         final json = jsonDecode(response.body);
+        final id = json['id'] as String;
         final people = json['people'] as List;
-        return right(people.map((e) => Person.fromJson(e)).toList());
+        return right((id, people.map((e) => Person.fromJson(e)).toList()));
       },
     );
   }

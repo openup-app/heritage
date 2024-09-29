@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:collection/collection.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:heritage/api.dart';
@@ -11,9 +12,10 @@ import 'package:heritage/graph_provider.dart';
 import 'package:heritage/graph_view.dart';
 import 'package:heritage/heritage_app.dart';
 import 'package:heritage/profile_display.dart';
+import 'package:heritage/profile_update.dart';
+import 'package:heritage/share/share.dart';
 import 'package:heritage/util.dart';
 import 'package:heritage/zoomable_pannable_viewport.dart';
-import 'package:share_plus/share_plus.dart';
 
 class FamilyTreeLoadingPage extends ConsumerStatefulWidget {
   final Id focalPersonId;
@@ -113,7 +115,10 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
             key: Key(selectedPerson.id),
             person: selectedPerson,
             isRelative: _isRelative,
-            onAddConnectionPressed: _showAddConnectionModal,
+            onAddConnectionPressed: (relationship) =>
+                _showAddConnectionModal(selectedPerson, relationship),
+            onUpdate: (name, gender) =>
+                _onUpdate(_selectedPerson!.id, name, gender),
             onViewPerspective: () {
               final pathParameters = {
                 'focalPersonId': graph.focalPerson.id,
@@ -138,7 +143,6 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
   }
 
   void _showAddConnectionModal(Person person, Relationship relationship) {
-    final graphNotifier = ref.read(graphProvider.notifier);
     showDialog(
       context: context,
       builder: (context) {
@@ -147,21 +151,85 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
           content: SingleChildScrollView(
             child: BasicProfileDisplay(
               relationship: relationship,
+              isNewPerson: true,
               padding: const EdgeInsets.all(16),
               onSave: (name, gender) {
-                Navigator.of(context).pop();
-                graphNotifier.addConnection(
-                  source: person.id,
-                  name: name,
-                  gender: gender,
-                  relationship: relationship,
-                );
+                _saveNewConnection(name, gender, person, relationship);
               },
             ),
           ),
         );
       },
     );
+  }
+
+  void _saveNewConnection(String name, Gender gender, Person person,
+      Relationship relationship) async {
+    final graphNotifier = ref.read(graphProvider.notifier);
+    final addConnectionFuture = graphNotifier.addConnection(
+      source: person.id,
+      name: name,
+      gender: gender,
+      relationship: relationship,
+    );
+    final id = await showBlockingModal(context, addConnectionFuture);
+    if (!mounted) {
+      return;
+    }
+    if (id != null) {
+      await _shareLink(name, id);
+    }
+    if (!mounted) {
+      return;
+    }
+    Navigator.of(context).pop();
+  }
+
+  void _onUpdate(Id id, String name, Gender gender) async {
+    final graph = ref.read(graphProvider);
+    final person = graph.people[id];
+    if (person == null) {
+      return;
+    }
+    if (person.profile.name != name || person.profile.gender != gender) {
+      final graphNotifier = ref.read(graphProvider.notifier);
+      final addConnectionFuture = graphNotifier.updateProfile(
+        id,
+        ProfileUpdate(
+            profile: person.profile.copyWith(name: name, gender: gender)),
+      );
+      await showBlockingModal(context, addConnectionFuture);
+      if (!mounted) {
+        return;
+      }
+    }
+
+    await _shareLink(name, id);
+
+    if (!mounted) {
+      return;
+    }
+  }
+
+  Future<void> _shareLink(String name, String id) async {
+    final data = ShareData(
+      title: 'Join the family tree!',
+      text: '$name\'s family tree invite!',
+      url: 'https://breakfastsearch.xyz/$id',
+    );
+    if (await canShare(data)) {
+      await shareContent(data);
+    } else {
+      await Clipboard.setData(ClipboardData(text: data.url!));
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Link copied to clipboard!'),
+        ),
+      );
+    }
   }
 
   void _onProfileSelected(Person? person, bool isRelative) {
@@ -408,6 +476,7 @@ class _TiledBackgroundState extends State<_TiledBackground> {
 
 class BasicProfileDisplay extends ConsumerStatefulWidget {
   final bool isRootCreation;
+  final bool isNewPerson;
   final Relationship relationship;
   final String? initialName;
   final Gender? initialGender;
@@ -417,6 +486,7 @@ class BasicProfileDisplay extends ConsumerStatefulWidget {
   const BasicProfileDisplay({
     super.key,
     this.isRootCreation = false,
+    required this.isNewPerson,
     required this.relationship,
     this.initialName,
     this.initialGender,
@@ -515,46 +585,67 @@ class _BasicProfileDisplayState extends ConsumerState<BasicProfileDisplay> {
           ),
           if (!widget.isRootCreation) ...[
             const SizedBox(height: 24),
-            FilledButton(
-              key: _shareButtonKey,
-              onPressed: _shareLink,
-              style: _bigButtonStyle,
+            AnimatedBuilder(
+              animation: _nameController,
+              builder: (context, child) {
+                return FilledButton(
+                  key: _shareButtonKey,
+                  onPressed: _nameController.text.isEmpty ? null : _done,
+                  style: _bigButtonStyle,
+                  child: child,
+                );
+              },
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   const Icon(CupertinoIcons.share),
                   Expanded(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                            'Only share this link with your ${widget.relationship.name}'),
-                        const Text('They can complete their profile'),
-                      ],
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          AnimatedBuilder(
+                            animation: _nameController,
+                            builder: (context, child) {
+                              return Text(
+                                'Only share this link with ${_nameController.text}',
+                                textAlign: TextAlign.center,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              );
+                            },
+                          ),
+                          const Text('They can complete their profile'),
+                        ],
+                      ),
                     ),
                   ),
                 ],
               ),
             ),
-          ],
-          const SizedBox(height: 16),
-          Center(
-            child: AnimatedBuilder(
-              animation: _nameController,
-              builder: (context, child) {
-                return TextButton(
-                  onPressed: _nameController.text.isEmpty ? null : _done,
-                  child: const Text('Done'),
-                );
-              },
+          ] else ...[
+            const SizedBox(height: 16),
+            Center(
+              child: AnimatedBuilder(
+                animation: _nameController,
+                builder: (context, child) {
+                  return TextButton(
+                    onPressed: _nameController.text.isEmpty ? null : _done,
+                    child: const Text('Done'),
+                  );
+                },
+              ),
             ),
-          ),
+          ],
           if (!widget.isRootCreation) ...[
             const SizedBox(height: 16),
-            TextButton(
-              onPressed: () {},
-              child:
-                  const Text('Tap here for a child or deceased family member'),
+            Center(
+              child: TextButton(
+                onPressed: () {},
+                child: const Text(
+                    'Tap here for a child or deceased family member'),
+              ),
             ),
           ],
           SizedBox(height: widget.padding.bottom),
@@ -569,18 +660,6 @@ class _BasicProfileDisplayState extends ConsumerState<BasicProfileDisplay> {
       return;
     }
     widget.onSave(name, _gender);
-  }
-
-  void _shareLink() {
-    final rect = locateWidget(_shareButtonKey);
-    final graph = ref.read(graphProvider);
-    final personId = graph.focalPerson.id;
-    final url = 'https://breakfastsearch.xyz/$personId';
-    Share.share(
-      url,
-      subject: 'Join the family tree!',
-      sharePositionOrigin: rect,
-    );
   }
 }
 
