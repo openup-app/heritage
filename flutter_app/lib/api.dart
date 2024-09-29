@@ -248,8 +248,12 @@ class Person with _$Person implements GraphNode {
   factory Person.fromJson(Map<String, Object?> json) => _$PersonFromJson(json);
 
   @override
-  bool operator <(GraphNode other) =>
-      createdAt.compareTo((other as Person).createdAt) == -1;
+  bool operator <(GraphNode other) {
+    if (createdAt == (other as Person).createdAt) {
+      return id.compareTo(other.id) == -1;
+    }
+    return createdAt.compareTo(other.createdAt) == -1;
+  }
 }
 
 @freezed

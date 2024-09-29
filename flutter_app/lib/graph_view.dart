@@ -191,6 +191,15 @@ class _GraphViewState<T extends GraphNode> extends State<GraphView<T>> {
       }
     }
 
+    // Graphs with only one or two levels
+    if (downRoots.isEmpty) {
+      if (focalCouple.parents.isNotEmpty) {
+        downRoots.addAll(focalCouple.parents);
+      } else {
+        downRoots.add(focalCouple);
+      }
+    }
+
     return (focalCouple, idToCouple, downRoots);
   }
 
@@ -539,7 +548,8 @@ class _MultiTreeRenderBox<T extends GraphNode> extends RenderBox
       final centerAboveLeft = !upShouldShiftToPivot
           ? Offset.zero
           : Offset(up1Size.width / 2, 0) +
-              Offset(-(leftWidth + mainRootSize.width), 0) / 2;
+              Offset(-(leftWidth + mainRootSize.width), 0) / 2 +
+              Offset(mainRootSize.width / 2, 0);
       final up1Child = childMap[up1.id];
       if (up1Child != null) {
         (up1Child.parentData as _TreeParentData).offset =
