@@ -38,7 +38,13 @@ String genderedRelationship(Relationship relationship, Gender gender) {
 }
 
 void launchEmail() {
-  final uri = Uri.parse('mailto:tarloksinghfilms@gmail.com?subject=');
+  final uri = Uri(
+    scheme: 'mailto',
+    path: 'tarloksinghfilms@gmail.com',
+    queryParameters: {
+      'subject': 'Stitchfam',
+    },
+  );
   launchUrl(uri);
 }
 
