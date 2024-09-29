@@ -28,6 +28,7 @@ class GraphView<T extends GraphNode> extends StatefulWidget {
     BuildContext context,
     T data,
     Key key,
+    bool isRelative,
   ) nodeBuilder;
 
   const GraphView({
@@ -128,7 +129,8 @@ class GraphViewState<T extends GraphNode> extends State<GraphView<T>> {
                         throw 'Missing key';
                       }
                       return RepaintBoundary(
-                        child: widget.nodeBuilder(context, node.data, key),
+                        child: widget.nodeBuilder(
+                            context, node.data, key, node.isRelative),
                       );
                     },
                   ),
@@ -150,7 +152,8 @@ class GraphViewState<T extends GraphNode> extends State<GraphView<T>> {
                       throw 'Missing key';
                     }
                     return RepaintBoundary(
-                      child: widget.nodeBuilder(context, node.data, key),
+                      child: widget.nodeBuilder(
+                          context, node.data, key, node.isRelative),
                     );
                   },
                 ),
@@ -172,7 +175,7 @@ class GraphViewState<T extends GraphNode> extends State<GraphView<T>> {
     }
     _organizeSides(focalNode);
     final (focalCouple, idToCouple) = createCoupleTree(focalNode);
-    markRelatives(focalCouple);
+    markRelatives(focalNode);
 
     // Maintains the child ordering from `_organizeSides`,
     final downRoots = focalCouple.parents

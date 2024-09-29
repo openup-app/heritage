@@ -156,7 +156,7 @@ class _RouterBuilderState extends State<_RouterBuilder> {
                     sibling: 8,
                     spouse: 2,
                   ),
-                  nodeBuilder: (context, data, key) {
+                  nodeBuilder: (context, data, key, isRelative) {
                     return Container(
                       key: key,
                       width: 60,
@@ -164,7 +164,9 @@ class _RouterBuilderState extends State<_RouterBuilder> {
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: Colors.blue.shade300,
+                        color: isRelative
+                            ? Colors.blue.shade300
+                            : Colors.blue.shade100,
                       ),
                       child: Text(
                         data.id,

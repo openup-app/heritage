@@ -122,26 +122,7 @@ LinkedNode<T> _emptyLinkedNode<T extends GraphNode>(String id, T data) {
   );
 }
 
-void markRelatives<T extends GraphNode>(Couple<T> focalCouple) {
-  final roots = findRootCouplesWithDistance(focalCouple).map((e) => e.$1);
-  final rootNodes = roots.expand((e) => [e.node, e.spouse]).whereNotNull();
-
-  // Breadth-first search marking children, but not spouses
-  final fringe = Queue<LinkedNode<T>>();
-  final visited = <Id>{};
-  fringe.addAll(rootNodes);
-  while (fringe.isNotEmpty) {
-    final node = fringe.removeFirst();
-    if (visited.contains(node.id)) {
-      continue;
-    }
-    visited.add(node.id);
-    node.isRelative = true;
-    fringe.addAll(node.children);
-  }
-}
-
-void markRelativesSingles<T extends GraphNode>(LinkedNode<T> focalNode) {
+void markRelatives<T extends GraphNode>(LinkedNode<T> focalNode) {
   final rootNodes =
       findRootsIncludingSpousesWithDistance(focalNode).map((e) => e.$1);
 

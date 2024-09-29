@@ -14,6 +14,7 @@ import 'package:heritage/util.dart';
 
 class Panels extends ConsumerStatefulWidget {
   final Person person;
+  final bool isRelative;
   final void Function(Person person, Relationship relationship)
       onAddConnectionPressed;
   final VoidCallback onViewPerspective;
@@ -22,6 +23,7 @@ class Panels extends ConsumerStatefulWidget {
   const Panels({
     super.key,
     required this.person,
+    required this.isRelative,
     required this.onAddConnectionPressed,
     required this.onViewPerspective,
     required this.onClose,
@@ -64,6 +66,7 @@ class _PanelsState extends ConsumerState<Panels> {
         header: !small
             ? null
             : AddConnectionButtons(
+                enabled: widget.isRelative,
                 canAddParent: person.parents.isEmpty,
                 onAddConnectionPressed: (relationship) =>
                     widget.onAddConnectionPressed(person, relationship),
@@ -161,6 +164,7 @@ class _PanelsState extends ConsumerState<Panels> {
                   ],
                 ),
                 child: AddConnectionButtons(
+                  enabled: widget.isRelative,
                   canAddParent: person.parents.isEmpty,
                   onAddConnectionPressed: (relationship) =>
                       widget.onAddConnectionPressed(person, relationship),

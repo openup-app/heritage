@@ -90,6 +90,7 @@ class FamilyTreePage extends ConsumerStatefulWidget {
 class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
   final _familyTreeViewKey = GlobalKey<FamilyTreeViewState>();
   Person? _selectedPerson;
+  bool _isRelative = false;
 
   @override
   Widget build(BuildContext context) {
@@ -111,6 +112,7 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
           Panels(
             key: Key(selectedPerson.id),
             person: selectedPerson,
+            isRelative: _isRelative,
             onAddConnectionPressed: _showAddConnectionModal,
             onViewPerspective: () {
               final pathParameters = {
@@ -162,7 +164,8 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
     );
   }
 
-  void _onProfileSelected(Person? person) {
+  void _onProfileSelected(Person? person, bool isRelative) {
+    setState(() => _isRelative = isRelative);
     if (person == null) {
       setState(() => _selectedPerson = null);
       return;
@@ -177,7 +180,7 @@ class FamilyTreeView extends ConsumerStatefulWidget {
   final Person focalPerson;
   final List<Person> people;
   final Person? selectedPerson;
-  final void Function(Person? person) onProfileSelected;
+  final void Function(Person? person, bool isRelative) onProfileSelected;
   final void Function(Person person, Relationship relationship)
       onAddConnectionPressed;
   final void Function(List<Id> ids) onFetchConnections;
@@ -248,11 +251,11 @@ class FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
                     spouse: 52,
                     sibling: 297,
                   ),
-                  nodeBuilder: (context, data, key) {
+                  nodeBuilder: (context, data, key, isRelative) {
                     return HoverableNodeProfile(
                       key: key,
                       person: data,
-                      onTap: () => widget.onProfileSelected(data),
+                      onTap: () => widget.onProfileSelected(data, isRelative),
                     );
                   },
                 ),
