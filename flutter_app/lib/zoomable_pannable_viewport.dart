@@ -72,7 +72,9 @@ class ZoomablePannableViewportState extends State<ZoomablePannableViewport>
       },
       child: KeyedSubtree(
         key: _childKey,
-        child: widget.child,
+        child: RepaintBoundary(
+          child: widget.child,
+        ),
       ),
     );
   }

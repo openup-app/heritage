@@ -9,6 +9,7 @@ class ErrorPage extends StatelessWidget {
     return Scaffold(
       body: Center(
         child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const Text('Something went wrong.'),
             FilledButton(

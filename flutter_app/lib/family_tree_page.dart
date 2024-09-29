@@ -318,7 +318,6 @@ class HoverableNodeProfile extends StatelessWidget {
   Widget build(BuildContext context) {
     return MouseHover(
       builder: (context, hovering) {
-        // TODO: Need accounts
         return MouseRegion(
           cursor: SystemMouseCursors.click,
           child: GestureDetector(

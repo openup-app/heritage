@@ -4,20 +4,20 @@ import 'dart:math';
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:heritage/api.dart';
 import 'package:heritage/graph.dart';
 import 'package:heritage/util.dart';
 
-class Spacing {
-  final double level;
-  final double sibling;
-  final double spouse;
+part 'graph_view.freezed.dart';
 
-  const Spacing({
-    required this.level,
-    required this.sibling,
-    required this.spouse,
-  });
+@freezed
+class Spacing with _$Spacing {
+  const factory Spacing({
+    required double level,
+    required double sibling,
+    required double spouse,
+  }) = _Spacing;
 }
 
 class GraphView<T extends GraphNode> extends StatefulWidget {
@@ -127,7 +127,9 @@ class _GraphViewState<T extends GraphNode> extends State<GraphView<T>> {
                       if (key == null) {
                         throw 'Missing key';
                       }
-                      return widget.nodeBuilder(context, node.data, key);
+                      return RepaintBoundary(
+                        child: widget.nodeBuilder(context, node.data, key),
+                      );
                     },
                   ),
                 ),
@@ -147,7 +149,9 @@ class _GraphViewState<T extends GraphNode> extends State<GraphView<T>> {
                     if (key == null) {
                       throw 'Missing key';
                     }
-                    return widget.nodeBuilder(context, node.data, key);
+                    return RepaintBoundary(
+                      child: widget.nodeBuilder(context, node.data, key),
+                    );
                   },
                 ),
               ),
@@ -766,7 +770,9 @@ class _EdgePainter<T extends GraphNode> extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) {
-    return true;
+  bool shouldRepaint(covariant _EdgePainter oldDelegate) {
+    return const DeepCollectionEquality.unordered()
+            .equals(oldDelegate.nodeRects, nodeRects) ||
+        spacing != oldDelegate.spacing;
   }
 }
