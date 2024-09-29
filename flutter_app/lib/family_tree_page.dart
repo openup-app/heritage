@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:collection/collection.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -195,6 +197,7 @@ class FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
   final _peopleKeys = <Id, GlobalKey>{};
   final _viewportKey = GlobalKey<ZoomablePannableViewportState>();
   final _graphViewKey = GlobalKey();
+  final _transformNotifier = ValueNotifier<Matrix4>(Matrix4.identity());
 
   @override
   void initState() {
@@ -225,13 +228,19 @@ class FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
   }
 
   @override
+  void dispose() {
+    _transformNotifier.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Center(
       child: Overlay.wrap(
         child: ZoomablePannableViewport(
           key: _viewportKey,
           childKeys: _peopleKeys.values.toList(),
-          onTransformed: (_) {},
+          onTransformed: (transform) => _transformNotifier.value = transform,
           child: Stack(
             children: [
               Positioned.fill(
@@ -320,6 +329,80 @@ class HoverableNodeProfile extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+class _TiledBackground extends StatefulWidget {
+  final ValueNotifier<Matrix4> transformNotifier;
+  final Widget child;
+
+  const _TiledBackground({
+    super.key,
+    required this.transformNotifier,
+    required this.child,
+  });
+
+  @override
+  State<_TiledBackground> createState() => _TiledBackgroundState();
+}
+
+class _TiledBackgroundState extends State<_TiledBackground> {
+  @override
+  Widget build(BuildContext context) {
+    const size = 541.0;
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        IgnorePointer(
+          child: ValueListenableBuilder(
+            valueListenable: widget.transformNotifier,
+            builder: (context, value, child) {
+              final t = value.getTranslation();
+              return Transform.translate(
+                offset: Offset(t.x % size, t.y % size),
+                child: Transform.scale(
+                  scale: value.getMaxScaleOnAxis(),
+                  child: child,
+                ),
+              );
+            },
+            child: Transform.translate(
+              offset: const Offset(-size / 2, -size / 2),
+              child: LayoutBuilder(
+                builder: (context, c) {
+                  final rowCount = max(2, c.maxHeight ~/ size + 2);
+                  final columnCount = max(2, c.maxWidth ~/ size + 2);
+                  return OverflowBox(
+                    maxWidth: double.infinity,
+                    maxHeight: double.infinity,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        for (var row = 0; row < rowCount; row++)
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              for (var column = 0;
+                                  column < columnCount;
+                                  column++)
+                                Image.asset(
+                                  'assets/images/tree_background.jpg',
+                                  width: size,
+                                  height: size,
+                                ),
+                            ],
+                          ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+        ),
+        widget.child,
+      ],
     );
   }
 }
