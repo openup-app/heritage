@@ -100,12 +100,12 @@ class GraphViewState<T extends GraphNode> extends State<GraphView<T>> {
     // At most two upRoots, the couple grandparent on each side
     final upRoots = _focalCouple.parents.expand((e) => e.parents).toList();
     return _Edges(
-      key: _graphKey,
       nodeMap: _nodeMap,
       spacing: widget.spacing,
       child: _MultiTreeWidget(
-        parentFocalId:
-            _focalCouple.parents.isEmpty ? '' : _focalCouple.parents.first.id,
+        parentFocalId: _focalCouple.parents.isEmpty
+            ? _focalCouple.node.id
+            : _focalCouple.parents.first.id,
         leftGrandparent: upRoots.firstOrNull,
         rightGrandparent: upRoots.length > 1 ? upRoots[1] : null,
         parentLevelRoots: _downRoots,
@@ -528,12 +528,15 @@ class _MultiTreeRenderBox<T extends GraphNode> extends RenderBox
         !upShouldShiftToPivot ? Offset.zero : Offset(downPivot - upPivot, 0);
 
     // Position the parent roots
+    final downLeft = downRootsHorizontalShift.dx;
+    double downRight = downRootsHorizontalShift.dx;
     Offset downRootOffset = downRootsHorizontalShift + Offset(0, upHeight);
     for (var id in downRootSizes.keys) {
       final child = childMap[id];
       if (child != null) {
         (child.parentData as _TreeParentData).offset = downRootOffset;
         downRootOffset += Offset(child.size.width, 0);
+        downRight += child.size.width;
       }
     }
 
@@ -546,6 +549,8 @@ class _MultiTreeRenderBox<T extends GraphNode> extends RenderBox
         .fold(0.0, (p, e) => p + e.value.width);
 
     // Position the grandparents
+    double? upLeft;
+    double? upRight;
     if (up1 != null) {
       final centerAboveLeft = !upShouldShiftToPivot
           ? Offset.zero
@@ -554,13 +559,16 @@ class _MultiTreeRenderBox<T extends GraphNode> extends RenderBox
               Offset(mainRootSize.width / 2, 0);
       final up1Child = childMap[up1.id];
       if (up1Child != null) {
-        (up1Child.parentData as _TreeParentData).offset =
-            upRootsHorizontalShift +
-                Offset(0, upHeight) +
-                Offset(0, -up1Size.height) +
-                centerAboveLeft;
+        final childParentData = (up1Child.parentData as _TreeParentData);
+        childParentData.offset = upRootsHorizontalShift +
+            Offset(0, upHeight) +
+            Offset(0, -up1Size.height) +
+            centerAboveLeft;
+        upLeft = childParentData.offset.dx;
+        upRight = up2 == null ? upLeft + up1Size.width : null;
       }
     }
+
     if (up2 != null) {
       final centerAboveRight = !upShouldShiftToPivot
           ? Offset.zero
@@ -568,24 +576,21 @@ class _MultiTreeRenderBox<T extends GraphNode> extends RenderBox
               Offset(rightWidth + mainRootSize.width / 2, 0) / 2;
       final up2child = childMap[up2.id];
       if (up2child != null) {
-        (up2child.parentData as _TreeParentData).offset =
-            upRootsHorizontalShift +
-                Offset(up1Size.width, 0) +
-                Offset(0, upHeight) +
-                Offset(0, -up2Size.height) +
-                centerAboveRight;
+        final childParentData = (up2child.parentData as _TreeParentData);
+        childParentData.offset = upRootsHorizontalShift +
+            Offset(up1Size.width, 0) +
+            Offset(0, upHeight) +
+            Offset(0, -up2Size.height) +
+            centerAboveRight;
+        upLeft = up1 == null ? childParentData.offset.dx : upLeft;
+        upRight = childParentData.offset.dx + up2Size.width;
       }
     }
 
-    final upSize = Size(
-      up1Size.width + up2Size.width + upRootsHorizontalShift.dx,
-      upHeight,
-    );
-    final downSize = Size(
-      leftWidth + mainRootSize.width + rightWidth + downRootsHorizontalShift.dx,
-      mainRootSize.height,
-    );
-
+    final upSize = upLeft == null && upRight == null
+        ? Size.zero
+        : Size(upRight! - upLeft!, upHeight);
+    final downSize = Size(downRight - downLeft, mainRootSize.height);
     // Size the parent
     if (up1 == null && up2 == null) {
       size = downSize;
