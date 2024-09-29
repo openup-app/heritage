@@ -136,7 +136,7 @@ export class Database {
   }
 
   public async getLimitedGraph(id: Id): Promise<Person[]> {
-    return this.fetchUpToDistance(id, { maxDistance: 3, noChildrenOfSiblingsOfAncestorDistance: 2 });
+    return this.fetchUpToDistance(id, { maxDistance: 3, traverseSilbingsChildrenAfterRelativeLevel: -2 });
   }
 
   public async getPerson(id: Id): Promise<Person> {
@@ -176,17 +176,20 @@ export class Database {
     return people;
   }
 
-  public async fetchUpToDistance(id: Id, options: { maxDistance: number, noChildrenOfSiblingsOfAncestorDistance: number }): Promise<Person[]> {
+  public async fetchUpToDistance(id: Id, options: { maxDistance: number, traverseSilbingsChildrenAfterRelativeLevel: number }): Promise<Person[]> {
     const visited = new Set<Id>();
     const spouses = new Set<Id>();
-    const fringe: { id: Id; level: number }[] = [{ id, level: 0 }];
+    const bloodRelatives = new Set<Id>();
+    const fringe: { id: Id; relativeLevel: number, shouldTraverseChildren: boolean }[] = [{ id, relativeLevel: 0, shouldTraverseChildren: true, }];
     const output: Person[] = [];
 
+    bloodRelatives.add(id);
     while (fringe.length > 0) {
       // Fetch fringe in a single request
       const currentFringe = fringe.splice(0, fringe.length);
       const fringeIds = currentFringe.map(f => f.id);
-      const fringeIdToLevel = new Map<Id, number>(currentFringe.map(f => [f.id, f.level]));
+      const fringeIdToLevel = new Map<Id, number>(currentFringe.map(f => [f.id, f.relativeLevel]));
+      const fringeIdToShouldTraverseChildren = new Map<Id, boolean>(currentFringe.map(f => [f.id, f.shouldTraverseChildren]));
       const personRefs = fringeIds.map(id => this.personRef(id));
       const snapshots = await this.firestore.getAll(...personRefs);
 
@@ -197,7 +200,8 @@ export class Database {
 
         const person = personSchema.parse(snapshot.data());
         const id = snapshot.id;
-        const level = fringeIdToLevel.get(id)!;
+        const relativeLevel = fringeIdToLevel.get(id)!;
+        const shouldTraverseChildren = fringeIdToShouldTraverseChildren.get(id)!;
 
         if (visited.has(id)) {
           continue;
@@ -206,21 +210,35 @@ export class Database {
         visited.add(id);
         output.push(person);
 
-        // Traversal limited at spouses and max depth
-        if (spouses.has(id) || level >= options.maxDistance) {
+        // Traversal limited at out of family spouses and max depth
+        if ((spouses.has(id) && !bloodRelatives.has(id)) || relativeLevel >= options.maxDistance) {
           continue;
         }
 
-        const neighbourIds = new Set<Id>([
-          ...person.parents,
-          ...person.spouses,
-          ...((level < options.noChildrenOfSiblingsOfAncestorDistance) ? person.children : []),
-        ]);
+        // Next
+        for (const id of person.parents) {
+          if (!visited.has(id)) {
+            fringe.push({
+              id: id,
+              relativeLevel: relativeLevel - 1,
+              shouldTraverseChildren: !shouldTraverseChildren ? false : (relativeLevel - 1) >= options.traverseSilbingsChildrenAfterRelativeLevel
+            });
+          }
+        }
+        person.parents.forEach(r => bloodRelatives.add(r));
 
-        // Next level fringe
-        for (const neighbourId of neighbourIds) {
-          if (!visited.has(neighbourId)) {
-            fringe.push({ id: neighbourId, level: level + 1 });
+        if (shouldTraverseChildren) {
+          for (const id of person.children) {
+            if (!visited.has(id)) {
+              fringe.push({ id: id, relativeLevel: relativeLevel + 1, shouldTraverseChildren: shouldTraverseChildren });
+            }
+          }
+          person.children.forEach(r => bloodRelatives.add(r));
+        }
+
+        for (const spouseId of person.spouses) {
+          if (!visited.has(spouseId)) {
+            fringe.push({ id: spouseId, relativeLevel: relativeLevel, shouldTraverseChildren: shouldTraverseChildren });
           }
         }
 
