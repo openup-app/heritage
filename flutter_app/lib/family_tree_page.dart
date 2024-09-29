@@ -53,21 +53,24 @@ class ViewPageState extends ConsumerState<FamilyTreeLoadingPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        foregroundColor: Colors.black.withOpacity(0.3),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: BackButton(
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        title: Text('Family Tree - ${widget.focalPersonId}'),
+      body: Stack(
+        children: [
+          !_ready
+              ? const Center(
+                  child: CircularProgressIndicator.adaptive(),
+                )
+              : widget.child,
+          Opacity(
+            opacity: 0.2,
+            child: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: BackButton(
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ),
+          ),
+        ],
       ),
-      body: !_ready
-          ? const Center(
-              child: CircularProgressIndicator.adaptive(),
-            )
-          : widget.child,
     );
   }
 }
