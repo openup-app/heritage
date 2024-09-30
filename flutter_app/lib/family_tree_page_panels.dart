@@ -77,6 +77,10 @@ class _PanelsState extends ConsumerState<Panels> {
       );
     }
 
+    // Clamped in case of narrow, but extremely tall/short windows
+    final windowSize = MediaQuery.of(context).size;
+    final minPanelRatio = (180 / windowSize.height).clamp(0.05, 0.7);
+
     return Stack(
       children: [
         if (small)
@@ -86,8 +90,8 @@ class _PanelsState extends ConsumerState<Panels> {
               child: DraggableScrollableSheet(
                 expand: false,
                 snap: true,
-                initialChildSize: 0.2,
-                minChildSize: 0.2,
+                initialChildSize: minPanelRatio,
+                minChildSize: minPanelRatio,
                 maxChildSize: 1.0,
                 builder: (context, controller) {
                   return Container(
@@ -107,6 +111,7 @@ class _PanelsState extends ConsumerState<Panels> {
                     ),
                     child: SingleChildScrollView(
                       controller: controller,
+                      padding: EdgeInsets.zero,
                       child: KeyedSubtree(
                         key: _childKey,
                         child: child,
