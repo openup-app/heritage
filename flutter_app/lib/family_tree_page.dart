@@ -10,6 +10,7 @@ import 'package:heritage/api.dart';
 import 'package:heritage/family_tree_page_panels.dart';
 import 'package:heritage/graph_provider.dart';
 import 'package:heritage/graph_view.dart';
+import 'package:heritage/help.dart';
 import 'package:heritage/heritage_app.dart';
 import 'package:heritage/profile_display.dart';
 import 'package:heritage/profile_update.dart';
@@ -68,6 +69,19 @@ class ViewPageState extends ConsumerState<FamilyTreeLoadingPage> {
               padding: const EdgeInsets.all(8.0),
               child: BackButton(
                 onPressed: () => Navigator.of(context).pop(),
+              ),
+            ),
+          ),
+          Align(
+            alignment: Alignment.topRight,
+            child: Opacity(
+              opacity: 0.2,
+              child: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: IconButton(
+                  onPressed: () => showHelpDialog(context: context),
+                  icon: const Icon(Icons.question_mark),
+                ),
               ),
             ),
           ),

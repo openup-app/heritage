@@ -433,7 +433,7 @@ class _ProfileEditorState extends ConsumerState<_ProfileDisplay> {
             controller: _birthplaceController,
             onChanged: ref.read(profileUpdateProvider.notifier).birthplace,
             decoration: const InputDecoration(
-              label: Text('Birthplace'),
+              label: Text('Place of birth'),
             ),
             onFieldSubmitted: (_) {},
           ),

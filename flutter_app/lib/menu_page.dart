@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:heritage/api.dart';
 import 'package:heritage/family_tree_page.dart';
+import 'package:heritage/help.dart';
 
 class MenuPage extends ConsumerStatefulWidget {
   const MenuPage({super.key});
@@ -31,6 +32,8 @@ class _MenuPageState extends ConsumerState<MenuPage> {
           SizedBox(
             height: MediaQuery.of(context).padding.top,
           ),
+          const SizedBox(height: 16),
+          const AppVersion(),
           const SizedBox(height: 16),
           Center(
             child: ElevatedButton(
