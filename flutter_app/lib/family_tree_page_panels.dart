@@ -503,7 +503,7 @@ class _ProfileEditorState extends ConsumerState<_ProfileDisplay> {
   }
 
   Future<void> _pickPhotoWithSource(BuildContext context) async {
-    final source = await pickPhotoSource(context);
+    final source = await showPhotoSourceDialog(context);
     if (!context.mounted || source == null) {
       return;
     }

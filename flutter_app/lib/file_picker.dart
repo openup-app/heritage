@@ -29,7 +29,7 @@ Future<XFile?> pickFile(String title) async {
   return XFile(path);
 }
 
-Future<PhotoSource?> pickPhotoSource(BuildContext context) {
+Future<PhotoSource?> showPhotoSourceDialog(BuildContext context) {
   return showDialog<PhotoSource>(
     context: context,
     builder: (context) {
@@ -64,7 +64,12 @@ Future<XFile?> pickPhoto({required PhotoSource source}) async {
       }
     }
 
-    result = await picker.pickImage(source: source.imageSource);
+    result = await picker.pickImage(
+      source: source.imageSource,
+      maxWidth: 1000,
+      maxHeight: 1000,
+      preferredCameraDevice: CameraDevice.front,
+    );
   } on PlatformException catch (e) {
     if (e.code == 'camera_access_denied') {
       result = null;
