@@ -47,6 +47,7 @@ flutter:
   uses-material-design: true
 
   assets:
+    - assets/images/connection_spouse.webp
     - assets/images/tree_background.jpg
 
   fonts:

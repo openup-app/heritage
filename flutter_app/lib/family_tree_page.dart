@@ -549,13 +549,21 @@ class _BasicProfileDisplayState extends ConsumerState<BasicProfileDisplay> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(height: widget.padding.top),
-          const Center(
-            child: Icon(
-              Icons.person,
-              size: 200,
-              color: primaryColor,
+          Center(
+            child: Text(
+              'Add a ${widget.relationship.name}',
+              style: const TextStyle(fontSize: 24),
             ),
           ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: Image.asset(
+              'assets/images/connection_spouse.webp',
+              fit: BoxFit.cover,
+            ),
+          ),
+          const SizedBox(height: 16),
           const SelectableText('First & Last Name'),
           const SizedBox(height: 4),
           TextFormField(
