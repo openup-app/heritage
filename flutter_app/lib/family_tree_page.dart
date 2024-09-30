@@ -213,8 +213,8 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
 
   Future<void> _shareLink(String name, String id) async {
     final data = ShareData(
-      title: 'Join the family tree!',
-      text: '$name\'s family tree invite!',
+      title: '$name\'s family tree invite!',
+      text: 'https://breakfastsearch.xyz/$id',
       url: 'https://breakfastsearch.xyz/$id',
     );
     if (await canShare(data)) {
