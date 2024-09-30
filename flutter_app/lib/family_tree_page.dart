@@ -1,4 +1,4 @@
-import 'dart:math';
+import 'dart:ui' as ui;
 
 import 'package:collection/collection.dart';
 import 'package:flutter/cupertino.dart';
@@ -299,35 +299,29 @@ class FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
       child: Overlay.wrap(
         child: Opacity(
           opacity: _ready ? 1.0 : 0.0,
-          child: ZoomablePannableViewport(
-            key: _viewportKey,
-            onTransformed: (transform) => _transformNotifier.value = transform,
-            child: Stack(
-              children: [
-                Positioned.fill(
-                  child: Image.asset(
-                    'assets/images/tree_background.jpg',
-                    fit: BoxFit.cover,
-                  ),
+          child: _TiledBackground(
+            transformNotifier: _transformNotifier,
+            child: ZoomablePannableViewport(
+              key: _viewportKey,
+              onTransformed: (transform) =>
+                  _transformNotifier.value = transform,
+              child: GraphView<Person>(
+                key: _graphViewKey,
+                focalNodeId: widget.focalPerson.id,
+                nodes: widget.people,
+                spacing: const Spacing(
+                  level: 302,
+                  spouse: 52,
+                  sibling: 297,
                 ),
-                GraphView<Person>(
-                  key: _graphViewKey,
-                  focalNodeId: widget.focalPerson.id,
-                  nodes: widget.people,
-                  spacing: const Spacing(
-                    level: 302,
-                    spouse: 52,
-                    sibling: 297,
-                  ),
-                  nodeBuilder: (context, data, key, isRelative) {
-                    return HoverableNodeProfile(
-                      key: key,
-                      person: data,
-                      onTap: () => widget.onProfileSelected(data, isRelative),
-                    );
-                  },
-                ),
-              ],
+                nodeBuilder: (context, data, key, isRelative) {
+                  return HoverableNodeProfile(
+                    key: key,
+                    person: data,
+                    onTap: () => widget.onProfileSelected(data, isRelative),
+                  );
+                },
+              ),
             ),
           ),
         ),
@@ -415,63 +409,89 @@ class _TiledBackground extends StatefulWidget {
 }
 
 class _TiledBackgroundState extends State<_TiledBackground> {
+  ui.Image? _image;
+
+  @override
+  void initState() {
+    super.initState();
+    _initImage();
+  }
+
+  @override
+  void dispose() {
+    _image?.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
-    const size = 541.0;
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        IgnorePointer(
-          child: ValueListenableBuilder(
-            valueListenable: widget.transformNotifier,
-            builder: (context, value, child) {
-              final t = value.getTranslation();
-              return Transform.translate(
-                offset: Offset(t.x % size, t.y % size),
-                child: Transform.scale(
-                  scale: value.getMaxScaleOnAxis(),
-                  child: child,
-                ),
-              );
-            },
-            child: Transform.translate(
-              offset: const Offset(-size / 2, -size / 2),
-              child: LayoutBuilder(
-                builder: (context, c) {
-                  final rowCount = max(2, c.maxHeight ~/ size + 2);
-                  final columnCount = max(2, c.maxWidth ~/ size + 2);
-                  return OverflowBox(
-                    maxWidth: double.infinity,
-                    maxHeight: double.infinity,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        for (var row = 0; row < rowCount; row++)
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              for (var column = 0;
-                                  column < columnCount;
-                                  column++)
-                                Image.asset(
-                                  'assets/images/tree_background.jpg',
-                                  width: size,
-                                  height: size,
-                                ),
-                            ],
-                          ),
-                      ],
-                    ),
-                  );
-                },
-              ),
-            ),
+    final image = _image;
+    if (image == null) {
+      return widget.child;
+    }
+    return AnimatedBuilder(
+      animation: widget.transformNotifier,
+      builder: (context, child) {
+        return CustomPaint(
+          painter: _TilePainter(
+            tile: image,
+            transform: widget.transformNotifier.value,
           ),
-        ),
-        widget.child,
-      ],
+          isComplex: true,
+          child: widget.child,
+        );
+      },
     );
   }
+
+  void _initImage() async {
+    final bytes = await rootBundle.load('assets/images/tree_background.jpg');
+    final codec = await ui.instantiateImageCodec(bytes.buffer.asUint8List());
+    final frame = await codec.getNextFrame();
+    final image = frame.image;
+    if (mounted) {
+      setState(() => _image = image.clone());
+    }
+    image.dispose();
+  }
+}
+
+class _TilePainter extends CustomPainter {
+  final ui.Image tile;
+  final Matrix4 transform;
+
+  _TilePainter({
+    required this.tile,
+    required this.transform,
+  });
+
+  @override
+  void paint(ui.Canvas canvas, ui.Size size) {
+    final translate = transform.getTranslation();
+    final scale = transform.getMaxScaleOnAxis();
+    final scaledTileWidth = tile.width * scale;
+    final scaledTileHeight = tile.height * scale;
+    final canvasTransform = Matrix4.identity()
+      ..translate(translate.x % scaledTileWidth, translate.y % scaledTileHeight)
+      ..scale(scale);
+    canvas.transform(canvasTransform.storage);
+    final scaledCanvasSize = size / scale;
+    final countWidth = scaledCanvasSize.width ~/ tile.width + 1;
+    final countHeight = scaledCanvasSize.height ~/ tile.height + 1;
+    for (var y = -1; y < countHeight; y++) {
+      for (var x = -1; x < countWidth; x++) {
+        canvas.drawImage(
+          tile,
+          Offset(x * tile.width.toDouble(), y * tile.height.toDouble()),
+          Paint()..filterQuality = ui.FilterQuality.high,
+        );
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _TilePainter oldDelegate) =>
+      !tile.isCloneOf(oldDelegate.tile) || transform != oldDelegate.transform;
 }
 
 class BasicProfileDisplay extends ConsumerStatefulWidget {

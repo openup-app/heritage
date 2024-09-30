@@ -63,8 +63,8 @@ class ZoomablePannableViewportState extends State<ZoomablePannableViewport>
           key: _interactiveViewerKey,
           transformationController: _transformationController,
           constrained: false,
-          maxScale: 4,
-          minScale: 0.1,
+          maxScale: 1,
+          minScale: 0.15,
           boundaryMargin: EdgeInsets.symmetric(
             horizontal: windowSize.width / 2 / scale,
             vertical: windowSize.height / 2 / scale,
