@@ -1,10 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
-import 'package:heritage/share/share_stub.dart';
-
-export 'share_stub.dart'
-    if (dart.library.io) 'share_io.dart'
-    if (dart.library.js_interop) 'share_web.dart' show canShare, shareContent;
+import 'package:share_plus/share_plus.dart';
 
 part 'share.freezed.dart';
 
@@ -15,6 +11,20 @@ class ShareData with _$ShareData {
     @Default(null) String? text,
     @Default(null) String? url,
   }) = _ShareData;
+}
+
+Future<bool> canShare(ShareData data) => Future.value(true);
+
+Future<void> shareContent(ShareData data) async {
+  final text = data.url ?? data.text;
+  if (text == null) {
+    return Future.error('Sharing requires url or text');
+  }
+  Share.share(
+    text,
+    subject: data.title,
+    sharePositionOrigin: Rect.zero,
+  );
 }
 
 class ShareButtonBuilder extends StatefulWidget {

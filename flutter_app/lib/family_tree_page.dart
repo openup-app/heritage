@@ -14,7 +14,7 @@ import 'package:heritage/help.dart';
 import 'package:heritage/heritage_app.dart';
 import 'package:heritage/profile_display.dart';
 import 'package:heritage/profile_update.dart';
-import 'package:heritage/share/share.dart';
+import 'package:heritage/share.dart';
 import 'package:heritage/util.dart';
 import 'package:heritage/zoomable_pannable_viewport.dart';
 
