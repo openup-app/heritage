@@ -56,37 +56,11 @@ class ViewPageState extends ConsumerState<FamilyTreeLoadingPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Stack(
-        children: [
-          !_ready
-              ? const Center(
-                  child: CircularProgressIndicator.adaptive(),
-                )
-              : widget.child,
-          Opacity(
-            opacity: 0.2,
-            child: Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: BackButton(
-                onPressed: () => Navigator.of(context).pop(),
-              ),
-            ),
-          ),
-          Align(
-            alignment: Alignment.topRight,
-            child: Opacity(
-              opacity: 0.2,
-              child: Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: IconButton(
-                  onPressed: () => showHelpDialog(context: context),
-                  icon: const Icon(Icons.question_mark),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
+      body: !_ready
+          ? const Center(
+              child: CircularProgressIndicator.adaptive(),
+            )
+          : widget.child,
     );
   }
 }
@@ -123,6 +97,33 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
           onProfileSelected: _onProfileSelected,
           onAddConnectionPressed: _showAddConnectionModal,
           onFetchConnections: (ids) {},
+        ),
+        Positioned(
+          left: 16,
+          top: 16,
+          child: Opacity(
+            opacity: 0.2,
+            child: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: BackButton(
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ),
+          ),
+        ),
+        Positioned(
+          right: 16,
+          top: 16,
+          child: Opacity(
+            opacity: 0.2,
+            child: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: IconButton(
+                onPressed: () => showHelpDialog(context: context),
+                icon: const Icon(Icons.question_mark),
+              ),
+            ),
+          ),
         ),
         if (selectedPerson != null)
           Panels(
