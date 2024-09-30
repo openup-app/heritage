@@ -147,15 +147,17 @@ class _RouterBuilderState extends State<_RouterBuilder> {
               final (:focalPerson, :people) = _makeManyAncestoryTree();
               // final (:focalPerson, :people) = _makeWideTree();
               // final (:focalPerson, :people) = _makeTallTree();
+              final nodeKeys = people.map((e) => (e, GlobalKey())).toList();
               return Scaffold(
                 body: GraphView<Person>(
                   focalNodeId: focalPerson.id,
-                  nodes: people,
+                  nodeKeys: nodeKeys,
                   spacing: const Spacing(
                     level: 40,
                     sibling: 8,
                     spouse: 2,
                   ),
+                  builder: (context, nodes, child) => child,
                   nodeBuilder: (context, data, key, isRelative) {
                     return Container(
                       key: key,

@@ -1,4 +1,3 @@
-import 'dart:collection';
 import 'dart:math';
 
 import 'package:collection/collection.dart';
@@ -7,7 +6,6 @@ import 'package:flutter/rendering.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:heritage/api.dart';
 import 'package:heritage/graph.dart';
-import 'package:heritage/util.dart';
 
 part 'graph_view.freezed.dart';
 
@@ -22,8 +20,10 @@ class Spacing with _$Spacing {
 
 class GraphView<T extends GraphNode> extends StatefulWidget {
   final Id focalNodeId;
-  final List<T> nodes;
+  final List<(T, Key)> nodeKeys;
   final Spacing spacing;
+  final Widget Function(
+      BuildContext context, Map<Id, LinkedNode<T>> nodes, Widget child) builder;
   final Widget Function(
     BuildContext context,
     T data,
@@ -34,21 +34,21 @@ class GraphView<T extends GraphNode> extends StatefulWidget {
   const GraphView({
     super.key,
     required this.focalNodeId,
-    required this.nodes,
+    required this.nodeKeys,
     required this.spacing,
+    required this.builder,
     required this.nodeBuilder,
   });
 
   @override
-  State<GraphView<T>> createState() => GraphViewState<T>();
+  State<GraphView<T>> createState() => _GraphViewState<T>();
 }
 
-class GraphViewState<T extends GraphNode> extends State<GraphView<T>> {
-  final _nodeMap = <Id, (LinkedNode<T>, GlobalKey)>{};
+class _GraphViewState<T extends GraphNode> extends State<GraphView<T>> {
+  late Map<Id, Key> _idToKey;
   late Couple<T> _focalCouple;
   late List<Couple<T>> _downRoots;
-  late Map<Id, GlobalKey> _nodeKeys;
-  late Key _graphKey;
+  late Map<Id, LinkedNode<T>> _linkedNodes;
 
   @override
   void initState() {
@@ -56,54 +56,24 @@ class GraphViewState<T extends GraphNode> extends State<GraphView<T>> {
     _rebuildGraph();
   }
 
-  @override
-  void didUpdateWidget(covariant GraphView<T> oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    const unordered = DeepCollectionEquality.unordered();
-    final oldIds = oldWidget.nodes.map((e) => e.id);
-    final newIds = widget.nodes.map((e) => e.id);
-    if (!unordered.equals(oldIds, newIds)) {
-      _rebuildGraph();
-    } else if (!unordered.equals(oldWidget.nodes, widget.nodes)) {
-      _rebuildGraph();
-    }
-  }
-
   void _rebuildGraph() {
-    _graphKey = UniqueKey();
+    _idToKey =
+        Map.fromEntries(widget.nodeKeys.map((e) => MapEntry(e.$1.id, e.$2)));
+    final nodes = widget.nodeKeys.map((e) => e.$1);
     final (focalCouple, idToCouple, downRoots) =
-        _createCouples(widget.nodes, widget.focalNodeId);
+        _createCouples(nodes, widget.focalNodeId);
     _focalCouple = focalCouple;
     _downRoots = downRoots;
-    _nodeKeys =
-        Map.fromEntries(idToCouple.keys.map((e) => MapEntry(e, GlobalKey())));
-
-    for (final entry in idToCouple.entries) {
-      final (id, couple) = (entry.key, entry.value);
-      final spouse = couple.spouse;
-      final nodeKey = _nodeKeys[couple.node.id];
-      final spouseKey = spouse == null ? null : _nodeKeys[spouse.id];
-      if (nodeKey == null) {
-        throw 'Missing key for node';
-      }
-      _nodeMap[couple.id] = (couple.node, nodeKey);
-      if (spouse != null) {
-        if (spouseKey == null) {
-          throw 'Missing key for spouse';
-        }
-        _nodeMap[spouse.id] = (spouse, spouseKey);
-      }
-    }
   }
 
   @override
   Widget build(BuildContext context) {
     // At most two upRoots, the couple grandparent on each side
     final upRoots = _focalCouple.parents.expand((e) => e.parents).toList();
-    return _Edges(
-      nodeMap: _nodeMap,
-      spacing: widget.spacing,
-      child: _MultiTreeWidget(
+    return widget.builder(
+      context,
+      _linkedNodes,
+      _MultiTreeWidget(
         parentFocalId: _focalCouple.parents.isEmpty
             ? _focalCouple.node.id
             : _focalCouple.parents.first.id,
@@ -124,7 +94,7 @@ class GraphViewState<T extends GraphNode> extends State<GraphView<T>> {
                     reverse: true,
                     spacing: widget.spacing,
                     nodeBuilder: (context, node) {
-                      final key = _nodeKeys[node.id];
+                      final key = _idToKey[node.id];
                       if (key == null) {
                         throw 'Missing key';
                       }
@@ -147,7 +117,7 @@ class GraphViewState<T extends GraphNode> extends State<GraphView<T>> {
                   node: node,
                   spacing: widget.spacing,
                   nodeBuilder: (context, node) {
-                    final key = _nodeKeys[node.id];
+                    final key = _idToKey[node.id];
                     if (key == null) {
                       throw 'Missing key';
                     }
@@ -164,11 +134,10 @@ class GraphViewState<T extends GraphNode> extends State<GraphView<T>> {
     );
   }
 
-  GlobalKey? getKeyForNode(Id id) => _nodeKeys[id];
-
   (Couple<T>, Map<Id, Couple<T>>, List<Couple<T>>) _createCouples(
       Iterable<T> unlinkedNodes, Id focalNodeId) {
     final linkedNodes = linkNodes(unlinkedNodes);
+    _linkedNodes = linkedNodes;
     final focalNode = linkedNodes[focalNodeId];
     if (focalNode == null) {
       throw 'Missing node with focalNodeId';
@@ -699,111 +668,4 @@ class _TreeRootIdWidget extends ParentDataWidget<_TreeParentData> {
 
   @override
   Type get debugTypicalAncestorWidgetClass => _MultiTreeWidget;
-}
-
-class _Edges<T extends GraphNode> extends StatefulWidget {
-  final Map<Id, (LinkedNode<T>, GlobalKey)> nodeMap;
-  final Spacing spacing;
-  final Widget child;
-
-  const _Edges({
-    super.key,
-    required this.nodeMap,
-    required this.spacing,
-    required this.child,
-  });
-
-  @override
-  State<_Edges> createState() => _EdgesState();
-}
-
-class _EdgesState<T extends GraphNode> extends State<_Edges<T>> {
-  final _nodeRects = <Id, (LinkedNode<T>, Rect)>{};
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.endOfFrame.then((_) {
-      if (!mounted) {
-        return;
-      }
-      _locateNodes();
-    });
-  }
-
-  void _locateNodes() {
-    setState(() {
-      for (final entry in widget.nodeMap.entries) {
-        final (id, value) = (entry.key, entry.value);
-        final node = value.$1;
-        final key = value.$2;
-        _nodeRects[id] = (node, locateWidget(key) ?? Rect.zero);
-      }
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return CustomPaint(
-      foregroundPainter: _EdgePainter(
-        nodeRects: _nodeRects,
-        spacing: widget.spacing,
-      ),
-      child: widget.child,
-    );
-  }
-}
-
-class _EdgePainter<T extends GraphNode> extends CustomPainter {
-  final Map<Id, (LinkedNode<T>, Rect)> nodeRects;
-  final Spacing spacing;
-
-  _EdgePainter({
-    required this.nodeRects,
-    required this.spacing,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    // Only the left node in nodes with spouses
-    final leftNodeInCouples = nodeRects.values.where((e) {
-      final node = e.$1;
-      final spouse = node.spouse;
-      if (spouse == null) {
-        return false;
-      }
-      return node.isRelative && spouse.isRelative
-          ? node < spouse
-          : !node.isRelative;
-    });
-    for (final (fromNode, fromRect) in leftNodeInCouples) {
-      for (final toNode in fromNode.children) {
-        final (_, toRect) = nodeRects[toNode.id]!;
-        final s = Offset(
-          fromRect.bottomRight.dx + spacing.spouse / 2,
-          fromRect.bottomRight.dy,
-        );
-        final e = toRect.topCenter;
-        final path = Path()
-          ..moveTo(s.dx, s.dy)
-          ..lineTo(s.dx, s.dy + spacing.level / 2)
-          ..lineTo(e.dx, s.dy + spacing.level / 2)
-          ..lineTo(e.dx, e.dy);
-        canvas.drawPath(
-          path,
-          Paint()
-            ..strokeWidth = 4
-            ..style = PaintingStyle.stroke
-            ..color = Colors.black,
-        );
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _EdgePainter oldDelegate) {
-    return const DeepCollectionEquality.unordered()
-            .equals(oldDelegate.nodeRects, nodeRects) ||
-        spacing != oldDelegate.spacing;
-  }
 }

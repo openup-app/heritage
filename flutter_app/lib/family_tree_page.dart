@@ -2,12 +2,14 @@ import 'dart:ui' as ui;
 
 import 'package:collection/collection.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:heritage/api.dart';
 import 'package:heritage/family_tree_page_panels.dart';
+import 'package:heritage/graph.dart';
 import 'package:heritage/graph_provider.dart';
 import 'package:heritage/graph_view.dart';
 import 'package:heritage/help.dart';
@@ -284,13 +286,16 @@ class FamilyTreeView extends ConsumerStatefulWidget {
 
 class FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
   final _viewportKey = GlobalKey<ZoomablePannableViewportState>();
-  final _graphViewKey = GlobalKey<GraphViewState>();
   final _transformNotifier = ValueNotifier<Matrix4>(Matrix4.identity());
   bool _ready = false;
+  final _idToKey = <Id, GlobalKey>{};
+  final _nodeKeys = <(Person, GlobalKey)>[];
+  late Key _graphKey;
 
   @override
   void initState() {
     super.initState();
+    _reinitKeys();
     WidgetsBinding.instance.endOfFrame.then((_) {
       if (mounted) {
         if (widget.focalPerson.ownedBy == null) {
@@ -303,6 +308,27 @@ class FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
   }
 
   @override
+  void didUpdateWidget(covariant FamilyTreeView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    const unordered = DeepCollectionEquality.unordered();
+    if (!unordered.equals(oldWidget.people, widget.people)) {
+      _reinitKeys();
+    }
+  }
+
+  void _reinitKeys() {
+    _graphKey = UniqueKey();
+    _nodeKeys
+      ..clear()
+      ..addAll(widget.people.map(((e) => (e, GlobalKey()))));
+    _idToKey
+      ..clear()
+      ..addEntries(
+        _nodeKeys.map((e) => MapEntry(e.$1.id, e.$2)),
+      );
+  }
+
+  @override
   void dispose() {
     _transformNotifier.dispose();
     super.dispose();
@@ -310,6 +336,11 @@ class FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
 
   @override
   Widget build(BuildContext context) {
+    const spacing = Spacing(
+      level: 302,
+      spouse: 52,
+      sibling: 297,
+    );
     return Center(
       child: Overlay.wrap(
         child: Opacity(
@@ -321,14 +352,24 @@ class FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
               onTransformed: (transform) =>
                   _transformNotifier.value = transform,
               child: GraphView<Person>(
-                key: _graphViewKey,
+                key: _graphKey,
                 focalNodeId: widget.focalPerson.id,
-                nodes: widget.people,
-                spacing: const Spacing(
-                  level: 302,
-                  spouse: 52,
-                  sibling: 297,
-                ),
+                nodeKeys: _nodeKeys,
+                spacing: spacing,
+                builder: (context, nodes, child) {
+                  return ValueListenableBuilder(
+                    valueListenable: _transformNotifier,
+                    builder: (context, value, _) {
+                      return _Edges(
+                        idToKey: _idToKey,
+                        idToNode: nodes,
+                        spacing: spacing,
+                        transform: value,
+                        child: child,
+                      );
+                    },
+                  );
+                },
                 nodeBuilder: (context, data, key, isRelative) {
                   return HoverableNodeProfile(
                     key: key,
@@ -348,7 +389,7 @@ class FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
     Id id, {
     bool animate = true,
   }) {
-    final key = _graphViewKey.currentState?.getKeyForNode(id);
+    final key = _idToKey[id];
     if (key != null) {
       _viewportKey.currentState?.centerOnWidgetWithKey(
         key,
@@ -753,3 +794,141 @@ ButtonStyle _bigButtonStyle = FilledButton.styleFrom(
   backgroundColor: primaryColor,
   fixedSize: const Size.fromHeight(64),
 );
+
+class _Edges extends StatefulWidget {
+  final Map<Id, GlobalKey> idToKey;
+  final Map<Id, LinkedNode<Person>> idToNode;
+  final Spacing spacing;
+  final Matrix4 transform;
+  final Widget child;
+
+  const _Edges({
+    super.key,
+    required this.idToKey,
+    required this.idToNode,
+    required this.spacing,
+    required this.transform,
+    required this.child,
+  });
+
+  @override
+  State<_Edges> createState() => _EdgesState();
+}
+
+class _EdgesState extends State<_Edges> {
+  final _nodeRects = <Id, (LinkedNode<Person>, Rect)>{};
+  final _parentKey = GlobalKey();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.endOfFrame.then((_) {
+      if (!mounted) {
+        return;
+      }
+      _locateNodes();
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant _Edges oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    const unordered = DeepCollectionEquality.unordered();
+    if (oldWidget.spacing != widget.spacing ||
+        oldWidget.transform != widget.transform ||
+        !unordered.equals(oldWidget.idToKey, widget.idToKey) ||
+        !unordered.equals(oldWidget.idToNode, widget.idToNode)) {
+      _locateNodes();
+    }
+  }
+
+  void _locateNodes() {
+    final parentRect = locateWidget(_parentKey) ?? Rect.zero;
+    final scale = widget.transform.getMaxScaleOnAxis();
+    setState(() {
+      for (final entry in widget.idToKey.entries) {
+        final (id, key) = (entry.key, entry.value);
+        final originalRect = locateWidget(key) ?? Rect.zero;
+        final nodeRect = Rect.fromLTWH(
+          (originalRect.left - parentRect.left) / scale,
+          (originalRect.top - parentRect.top) / scale,
+          originalRect.width,
+          originalRect.height,
+        );
+
+        final node = widget.idToNode[id];
+        if (node == null) {
+          throw 'Missing node';
+        }
+        _nodeRects[id] = (node, nodeRect);
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      key: _parentKey,
+      painter: _EdgePainter(
+        nodeRects: Map.of(_nodeRects),
+        spacing: widget.spacing,
+      ),
+      child: widget.child,
+    );
+  }
+}
+
+class _EdgePainter extends CustomPainter {
+  final Map<Id, (LinkedNode<Person>, Rect)> nodeRects;
+  final Spacing spacing;
+
+  _EdgePainter({
+    required this.nodeRects,
+    required this.spacing,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    // Only the left node in nodes with spouses
+    final leftNodeInCouples = nodeRects.values.where((e) {
+      final node = e.$1;
+      final spouse = node.spouse;
+      if (spouse == null) {
+        return false;
+      }
+      return node.isRelative && spouse.isRelative
+          ? node < spouse
+          : !node.isRelative;
+    });
+    for (final (fromNode, fromRect) in leftNodeInCouples) {
+      final path = Path();
+      for (final toNode in fromNode.children) {
+        final (_, toRect) = nodeRects[toNode.id]!;
+        final s = Offset(
+          fromRect.bottomRight.dx + spacing.spouse / 2,
+          fromRect.bottomRight.dy,
+        );
+        final e = toRect.topCenter;
+        path
+          ..moveTo(s.dx, s.dy)
+          ..lineTo(s.dx, s.dy + spacing.level / 2)
+          ..lineTo(e.dx, s.dy + spacing.level / 2)
+          ..lineTo(e.dx, e.dy);
+      }
+      canvas.drawPath(
+        path,
+        Paint()
+          ..strokeWidth = 4
+          ..style = PaintingStyle.stroke
+          ..color = Colors.black,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _EdgePainter oldDelegate) {
+    return !const DeepCollectionEquality.unordered()
+            .equals(nodeRects, oldDelegate.nodeRects) ||
+        spacing != oldDelegate.spacing;
+  }
+}
