@@ -27,7 +27,7 @@ class ZoomablePannableViewportState extends State<ZoomablePannableViewport>
 
   late final _animationController = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 800),
+    duration: const Duration(milliseconds: 1200),
   );
   Animation? _animation;
 

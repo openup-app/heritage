@@ -2,7 +2,6 @@ import 'dart:ui' as ui;
 
 import 'package:collection/collection.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -19,6 +18,7 @@ import 'package:heritage/profile_update.dart';
 import 'package:heritage/share.dart';
 import 'package:heritage/util.dart';
 import 'package:heritage/zoomable_pannable_viewport.dart';
+import 'package:path_drawing/path_drawing.dart' as path_drawing;
 
 class FamilyTreeLoadingPage extends ConsumerStatefulWidget {
   final Id focalPersonId;
@@ -189,12 +189,19 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
       gender: gender,
       relationship: relationship,
     );
-    final id = await showBlockingModal(context, addConnectionFuture);
+    final newId = await showBlockingModal(context, addConnectionFuture);
     if (!mounted) {
       return;
     }
-    if (id != null) {
-      await _shareLink(name, id);
+    if (newId != null) {
+      await _shareLink(name, newId);
+      if (mounted) {
+        WidgetsBinding.instance.endOfFrame.then((_) {
+          if (mounted) {
+            _familyTreeViewKey.currentState?.centerOnPersonWithId(newId);
+          }
+        });
+      }
     }
     if (!mounted) {
       return;
@@ -539,7 +546,9 @@ class _TilePainter extends CustomPainter {
         canvas.drawImage(
           tile,
           Offset(x * tile.width.toDouble(), y * tile.height.toDouble()),
-          Paint()..filterQuality = ui.FilterQuality.high,
+          Paint()
+            ..color = const Color.fromRGBO(0xEE, 0xF7, 0xFC, 0.2)
+            ..filterQuality = ui.FilterQuality.high,
         );
       }
     }
@@ -915,12 +924,18 @@ class _EdgePainter extends CustomPainter {
           ..lineTo(e.dx, s.dy + spacing.level / 2)
           ..lineTo(e.dx, e.dy);
       }
-      canvas.drawPath(
+
+      final dashedPath = path_drawing.dashPath(
         path,
+        dashArray: path_drawing.CircularIntervalList<double>([10.0, 10.0]),
+      );
+
+      canvas.drawPath(
+        dashedPath,
         Paint()
-          ..strokeWidth = 4
+          ..strokeWidth = 8
           ..style = PaintingStyle.stroke
-          ..color = Colors.black,
+          ..color = const Color.fromRGBO(0xB2, 0xB2, 0xB2, 1.0),
       );
     }
   }

@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:heritage/util.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 Future<void> showHelpDialog({
@@ -10,6 +11,18 @@ Future<void> showHelpDialog({
     builder: (context) {
       return AlertDialog(
         title: const AppVersion(),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            FilledButton(
+              onPressed: launchEmail,
+              style: FilledButton.styleFrom(
+                fixedSize: const Size.fromHeight(48),
+              ),
+              child: const Text('Contact us'),
+            ),
+          ],
+        ),
         actions: [
           TextButton(
             onPressed: Navigator.of(context).pop,

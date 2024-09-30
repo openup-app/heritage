@@ -20,7 +20,7 @@ Future<void> shareContent(ShareData data) async {
   if (text == null) {
     return Future.error('Sharing requires url or text');
   }
-  Share.share(
+  await Share.share(
     text,
     subject: data.title,
     sharePositionOrigin: Rect.zero,

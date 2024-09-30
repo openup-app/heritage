@@ -473,15 +473,6 @@ class _ProfileEditorState extends ConsumerState<_ProfileDisplay> {
               ),
             ],
           ),
-
-          const SizedBox(height: 24),
-          FilledButton(
-            onPressed: launchEmail,
-            style: FilledButton.styleFrom(
-              fixedSize: const Size.fromHeight(48),
-            ),
-            child: const Text('Contact us'),
-          ),
           const SizedBox(height: 24),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(),
@@ -542,6 +533,7 @@ class _ProfileEditorState extends ConsumerState<_ProfileDisplay> {
     await notifier.updateProfile(widget.id, profileUpdate);
     if (mounted) {
       setState(() => _submitting = false);
+      widget.onClose();
     }
   }
 }

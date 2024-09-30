@@ -391,13 +391,6 @@ class NodeProfile extends StatelessWidget {
             ),
           ),
           Text(
-            person.id,
-            style: const TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          Text(
             person.profile.birthday?.year.toString() ?? '',
             style: const TextStyle(
               fontSize: 24,
