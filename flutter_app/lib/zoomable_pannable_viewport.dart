@@ -65,6 +65,7 @@ class ZoomablePannableViewportState extends State<ZoomablePannableViewport>
           constrained: false,
           maxScale: 1,
           minScale: 0.15,
+          onInteractionStart: (_) => _animationController.stop(),
           boundaryMargin: EdgeInsets.symmetric(
             horizontal: windowSize.width / 2 / scale,
             vertical: windowSize.height / 2 / scale,
