@@ -154,7 +154,7 @@ function constructURLs(person: Person, storage: Storage) {
 
 function parseForm(req: Request): Promise<{ fields: formidable.Fields; files: formidable.Files }> {
   return new Promise((resolve, reject) => {
-    const form = new IncomingForm({ uploadDir: 'uploads/', keepExtensions: true });
+    const form = new IncomingForm({ keepExtensions: true });
 
     form.parse(req, (err, fields, files) => {
       if (err) {
