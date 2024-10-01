@@ -255,7 +255,7 @@ export class Database {
 
   public async updateProfile(id: Id, profile: Profile): Promise<Person> {
     const personRef = this.personRef(id);
-    await personRef.update({ "profile": profile });
+    await personRef.set({ "profile": profile }, { merge: true });
     const snapshot = await personRef.get();
     const data = snapshot.data();
     return personSchema.parse(data);

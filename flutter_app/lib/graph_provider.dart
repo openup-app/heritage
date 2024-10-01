@@ -87,7 +87,7 @@ class GraphNotifier extends StateNotifier<Graph> {
     if (!mounted) {
       return;
     }
-    result.fold(
+    return result.fold(
       debugPrint,
       (r) => _updatePeople([r]),
     );

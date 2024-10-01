@@ -131,6 +131,7 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
           Panels(
             key: Key(selectedPerson.id),
             person: selectedPerson,
+            myId: graph.focalPerson.id,
             isRelative: _isRelative,
             onAddConnectionPressed: (relationship) =>
                 _showAddConnectionModal(selectedPerson, relationship),
@@ -633,6 +634,8 @@ class _BasicProfileDisplayState extends ConsumerState<BasicProfileDisplay> {
           const SizedBox(height: 4),
           TextFormField(
             controller: _nameController,
+            textCapitalization: TextCapitalization.words,
+            textInputAction: TextInputAction.next,
           ),
           const SizedBox(height: 16),
           widget.isRootCreation

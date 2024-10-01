@@ -14,6 +14,7 @@ import 'package:heritage/util.dart';
 
 class Panels extends ConsumerStatefulWidget {
   final Person person;
+  final String myId;
   final bool isRelative;
   final void Function(Relationship relationship) onAddConnectionPressed;
   final void Function(String name, Gender gender) onUpdate;
@@ -23,6 +24,7 @@ class Panels extends ConsumerStatefulWidget {
   const Panels({
     super.key,
     required this.person,
+    required this.myId,
     required this.isRelative,
     required this.onAddConnectionPressed,
     required this.onUpdate,
@@ -39,10 +41,9 @@ class _PanelsState extends ConsumerState<Panels> {
 
   @override
   Widget build(BuildContext context) {
-    final focalPerson = ref.read(graphProvider).focalPerson;
     final person = widget.person;
-    final isMe = focalPerson.id == person.id;
-    final isOwnedByMe = person.ownedBy == person.id;
+    final isMe = person.id == widget.myId;
+    final isOwnedByMe = isMe || person.ownedBy == widget.myId;
     final layout = Layout.of(context);
     final small = layout == LayoutType.small;
 
@@ -62,7 +63,7 @@ class _PanelsState extends ConsumerState<Panels> {
         id: person.id,
         profile: person.profile,
         isMe: isMe,
-        isEditable: isMe || isOwnedByMe,
+        isEditable: isOwnedByMe,
         hasDifferentOwner: person.ownedBy != person.id,
         padding: small ? const EdgeInsets.all(16) : const EdgeInsets.all(24),
         header: !small
@@ -355,7 +356,6 @@ class _ProfileEditorState extends ConsumerState<_ProfileDisplay> {
               ),
             ),
           ),
-
           const SizedBox(height: 24),
           if (!widget.isMe) ...[
             FilledButton(
@@ -370,56 +370,62 @@ class _ProfileEditorState extends ConsumerState<_ProfileDisplay> {
           ],
           TextFormField(
             controller: _nameController,
-            onChanged: ref.read(profileUpdateProvider.notifier).name,
             enabled: widget.isEditable,
+            onChanged: ref.read(profileUpdateProvider.notifier).name,
+            textCapitalization: TextCapitalization.words,
+            textInputAction: TextInputAction.next,
             decoration: const InputDecoration(
               label: Text('Name'),
             ),
           ),
           const SizedBox(height: 24),
-          // TextFormField(
-          //   controller: _birthdayController,
-          //   keyboardType: TextInputType.number,
-          //   inputFormatters: [DateTextFormatter()],
-          //   onChanged: ref.read(profileUpdateProvider.notifier).birthday,
-          //   decoration: InputDecoration(
-          //     label: const Text('Date of birth'),
-          //     hintText: getFormattedDatePattern().formatted,
-          //   ),
-          // ),
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               Expanded(
-                child: InputDatePickerFormField(
-                  initialDate: ref.watch(profileUpdateProvider).birthday,
-                  firstDate: DateTime(1500, 0, 0),
-                  lastDate: DateTime.now(),
-                  onDateSubmitted: (date) {},
-                  fieldLabelText: 'Date of birth',
+                child: TextFormField(
+                  controller: _birthdayController,
+                  enabled: widget.isEditable,
+                  keyboardType: TextInputType.number,
+                  textInputAction: TextInputAction.next,
+                  inputFormatters: [DateTextFormatter()],
+                  onChanged: ref.read(profileUpdateProvider.notifier).birthday,
+                  decoration: InputDecoration(
+                    label: const Text('Date of birth'),
+                    hintText: getFormattedDatePattern().formatted,
+                  ),
                 ),
               ),
-              IconButton(
-                onPressed: () async {
-                  final date = await showDatePicker(
-                    context: context,
-                    firstDate: DateTime(1500),
-                    lastDate: DateTime.now(),
-                  );
-                  if (!mounted || date == null) {
-                    return;
-                  }
-                  ref.read(profileUpdateProvider.notifier).birthdayObject(date);
-                },
-                icon: const Icon(Icons.calendar_month),
-              ),
+              if (widget.isEditable)
+                IconButton(
+                  onPressed: () async {
+                    final date = await showDatePicker(
+                      context: context,
+                      firstDate: DateTime(1500),
+                      lastDate: DateTime.now(),
+                      initialDate: ref.watch(profileUpdateProvider
+                          .select((p) => p.birthday ?? DateTime.now())),
+                    );
+                    if (!mounted || date == null) {
+                      return;
+                    }
+                    ref
+                        .read(profileUpdateProvider.notifier)
+                        .birthdayObject(date);
+                  },
+                  icon: const Icon(Icons.calendar_month),
+                ),
             ],
           ),
-          if (widget.hasDifferentOwner) ...[
+          if (widget.hasDifferentOwner ||
+              ref.watch(
+                  profileUpdateProvider.select((s) => s.deathday != null))) ...[
             const SizedBox(height: 24),
             TextFormField(
               controller: _deathdayController,
+              enabled: widget.isEditable,
               keyboardType: TextInputType.number,
+              textInputAction: TextInputAction.next,
               inputFormatters: [DateTextFormatter()],
               onChanged: ref.read(profileUpdateProvider.notifier).deathday,
               decoration: InputDecoration(
@@ -431,6 +437,9 @@ class _ProfileEditorState extends ConsumerState<_ProfileDisplay> {
           const SizedBox(height: 24),
           TextFormField(
             controller: _birthplaceController,
+            enabled: widget.isEditable,
+            textCapitalization: TextCapitalization.words,
+            textInputAction: TextInputAction.next,
             onChanged: ref.read(profileUpdateProvider.notifier).birthplace,
             decoration: const InputDecoration(
               label: Text('Place of birth'),
@@ -449,9 +458,11 @@ class _ProfileEditorState extends ConsumerState<_ProfileDisplay> {
                         ? null
                         : Colors.grey,
                   ),
-                  onPressed: () => ref
-                      .read(profileUpdateProvider.notifier)
-                      .gender(Gender.male),
+                  onPressed: !widget.isEditable
+                      ? null
+                      : () => ref
+                          .read(profileUpdateProvider.notifier)
+                          .gender(Gender.male),
                   child: const Text('Male'),
                 ),
               ),
@@ -465,34 +476,38 @@ class _ProfileEditorState extends ConsumerState<_ProfileDisplay> {
                         ? null
                         : Colors.grey,
                   ),
-                  onPressed: () => ref
-                      .read(profileUpdateProvider.notifier)
-                      .gender(Gender.female),
+                  onPressed: !widget.isEditable
+                      ? null
+                      : () => ref
+                          .read(profileUpdateProvider.notifier)
+                          .gender(Gender.female),
                   child: const Text('Female'),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 24),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(),
-            style: FilledButton.styleFrom(
-              fixedSize: const Size.fromHeight(48),
+          if (widget.isEditable) ...[
+            const SizedBox(height: 24),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(),
+              style: FilledButton.styleFrom(
+                fixedSize: const Size.fromHeight(48),
+              ),
+              child: const Text('Delete profile information from the tree'),
             ),
-            child: const Text('Delete my information from the tree'),
-          ),
-          const SizedBox(height: 24),
-          FilledButton(
-            onPressed: _submitting ? null : _submit,
-            style: FilledButton.styleFrom(
-              fixedSize: const Size.fromHeight(73),
+            const SizedBox(height: 24),
+            FilledButton(
+              onPressed: _submitting ? null : _submit,
+              style: FilledButton.styleFrom(
+                fixedSize: const Size.fromHeight(73),
+              ),
+              child: _submitting
+                  ? const Center(
+                      child: CircularProgressIndicator(),
+                    )
+                  : const Text('Save'),
             ),
-            child: _submitting
-                ? const Center(
-                    child: CircularProgressIndicator(),
-                  )
-                : const Text('Save'),
-          ),
+          ],
           SizedBox(height: widget.padding.bottom),
           SizedBox(
             height: MediaQuery.of(context).padding.bottom,
