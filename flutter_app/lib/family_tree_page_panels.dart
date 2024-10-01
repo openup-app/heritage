@@ -6,6 +6,7 @@ import 'package:heritage/date.dart';
 import 'package:heritage/family_tree_page.dart';
 import 'package:heritage/file_picker.dart';
 import 'package:heritage/graph_provider.dart';
+import 'package:heritage/graph_view.dart';
 import 'package:heritage/image_croper.dart';
 import 'package:heritage/layout.dart';
 import 'package:heritage/profile_display.dart';
@@ -14,8 +15,8 @@ import 'package:heritage/util.dart';
 
 class Panels extends ConsumerStatefulWidget {
   final Person person;
+  final Relatedness relatedness;
   final String myId;
-  final bool isRelative;
   final void Function(Relationship relationship) onAddConnectionPressed;
   final void Function(String name, Gender gender) onUpdate;
   final VoidCallback onViewPerspective;
@@ -24,8 +25,8 @@ class Panels extends ConsumerStatefulWidget {
   const Panels({
     super.key,
     required this.person,
+    required this.relatedness,
     required this.myId,
-    required this.isRelative,
     required this.onAddConnectionPressed,
     required this.onUpdate,
     required this.onViewPerspective,
@@ -47,6 +48,14 @@ class _PanelsState extends ConsumerState<Panels> {
     final layout = Layout.of(context);
     final small = layout == LayoutType.small;
 
+    final addConnectionButtons = AddConnectionButtons(
+      enabled: widget.relatedness.isBloodRelative,
+      canAddParent: person.parents.isEmpty,
+      canAddChildren: widget.relatedness.isAncestor ||
+          !widget.relatedness.isGrandparentLevelOrHigher,
+      onAddConnectionPressed: widget.onAddConnectionPressed,
+    );
+
     final Widget child;
     final ownershipClaimed = person.ownedBy != null;
     if (!ownershipClaimed) {
@@ -66,13 +75,7 @@ class _PanelsState extends ConsumerState<Panels> {
         isEditable: isOwnedByMe,
         hasDifferentOwner: person.ownedBy != person.id,
         padding: small ? const EdgeInsets.all(16) : const EdgeInsets.all(24),
-        header: !small
-            ? null
-            : AddConnectionButtons(
-                enabled: widget.isRelative,
-                canAddParent: person.parents.isEmpty,
-                onAddConnectionPressed: widget.onAddConnectionPressed,
-              ),
+        header: !small ? null : addConnectionButtons,
         onViewPerspective: widget.onViewPerspective,
         onClose: widget.onClose,
       );
@@ -170,11 +173,7 @@ class _PanelsState extends ConsumerState<Panels> {
                     ),
                   ],
                 ),
-                child: AddConnectionButtons(
-                  enabled: widget.isRelative,
-                  canAddParent: person.parents.isEmpty,
-                  onAddConnectionPressed: widget.onAddConnectionPressed,
-                ),
+                child: addConnectionButtons,
               ),
             ),
           ),

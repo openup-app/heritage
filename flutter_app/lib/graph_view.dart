@@ -9,15 +9,6 @@ import 'package:heritage/graph.dart';
 
 part 'graph_view.freezed.dart';
 
-@freezed
-class Spacing with _$Spacing {
-  const factory Spacing({
-    required double level,
-    required double sibling,
-    required double spouse,
-  }) = _Spacing;
-}
-
 class GraphView<T extends GraphNode> extends StatefulWidget {
   final Id focalNodeId;
   final List<(T, Key)> nodeKeys;
@@ -25,11 +16,8 @@ class GraphView<T extends GraphNode> extends StatefulWidget {
   final Widget Function(
       BuildContext context, Map<Id, LinkedNode<T>> nodes, Widget child) builder;
   final Widget Function(
-    BuildContext context,
-    T data,
-    Key key,
-    bool isRelative,
-  ) nodeBuilder;
+          BuildContext context, T data, Key key, Relatedness relatedness)
+      nodeBuilder;
 
   const GraphView({
     super.key,
@@ -100,7 +88,15 @@ class _GraphViewState<T extends GraphNode> extends State<GraphView<T>> {
                       }
                       return RepaintBoundary(
                         child: widget.nodeBuilder(
-                            context, node.data, key, node.isRelative),
+                          context,
+                          node.data,
+                          key,
+                          Relatedness(
+                            isBloodRelative: node.isBloodRelative,
+                            isAncestor: node.isAncestor,
+                            relativeLevel: node.relativeLevel,
+                          ),
+                        ),
                       );
                     },
                   ),
@@ -123,7 +119,15 @@ class _GraphViewState<T extends GraphNode> extends State<GraphView<T>> {
                     }
                     return RepaintBoundary(
                       child: widget.nodeBuilder(
-                          context, node.data, key, node.isRelative),
+                        context,
+                        node.data,
+                        key,
+                        Relatedness(
+                          isBloodRelative: node.isBloodRelative,
+                          isAncestor: node.isAncestor,
+                          relativeLevel: node.relativeLevel,
+                        ),
+                      ),
                     );
                   },
                 ),
@@ -145,6 +149,7 @@ class _GraphViewState<T extends GraphNode> extends State<GraphView<T>> {
     _organizeSides(focalNode);
     final (focalCouple, idToCouple) = createCoupleTree(focalNode);
     markRelatives(focalNode);
+    markLevelsAndAncestors(focalNode);
 
     // Maintains the child ordering from `_organizeSides`,
     final downRoots = focalCouple.parents
@@ -249,11 +254,11 @@ class SimpleTree<T extends GraphNode> extends StatelessWidget {
             Column(
               mainAxisSize: MainAxisSize.min,
               mainAxisAlignment: MainAxisAlignment.end,
-              crossAxisAlignment: (parent.node.children.first.isRelative &&
+              crossAxisAlignment: (parent.node.children.first.isBloodRelative &&
                           parent.parents.isNotEmpty) ||
                       parent.node.children.first.shouldBeRightChild
                   ? CrossAxisAlignment.end
-                  : (parent.node.children.last.isRelative &&
+                  : (parent.node.children.last.isBloodRelative &&
                               parent.parents.isNotEmpty) ||
                           !parent.node.children.first.shouldBeRightChild
                       ? CrossAxisAlignment.start
@@ -288,7 +293,7 @@ class SimpleTree<T extends GraphNode> extends StatelessWidget {
                               node: singleSibling,
                               // Checks if there is any other branch that can lead to the spouse
                               spouse: spouse != null &&
-                                      (!spouse.isRelative ||
+                                      (!spouse.isBloodRelative ||
                                           spouse.parents.isEmpty)
                                   ? spouse
                                   : null,
@@ -364,7 +369,7 @@ class _NodeAndSpouse<T extends GraphNode> extends StatelessWidget {
   Widget build(BuildContext context) {
     final spouse = this.spouse;
     final spouseOnLeft =
-        spouse != null && (!spouse.isRelative ? true : spouse < node);
+        spouse != null && (!spouse.isBloodRelative ? true : spouse < node);
     final isLeftAndHasExternalSpouse =
         spouse == null && node.spouse != null && node < node.spouse!;
     // Only left side adds spacing between the couple
@@ -668,4 +673,26 @@ class _TreeRootIdWidget extends ParentDataWidget<_TreeParentData> {
 
   @override
   Type get debugTypicalAncestorWidgetClass => _MultiTreeWidget;
+}
+
+@freezed
+class Spacing with _$Spacing {
+  const factory Spacing({
+    required double level,
+    required double sibling,
+    required double spouse,
+  }) = _Spacing;
+}
+
+@freezed
+class Relatedness with _$Relatedness {
+  const factory Relatedness({
+    required bool isBloodRelative,
+    required bool isAncestor,
+    required int relativeLevel,
+  }) = _Relatedness;
+
+  const Relatedness._();
+
+  bool get isGrandparentLevelOrHigher => relativeLevel <= -2;
 }

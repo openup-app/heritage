@@ -20,7 +20,9 @@ class LinkedNode<T extends GraphNode> {
   final List<LinkedNode<T>> spouses;
   final List<LinkedNode<T>> children;
   final T data;
-  bool isRelative;
+  bool isBloodRelative;
+  bool isAncestor;
+  int relativeLevel;
   bool shouldBeRightChild;
 
   LinkedNode({
@@ -29,7 +31,9 @@ class LinkedNode<T extends GraphNode> {
     required this.spouses,
     required this.children,
     required this.data,
-    this.isRelative = false,
+    this.isBloodRelative = false,
+    this.isAncestor = false,
+    this.relativeLevel = 0,
     this.shouldBeRightChild = true,
   });
 
@@ -122,6 +126,26 @@ LinkedNode<T> _emptyLinkedNode<T extends GraphNode>(String id, T data) {
   );
 }
 
+void markLevelsAndAncestors<T extends GraphNode>(LinkedNode<T> focalNode) {
+  final fringe = Queue<(LinkedNode<T>, int, bool)>();
+  final visited = <Id>{};
+  fringe.add((focalNode, 0, false));
+  while (fringe.isNotEmpty) {
+    final (node, relativeLevel, isAncestor) = fringe.removeFirst();
+    if (visited.contains(node.id)) {
+      continue;
+    }
+    node.relativeLevel = relativeLevel;
+    node.isAncestor = isAncestor;
+    visited.add(node.id);
+
+    final parentIsAncestor = node.id == focalNode.id ? true : isAncestor;
+    fringe.addAll(
+        node.parents.map((e) => (e, relativeLevel - 1, parentIsAncestor)));
+    fringe.addAll(node.children.map((e) => (e, relativeLevel + 1, false)));
+  }
+}
+
 void markRelatives<T extends GraphNode>(LinkedNode<T> focalNode) {
   final rootNodes =
       findRootsIncludingSpousesWithDistance(focalNode).map((e) => e.$1);
@@ -136,7 +160,7 @@ void markRelatives<T extends GraphNode>(LinkedNode<T> focalNode) {
       continue;
     }
     visited.add(node.id);
-    node.isRelative = true;
+    node.isBloodRelative = true;
     fringe.addAll(node.children);
   }
 }

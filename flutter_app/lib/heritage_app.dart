@@ -158,7 +158,7 @@ class _RouterBuilderState extends State<_RouterBuilder> {
                     spouse: 2,
                   ),
                   builder: (context, nodes, child) => child,
-                  nodeBuilder: (context, data, key, isRelative) {
+                  nodeBuilder: (context, data, key, relatedness) {
                     return Container(
                       key: key,
                       width: 60,
@@ -166,7 +166,7 @@ class _RouterBuilderState extends State<_RouterBuilder> {
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: isRelative
+                        color: relatedness.isBloodRelative
                             ? Colors.blue.shade300
                             : Colors.blue.shade100,
                       ),

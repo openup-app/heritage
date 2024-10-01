@@ -180,7 +180,7 @@ export class Database {
     const visited = new Set<Id>();
     const spouses = new Set<Id>();
     const bloodRelatives = new Set<Id>();
-    const fringe: { id: Id; relativeLevel: number, shouldTraverseChildren: boolean }[] = [{ id, relativeLevel: 0, shouldTraverseChildren: true, }];
+    const fringe: { id: Id; relativeLevel: number, shouldTraverse: boolean }[] = [{ id, relativeLevel: 0, shouldTraverse: true, }];
     const output: Person[] = [];
 
     bloodRelatives.add(id);
@@ -189,7 +189,7 @@ export class Database {
       const currentFringe = fringe.splice(0, fringe.length);
       const fringeIds = currentFringe.map(f => f.id);
       const fringeIdToLevel = new Map<Id, number>(currentFringe.map(f => [f.id, f.relativeLevel]));
-      const fringeIdToShouldTraverseChildren = new Map<Id, boolean>(currentFringe.map(f => [f.id, f.shouldTraverseChildren]));
+      const fringeIdToShouldTraverse = new Map<Id, boolean>(currentFringe.map(f => [f.id, f.shouldTraverse]));
       const personRefs = fringeIds.map(id => this.personRef(id));
       const snapshots = await this.firestore.getAll(...personRefs);
 
@@ -201,7 +201,7 @@ export class Database {
         const person = personSchema.parse(snapshot.data());
         const id = snapshot.id;
         const relativeLevel = fringeIdToLevel.get(id)!;
-        const shouldTraverseChildren = fringeIdToShouldTraverseChildren.get(id)!;
+        const shouldTraverse = fringeIdToShouldTraverse.get(id)!;
 
         if (visited.has(id)) {
           continue;
@@ -216,21 +216,25 @@ export class Database {
         }
 
         // Next
-        for (const id of person.parents) {
-          if (!visited.has(id)) {
-            fringe.push({
-              id: id,
-              relativeLevel: relativeLevel - 1,
-              shouldTraverseChildren: !shouldTraverseChildren ? false : (relativeLevel - 1) >= options.traverseSilbingsChildrenAfterRelativeLevel
-            });
+        if (shouldTraverse) {
+          for (const id of person.parents) {
+            if (!visited.has(id)) {
+              fringe.push({
+                id: id,
+                relativeLevel: relativeLevel - 1,
+                shouldTraverse: true,
+              });
+            }
           }
-        }
-        person.parents.forEach(r => bloodRelatives.add(r));
+          person.parents.forEach(r => bloodRelatives.add(r));
 
-        if (shouldTraverseChildren) {
           for (const id of person.children) {
             if (!visited.has(id)) {
-              fringe.push({ id: id, relativeLevel: relativeLevel + 1, shouldTraverseChildren: shouldTraverseChildren });
+              fringe.push({
+                id: id,
+                relativeLevel: relativeLevel + 1,
+                shouldTraverse: relativeLevel >= options.traverseSilbingsChildrenAfterRelativeLevel
+              });
             }
           }
           person.children.forEach(r => bloodRelatives.add(r));
@@ -238,7 +242,7 @@ export class Database {
 
         for (const spouseId of person.spouses) {
           if (!visited.has(spouseId)) {
-            fringe.push({ id: spouseId, relativeLevel: relativeLevel, shouldTraverseChildren: shouldTraverseChildren });
+            fringe.push({ id: spouseId, relativeLevel: relativeLevel, shouldTraverse: false });
           }
         }
 

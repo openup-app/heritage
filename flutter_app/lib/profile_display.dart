@@ -5,12 +5,14 @@ import 'package:heritage/heritage_app.dart';
 class AddConnectionButtons extends StatelessWidget {
   final bool enabled;
   final bool canAddParent;
+  final bool canAddChildren;
   final void Function(Relationship relationship) onAddConnectionPressed;
 
   const AddConnectionButtons({
     super.key,
     required this.enabled,
     required this.canAddParent,
+    required this.canAddChildren,
     required this.onAddConnectionPressed,
   });
 
@@ -42,7 +44,7 @@ class AddConnectionButtons extends StatelessWidget {
           label: const Text('Sibling'),
         ),
         _AddConnectionButton(
-          onPressed: !enabled
+          onPressed: !(enabled && canAddChildren)
               ? null
               : () => onAddConnectionPressed(Relationship.child),
           icon: const Icon(Icons.person_add),

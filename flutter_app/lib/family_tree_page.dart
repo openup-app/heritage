@@ -82,11 +82,12 @@ class FamilyTreePage extends ConsumerStatefulWidget {
 class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
   final _familyTreeViewKey = GlobalKey<FamilyTreeViewState>();
   Person? _selectedPerson;
-  bool _isRelative = false;
+  Relatedness? _relatedness;
 
   @override
   Widget build(BuildContext context) {
     final selectedPerson = _selectedPerson;
+    final relatedness = _relatedness;
     final graph = ref.watch(graphProvider);
     return Stack(
       fit: StackFit.expand,
@@ -127,16 +128,16 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
             ),
           ),
         ),
-        if (selectedPerson != null)
+        if (selectedPerson != null && relatedness != null)
           Panels(
             key: Key(selectedPerson.id),
             person: selectedPerson,
+            relatedness: relatedness,
             myId: graph.focalPerson.id,
-            isRelative: _isRelative,
             onAddConnectionPressed: (relationship) =>
                 _showAddConnectionModal(selectedPerson, relationship),
             onUpdate: (name, gender) =>
-                _onUpdate(_selectedPerson!.id, name, gender),
+                _onUpdate(selectedPerson.id, name, gender),
             onViewPerspective: () {
               final pathParameters = {
                 'focalPersonId': graph.focalPerson.id,
@@ -154,7 +155,12 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
                 );
               }
             },
-            onClose: () => setState(() => _selectedPerson = null),
+            onClose: () {
+              setState(() {
+                _selectedPerson = null;
+                _relatedness = null;
+              });
+            },
           ),
       ],
     );
@@ -257,15 +263,21 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
     }
   }
 
-  void _onProfileSelected(Person? person, bool isRelative) {
-    setState(() => _isRelative = isRelative);
+  void _onProfileSelected(Person? person, Relatedness? relatedness) {
+    setState(() => _relatedness = relatedness);
     if (person == null) {
-      setState(() => _selectedPerson = null);
+      setState(() {
+        _selectedPerson = null;
+        _relatedness = null;
+      });
       return;
     }
 
     _familyTreeViewKey.currentState?.centerOnPersonWithId(person.id);
-    setState(() => _selectedPerson = person);
+    setState(() {
+      _selectedPerson = person;
+      _relatedness = relatedness;
+    });
   }
 }
 
@@ -273,7 +285,8 @@ class FamilyTreeView extends ConsumerStatefulWidget {
   final Person focalPerson;
   final List<Person> people;
   final Person? selectedPerson;
-  final void Function(Person? person, bool isRelative) onProfileSelected;
+  final void Function(Person? person, Relatedness? relatedness)
+      onProfileSelected;
   final void Function(Person person, Relationship relationship)
       onAddConnectionPressed;
   final void Function(List<Id> ids) onFetchConnections;
@@ -378,11 +391,11 @@ class FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
                     },
                   );
                 },
-                nodeBuilder: (context, data, key, isRelative) {
+                nodeBuilder: (context, data, key, relatedness) {
                   return HoverableNodeProfile(
                     key: key,
                     person: data,
-                    onTap: () => widget.onProfileSelected(data, isRelative),
+                    onTap: () => widget.onProfileSelected(data, relatedness),
                   );
                 },
               ),
@@ -908,9 +921,9 @@ class _EdgePainter extends CustomPainter {
       if (spouse == null) {
         return false;
       }
-      return node.isRelative && spouse.isRelative
+      return node.isBloodRelative && spouse.isBloodRelative
           ? node < spouse
-          : !node.isRelative;
+          : !node.isBloodRelative;
     });
     for (final (fromNode, fromRect) in leftNodeInCouples) {
       final path = Path();
