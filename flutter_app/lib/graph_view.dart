@@ -529,36 +529,28 @@ class _MultiTreeRenderBox<T extends GraphNode> extends RenderBox
     double? upLeft;
     double? upRight;
     if (up1 != null) {
-      final centerAboveLeft = !upShouldShiftToPivot
-          ? Offset.zero
-          : Offset(up1Size.width / 2, 0) +
-              Offset(-(leftWidth + mainRootSize.width), 0) / 2 +
-              Offset(mainRootSize.width / 2, 0);
+      final horizontalOffset = !upShouldShiftToPivot
+          ? 0.0
+          : (leftWidth + mainRootSize.width) / 2 - up1Size.width / 2;
+      final verticalOffset = upHeight - up1Size.height;
       final up1Child = childMap[up1.id];
       if (up1Child != null) {
         final childParentData = (up1Child.parentData as _TreeParentData);
-        childParentData.offset = upRootsHorizontalShift +
-            Offset(0, upHeight) +
-            Offset(0, -up1Size.height) +
-            centerAboveLeft;
+        childParentData.offset = Offset(horizontalOffset, verticalOffset);
         upLeft = childParentData.offset.dx;
         upRight = up2 == null ? upLeft + up1Size.width : null;
       }
     }
 
     if (up2 != null) {
-      final centerAboveRight = !upShouldShiftToPivot
-          ? Offset.zero
-          : Offset(-up2Size.width / 2, 0) +
-              Offset(rightWidth + mainRootSize.width / 2, 0) / 2;
+      final horizontalOffset = !upShouldShiftToPivot
+          ? up1Size.width
+          : (rightWidth + mainRootSize.width) / 2 + up2Size.width / 2;
+      final verticalOffset = upHeight - up2Size.height;
       final up2child = childMap[up2.id];
       if (up2child != null) {
         final childParentData = (up2child.parentData as _TreeParentData);
-        childParentData.offset = upRootsHorizontalShift +
-            Offset(up1Size.width, 0) +
-            Offset(0, upHeight) +
-            Offset(0, -up2Size.height) +
-            centerAboveRight;
+        childParentData.offset = Offset(horizontalOffset, verticalOffset);
         upLeft = up1 == null ? childParentData.offset.dx : upLeft;
         upRight = childParentData.offset.dx + up2Size.width;
       }
