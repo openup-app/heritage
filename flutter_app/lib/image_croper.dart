@@ -88,6 +88,8 @@ class ImageCropper extends StatefulWidget {
 class _ImageCropperState extends State<ImageCropper> {
   final _controller = TransformationController();
   final _interactiveViewerKey = GlobalKey();
+
+  Size _windowSize = Size.zero;
   bool _hasSize = false;
   Size _viewportSize = Size.zero;
   Size _contentSize = Size.zero;
@@ -95,21 +97,32 @@ class _ImageCropperState extends State<ImageCropper> {
   @override
   void initState() {
     super.initState();
+    _controller.addListener(_onTransform);
     WidgetsBinding.instance.endOfFrame.then((_) {
       if (mounted) {
-        _computeSizes();
-        _controller.addListener(_onTransform);
-
-        // Initial value
-        _onTransform();
+        _setInitialSizesAndTransform();
+        _hasSize = true;
       }
     });
   }
 
-  void _computeSizes() {
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final windowSize = MediaQuery.of(context).size;
+    if (windowSize != _windowSize && _hasSize) {
+      WidgetsBinding.instance.endOfFrame.then((_) {
+        _windowSize = windowSize;
+        // Reset crop
+        _setInitialSizesAndTransform();
+      });
+    }
+  }
+
+  void _setInitialSizesAndTransform() {
     final viewportSize = locateWidget(_interactiveViewerKey)?.size ?? Size.zero;
 
-    // Content scaled to cover viewport, one dimension is larger than FittedSizes.destination
+    // Content covering viewport (usually larger than FittedSizes.destination)
     final imageAspectRatio = widget.imageSize.width / widget.imageSize.height;
     final viewportAspectRatio = viewportSize.width / viewportSize.height;
     final double scale;
@@ -121,14 +134,12 @@ class _ImageCropperState extends State<ImageCropper> {
     final contentSize = widget.imageSize * scale;
     final viewportRect =
         Alignment.center.inscribe(contentSize, Offset.zero & viewportSize);
+    final transform = Matrix4.identity()
+      ..translate(viewportRect.left, viewportRect.top, 0.0);
 
-    setState(() {
-      _contentSize = contentSize;
-      _viewportSize = viewportSize;
-      _hasSize = true;
-      _controller.value = Matrix4.identity()
-        ..translate(viewportRect.left, viewportRect.top, 0.0);
-    });
+    _viewportSize = viewportSize;
+    _contentSize = contentSize;
+    _controller.value = transform;
   }
 
   void _onTransform() {
