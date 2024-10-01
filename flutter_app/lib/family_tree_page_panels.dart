@@ -503,11 +503,7 @@ class _ProfileEditorState extends ConsumerState<_ProfileDisplay> {
   }
 
   Future<void> _pickPhotoWithSource(BuildContext context) async {
-    final source = await showPhotoSourceDialog(context);
-    if (!context.mounted || source == null) {
-      return;
-    }
-    await showBlockingModal(context, _pickPhoto(source: source));
+    await showBlockingModal(context, _pickPhoto(source: PhotoSource.gallery));
   }
 
   Future<void> _pickPhoto({required PhotoSource source}) async {
