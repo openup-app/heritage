@@ -58,6 +58,9 @@ class _GraphViewState<T extends GraphNode> extends State<GraphView<T>> {
   Widget build(BuildContext context) {
     // At most two upRoots, the couple grandparent on each side
     final upRoots = _focalCouple.parents.expand((e) => e.parents).toList();
+    final parent = _focalCouple.parents.firstOrNull;
+    final singleUpRootIsRight =
+        upRoots.length == 1 && upRoots.first.id == parent?.parents.last.id;
     return widget.builder(
       context,
       _linkedNodes,
@@ -65,8 +68,16 @@ class _GraphViewState<T extends GraphNode> extends State<GraphView<T>> {
         parentFocalId: _focalCouple.parents.isEmpty
             ? _focalCouple.node.id
             : _focalCouple.parents.first.id,
-        leftGrandparent: upRoots.firstOrNull,
-        rightGrandparent: upRoots.length > 1 ? upRoots[1] : null,
+        leftGrandparent: upRoots.length > 1
+            ? upRoots.first
+            : singleUpRootIsRight
+                ? null
+                : upRoots.firstOrNull,
+        rightGrandparent: upRoots.length > 1
+            ? upRoots[1]
+            : singleUpRootIsRight
+                ? upRoots.firstOrNull
+                : null,
         parentLevelRoots: _downRoots,
         children: [
           for (final node in upRoots)
@@ -453,122 +464,118 @@ class _MultiTreeRenderBox<T extends GraphNode> extends RenderBox
 
   @override
   void performLayout() {
-    final constraints = this.constraints.loosen();
+    final idToRenderBox = _sizeAllChildren();
+    final (downRootLeftHalfWidth, downRootRightHalfWidth) =
+        _getDownRootBilateralWidths(idToRenderBox, downRoots);
 
-    // Layout all children
-    final childMap = <Id, RenderBox>{};
+    // Up roots
+    final up1Size = leftUpRoot == null
+        ? Size.zero
+        : idToRenderBox[leftUpRoot!.id]?.size ?? Size.zero;
+    final up2Size = rightUpRoot == null
+        ? Size.zero
+        : idToRenderBox[rightUpRoot!.id]?.size ?? Size.zero;
+    final upRootsHeight = max(up1Size.height, up2Size.height);
+    final upPivot = up1Size.width;
+    final downPivot1 = downRootLeftHalfWidth;
+    final up1WiderThanDownPivot = upPivot > downPivot1;
+
+    // Position the down roots
+    final downHorizontalOffset =
+        up1WiderThanDownPivot ? up1Size.width - downRootLeftHalfWidth : 0.0;
+    Offset downRootOffset = Offset(downHorizontalOffset, upRootsHeight);
+    for (var couple in downRoots) {
+      final id = couple.id;
+      final child = idToRenderBox[id];
+      if (child != null) {
+        (child.parentData as _TreeParentData).offset = downRootOffset;
+        downRootOffset += Offset(child.size.width, 0);
+      }
+    }
+
+    // Position the up roots
+    double upStartHorizontalOffset =
+        leftUpRoot == null && rightUpRoot != null ? downRootLeftHalfWidth : 0;
+    for (final couple in [leftUpRoot, rightUpRoot].whereNotNull()) {
+      final id = couple.id;
+      final isOnLeft = couple == leftUpRoot;
+      final child = idToRenderBox[id];
+      if (child != null) {
+        final bottomWidth =
+            isOnLeft ? downRootLeftHalfWidth : downRootRightHalfWidth;
+        final isWiderThanBottomHalf = child.size.width > bottomWidth;
+        final horizontalOffset = upStartHorizontalOffset +
+            (isWiderThanBottomHalf
+                ? 0.0
+                : (bottomWidth / 2 - child.size.width / 2));
+        final verticalOffset = upRootsHeight - child.size.height;
+        final childParentData = (child.parentData as _TreeParentData);
+        childParentData.offset = Offset(horizontalOffset, verticalOffset);
+        upStartHorizontalOffset += isWiderThanBottomHalf
+            ? horizontalOffset + child.size.width
+            : bottomWidth;
+      }
+    }
+
+    size = _sizeToShrinkWrapAllChildren();
+  }
+
+  Map<Id, RenderBox> _sizeAllChildren() {
+    final constraints = this.constraints.loosen();
+    final idToRenderBox = <Id, RenderBox>{};
     RenderBox? child = firstChild;
     while (child != null) {
       final childParentData = child.parentData as _TreeParentData;
       child.layout(constraints, parentUsesSize: true);
-      childMap[childParentData.id] = child;
+      idToRenderBox[childParentData.id] = child;
       assert(child.parentData == childParentData);
       child = childParentData.nextSibling;
     }
+    return idToRenderBox;
+  }
 
-    // Calculate position of the focal down root relative to first down root
-    Offset relativeFocalDownRootOffset = Offset.zero;
-    int mainRootIndex = 0;
-    Size mainRootSize = Size.zero;
-    final downRootSizes = <Id, Size>{};
-    for (var couple in downRoots) {
-      final child = childMap[couple.id];
-      if (child != null) {
-        downRootSizes[couple.id] = child.size;
+  (double downRootLeftHalfWidth, double downRootRightHalfWidth)
+      _getDownRootBilateralWidths(
+          Map<Id, RenderBox> idToRenderBox, List<Couple<T>> downRoots) {
+    double leftWidth = 0;
+    double rightWidth = 0;
+    bool isOnLeft = true;
+    for (final id in downRoots.map((e) => e.id)) {
+      final renderBox = idToRenderBox[id];
+      if (renderBox == null) {
+        continue;
+      }
+      if (isOnLeft) {
+        if (id != focalDownRootId) {
+          leftWidth += renderBox.size.width;
+        } else {
+          isOnLeft = false;
+          leftWidth += renderBox.size.width / 2;
+          rightWidth += renderBox.size.width / 2;
+        }
+      } else {
+        rightWidth += renderBox.size.width;
       }
     }
-    for (var index = 0; index < downRoots.length; index++) {
-      final id = downRoots[index].id;
-      final downRootSize = downRootSizes[id] ?? Size.zero;
-      if (id == focalDownRootId) {
-        mainRootSize = downRootSize;
-        mainRootIndex = index;
-        break;
-      }
-      relativeFocalDownRootOffset += Offset(downRootSize.width, 0);
+    return (leftWidth, rightWidth);
+  }
+
+  Size _sizeToShrinkWrapAllChildren() {
+    var left = double.infinity;
+    var top = double.infinity;
+    var right = -double.infinity;
+    var bottom = -double.infinity;
+    var child = firstChild;
+    while (child != null) {
+      final childParentData = child.parentData as _TreeParentData;
+      final rect = childParentData.offset & child.size;
+      left = rect.left < left ? rect.left : left;
+      top = rect.top < top ? rect.top : top;
+      right = rect.right > right ? rect.right : right;
+      bottom = rect.bottom > bottom ? rect.bottom : bottom;
+      child = childParentData.nextSibling;
     }
-
-    // Up roots
-    final up1 = leftUpRoot;
-    final up2 = rightUpRoot;
-    final up1Size =
-        up1 == null ? Size.zero : childMap[up1.id]?.size ?? Size.zero;
-    final up2Size =
-        up2 == null ? Size.zero : childMap[up2.id]?.size ?? Size.zero;
-    final upHeight = max(up1Size.height, up2Size.height);
-    final upPivot = up1Size.width;
-    final downPivot = relativeFocalDownRootOffset.dx + mainRootSize.width / 2;
-    final upShouldShiftToPivot = upPivot < downPivot;
-    final downRootsHorizontalShift =
-        upShouldShiftToPivot ? Offset.zero : Offset(upPivot - downPivot, 0);
-    final upRootsHorizontalShift =
-        !upShouldShiftToPivot ? Offset.zero : Offset(downPivot - upPivot, 0);
-
-    // Position the parent roots
-    final downLeft = downRootsHorizontalShift.dx;
-    double downRight = downRootsHorizontalShift.dx;
-    Offset downRootOffset = downRootsHorizontalShift + Offset(0, upHeight);
-    for (var id in downRootSizes.keys) {
-      final child = childMap[id];
-      if (child != null) {
-        (child.parentData as _TreeParentData).offset = downRootOffset;
-        downRootOffset += Offset(child.size.width, 0);
-        downRight += child.size.width;
-      }
-    }
-
-    final sizeEntries = downRootSizes.entries.toList();
-    final leftWidth = sizeEntries
-        .take(max(0, mainRootIndex - 1))
-        .fold(0.0, (p, e) => p + e.value.width);
-    final rightWidth = sizeEntries
-        .skip(mainRootIndex + 1)
-        .fold(0.0, (p, e) => p + e.value.width);
-
-    // Position the grandparents
-    double? upLeft;
-    double? upRight;
-    if (up1 != null) {
-      final horizontalOffset = !upShouldShiftToPivot
-          ? 0.0
-          : (leftWidth + mainRootSize.width) / 2 - up1Size.width / 2;
-      final verticalOffset = upHeight - up1Size.height;
-      final up1Child = childMap[up1.id];
-      if (up1Child != null) {
-        final childParentData = (up1Child.parentData as _TreeParentData);
-        childParentData.offset = Offset(horizontalOffset, verticalOffset);
-        upLeft = childParentData.offset.dx;
-        upRight = up2 == null ? upLeft + up1Size.width : null;
-      }
-    }
-
-    if (up2 != null) {
-      final horizontalOffset = !upShouldShiftToPivot
-          ? up1Size.width
-          : (rightWidth + mainRootSize.width) / 2 + up2Size.width / 2;
-      final verticalOffset = upHeight - up2Size.height;
-      final up2child = childMap[up2.id];
-      if (up2child != null) {
-        final childParentData = (up2child.parentData as _TreeParentData);
-        childParentData.offset = Offset(horizontalOffset, verticalOffset);
-        upLeft = up1 == null ? childParentData.offset.dx : upLeft;
-        upRight = childParentData.offset.dx + up2Size.width;
-      }
-    }
-
-    final upSize = upLeft == null && upRight == null
-        ? Size.zero
-        : Size(upRight! - upLeft!, upHeight);
-    final downSize = Size(downRight - downLeft, mainRootSize.height);
-    // Size the parent
-    if (up1 == null && up2 == null) {
-      size = downSize;
-    } else {
-      size = Size(
-        max(upSize.width, downSize.width),
-        upSize.height + downSize.height,
-      );
-    }
+    return Size(right - left, bottom - top);
   }
 
   @override
