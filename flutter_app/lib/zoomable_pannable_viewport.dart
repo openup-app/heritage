@@ -4,13 +4,13 @@ import 'package:vector_math/vector_math_64.dart' hide Colors;
 
 class ZoomablePannableViewport extends StatefulWidget {
   final void Function(Matrix4 transform) onTransformed;
-  final void Function(List<GlobalKey> keys)? onWithinViewport;
+  final VoidCallback? onStartInteraction;
   final Widget child;
 
   const ZoomablePannableViewport({
     super.key,
     required this.onTransformed,
-    this.onWithinViewport,
+    this.onStartInteraction,
     required this.child,
   });
 
@@ -65,7 +65,10 @@ class ZoomablePannableViewportState extends State<ZoomablePannableViewport>
           constrained: false,
           maxScale: 1,
           minScale: 0.15,
-          onInteractionStart: (_) => _animationController.stop(),
+          onInteractionStart: (_) {
+            _animationController.stop();
+            widget.onStartInteraction?.call();
+          },
           boundaryMargin: EdgeInsets.symmetric(
             horizontal: windowSize.width / 2 / scale,
             vertical: windowSize.height / 2 / scale,

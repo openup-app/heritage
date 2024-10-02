@@ -366,40 +366,70 @@ class FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
       child: Overlay.wrap(
         child: Opacity(
           opacity: _ready ? 1.0 : 0.0,
-          child: _TiledBackground(
-            transformNotifier: _transformNotifier,
-            child: ZoomablePannableViewport(
-              key: _viewportKey,
-              onTransformed: (transform) =>
-                  _transformNotifier.value = transform,
-              child: GraphView<Person>(
-                key: _graphKey,
-                focalNodeId: widget.focalPerson.id,
-                nodeKeys: _nodeKeys,
-                spacing: spacing,
-                builder: (context, nodes, child) {
-                  return ValueListenableBuilder(
-                    valueListenable: _transformNotifier,
-                    builder: (context, value, _) {
-                      return _Edges(
-                        idToKey: _idToKey,
-                        idToNode: nodes,
-                        spacing: spacing,
-                        transform: value,
-                        child: child,
+          child: Stack(
+            children: [
+              _TiledBackground(
+                transformNotifier: _transformNotifier,
+                child: ZoomablePannableViewport(
+                  key: _viewportKey,
+                  onTransformed: (transform) =>
+                      _transformNotifier.value = transform,
+                  onStartInteraction: () {
+                    if (widget.selectedPerson != null) {
+                      widget.onProfileSelected(null, null);
+                    }
+                  },
+                  child: GraphView<Person>(
+                    key: _graphKey,
+                    focalNodeId: widget.focalPerson.id,
+                    nodeKeys: _nodeKeys,
+                    spacing: spacing,
+                    builder: (context, nodes, child) {
+                      return Stack(
+                        children: [
+                          ValueListenableBuilder(
+                            valueListenable: _transformNotifier,
+                            builder: (context, value, _) {
+                              return _Edges(
+                                idToKey: _idToKey,
+                                idToNode: nodes,
+                                spacing: spacing,
+                                transform: value,
+                                child: child,
+                              );
+                            },
+                          ),
+                        ],
                       );
                     },
-                  );
-                },
-                nodeBuilder: (context, data, key, relatedness) {
-                  return HoverableNodeProfile(
-                    key: key,
-                    person: data,
-                    onTap: () => widget.onProfileSelected(data, relatedness),
-                  );
-                },
+                    nodeBuilder: (context, data, key, relatedness) {
+                      final enabled = widget.selectedPerson == null ||
+                          widget.selectedPerson?.id == data.id;
+                      return HoverableNodeProfile(
+                        key: key,
+                        person: data,
+                        enabled: enabled,
+                        forceHover: widget.selectedPerson?.id == data.id,
+                        onTap: !enabled
+                            ? null
+                            : () => widget.onProfileSelected(data, relatedness),
+                      );
+                    },
+                  ),
+                ),
               ),
-            ),
+              Positioned.fill(
+                child: AnimatedOpacity(
+                  duration: const Duration(milliseconds: 250),
+                  opacity: widget.selectedPerson == null ? 0.0 : 1.0,
+                  child: const IgnorePointer(
+                    child: ColoredBox(
+                      color: Color.fromRGBO(0x00, 0x00, 0x00, 0.6),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -445,20 +475,26 @@ class FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
 
 class HoverableNodeProfile extends StatelessWidget {
   final Person person;
-  final VoidCallback onTap;
+  final bool enabled;
+  final bool forceHover;
+  final VoidCallback? onTap;
 
   const HoverableNodeProfile({
     super.key,
     required this.person,
-    required this.onTap,
+    this.enabled = true,
+    this.forceHover = false,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     return MouseHover(
+      enabled: enabled,
+      forceHover: forceHover,
       builder: (context, hovering) {
         return MouseRegion(
-          cursor: SystemMouseCursors.click,
+          cursor: enabled ? SystemMouseCursors.click : MouseCursor.defer,
           child: GestureDetector(
             onTap: onTap,
             child: NodeProfile(

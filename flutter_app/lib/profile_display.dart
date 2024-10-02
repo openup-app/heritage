@@ -450,6 +450,8 @@ class ProfileImage extends StatelessWidget {
 }
 
 class MouseHoverAnimation extends StatefulWidget {
+  final bool enabled;
+  final bool forceHover;
   final VoidCallback onMouseEnter;
   final VoidCallback onMouseExit;
   final VoidCallback onHoverAnimationEnd;
@@ -457,6 +459,8 @@ class MouseHoverAnimation extends StatefulWidget {
 
   const MouseHoverAnimation({
     super.key,
+    this.enabled = true,
+    this.forceHover = false,
     required this.onMouseEnter,
     required this.onMouseExit,
     required this.onHoverAnimationEnd,
@@ -471,10 +475,25 @@ class _MouseHoverAnimationState extends State<MouseHoverAnimation> {
   bool _isScaling = false;
 
   @override
+  void didUpdateWidget(covariant MouseHoverAnimation oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.enabled && !widget.enabled) {
+      if (_isScaling) {
+        setState(() => _isScaling = false);
+        WidgetsBinding.instance.endOfFrame.then((_) {
+          if (mounted) {
+            widget.onMouseExit();
+          }
+        });
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaler(
       duration: const Duration(milliseconds: 300),
-      shouldScale: _isScaling,
+      shouldScale: _isScaling || widget.forceHover,
       scale: 1.5,
       onEnd: () {
         if (!_isScaling) {
@@ -484,8 +503,10 @@ class _MouseHoverAnimationState extends State<MouseHoverAnimation> {
       child: MouseRegion(
         opaque: false,
         onEnter: (_) {
-          setState(() => _isScaling = true);
-          widget.onMouseEnter();
+          if (widget.enabled) {
+            setState(() => _isScaling = true);
+            widget.onMouseEnter();
+          }
         },
         onExit: (_) {
           setState(() => _isScaling = false);
@@ -557,10 +578,15 @@ class _HoverState extends State<Scaler> {
 }
 
 class MouseHover extends StatefulWidget {
+  final bool enabled;
+  final bool forceHover;
+
   final Widget Function(BuildContext context, bool hovering) builder;
 
   const MouseHover({
     super.key,
+    this.enabled = true,
+    this.forceHover = false,
     required this.builder,
   });
 
@@ -574,6 +600,19 @@ class _MouseHoverState extends State<MouseHover> {
   final _layerLink = LayerLink();
 
   @override
+  void didUpdateWidget(covariant MouseHover oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!oldWidget.forceHover && widget.forceHover) {
+      _hovering = true;
+      WidgetsBinding.instance.endOfFrame.then((_) {
+        if (mounted) {
+          _controller.show();
+        }
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return CompositedTransformTarget(
       link: _layerLink,
@@ -585,6 +624,8 @@ class _MouseHoverState extends State<MouseHover> {
             child: CompositedTransformFollower(
               link: _layerLink,
               child: MouseHoverAnimation(
+                enabled: widget.enabled,
+                forceHover: widget.forceHover,
                 onMouseEnter: () => setState(() => _hovering = true),
                 onMouseExit: () => setState(() => _hovering = false),
                 onHoverAnimationEnd: () => setState(() => _controller.hide()),
@@ -596,10 +637,21 @@ class _MouseHoverState extends State<MouseHover> {
         child: MouseRegion(
           opaque: false,
           onEnter: (_) {
-            setState(() {
-              _hovering = true;
-              _controller.show();
-            });
+            if (widget.enabled) {
+              setState(() {
+                _hovering = true;
+                _controller.show();
+              });
+            }
+          },
+          onHover: (_) {
+            // Edge case where mouse starts inside widget
+            if (widget.enabled && !_hovering) {
+              setState(() {
+                _hovering = true;
+                _controller.show();
+              });
+            }
           },
           child: Visibility(
             visible: !_controller.isShowing,
