@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'dart:ui' as ui;
 
 import 'package:collection/collection.dart';
@@ -842,6 +843,33 @@ class _EdgePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    for (final (node, rect) in nodeRects.values) {
+      final person = node.data;
+      final bottom = _paintText(
+        canvas: canvas,
+        text: person.profile.name,
+        style: const TextStyle(
+          color: Colors.black,
+          fontSize: 27,
+          fontWeight: FontWeight.w700,
+        ),
+        topCenter: rect.bottomCenter + const Offset(0, 16),
+      );
+      final birthyear = person.profile.birthday?.year.toString();
+      if (birthyear != null) {
+        _paintText(
+          canvas: canvas,
+          text: birthyear,
+          style: const TextStyle(
+            color: Colors.black,
+            fontSize: 24,
+            fontWeight: FontWeight.w500,
+          ),
+          topCenter: Offset(rect.bottomCenter.dx, bottom),
+        );
+      }
+    }
+
     // Only the left node in nodes with spouses
     final leftNodeInCouples = nodeRects.values.where((e) {
       final node = e.$1;
@@ -853,6 +881,8 @@ class _EdgePainter extends CustomPainter {
           ? node < spouse
           : !node.isBloodRelative;
     });
+
+    final topOffset = min(30, spacing.level);
     for (final (fromNode, fromRect) in leftNodeInCouples) {
       final path = Path();
       for (final toNode in fromNode.children) {
@@ -863,7 +893,7 @@ class _EdgePainter extends CustomPainter {
         );
         final e = toRect.topCenter;
         path
-          ..moveTo(s.dx, s.dy)
+          ..moveTo(s.dx, s.dy + topOffset)
           ..lineTo(s.dx, s.dy + spacing.level / 2)
           ..lineTo(e.dx, s.dy + spacing.level / 2)
           ..lineTo(e.dx, e.dy);
@@ -889,6 +919,24 @@ class _EdgePainter extends CustomPainter {
     return !const DeepCollectionEquality.unordered()
             .equals(nodeRects, oldDelegate.nodeRects) ||
         spacing != oldDelegate.spacing;
+  }
+
+  double _paintText({
+    required Canvas canvas,
+    required String text,
+    required TextStyle style,
+    required Offset topCenter,
+  }) {
+    final textSpan = TextSpan(text: text, style: style);
+    final textPainter = TextPainter(
+      text: textSpan,
+      textDirection: TextDirection.ltr,
+      maxLines: 1,
+    );
+    textPainter.layout();
+    final lineMetrics = textPainter.computeLineMetrics().first;
+    textPainter.paint(canvas, topCenter - Offset(lineMetrics.width / 2, 0));
+    return topCenter.dy + lineMetrics.height;
   }
 }
 
