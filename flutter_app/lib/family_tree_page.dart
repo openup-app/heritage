@@ -460,8 +460,9 @@ class _TiledBackgroundState extends State<_TiledBackground> {
   }
 
   void _initImage() async {
-    final bytes = await rootBundle.load('assets/images/tree_background.jpg');
-    final codec = await ui.instantiateImageCodec(bytes.buffer.asUint8List());
+    final bytes = await rootBundle.load('assets/images/tree_background.webp');
+    final codec = await ui.instantiateImageCodec(bytes.buffer.asUint8List(),
+        targetHeight: 300);
     final frame = await codec.getNextFrame();
     final image = frame.image;
     if (mounted) {
@@ -498,9 +499,7 @@ class _TilePainter extends CustomPainter {
         canvas.drawImage(
           tile,
           Offset(x * tile.width.toDouble(), y * tile.height.toDouble()),
-          Paint()
-            ..color = const Color.fromRGBO(0xEE, 0xF7, 0xFC, 0.2)
-            ..filterQuality = ui.FilterQuality.high,
+          Paint()..filterQuality = ui.FilterQuality.high,
         );
       }
     }

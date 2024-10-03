@@ -250,7 +250,7 @@ class _CacheAssetsState extends State<_CacheAssets> {
         'assets/images/binoculars.png',
         'assets/images/connection_spouse.webp',
         'assets/images/logo_text.webp',
-        'assets/images/tree_background.jpg',
+        'assets/images/tree_background.webp',
       ];
       for (final asset in assets) {
         precacheImage(AssetImage(asset), context);
