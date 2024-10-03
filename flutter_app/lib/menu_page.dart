@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:heritage/api.dart';
 import 'package:heritage/family_tree_page.dart';
 import 'package:heritage/help.dart';
+import 'package:heritage/loading_page.dart';
 
 class MenuPage extends ConsumerStatefulWidget {
   const MenuPage({super.key});
@@ -27,77 +28,80 @@ class _MenuPageState extends ConsumerState<MenuPage> {
   Widget build(BuildContext context) {
     final roots = _roots;
     return Scaffold(
-      body: Column(
-        children: [
-          SizedBox(
-            height: MediaQuery.of(context).padding.top,
-          ),
-          const SizedBox(height: 16),
-          const AppVersion(),
-          const SizedBox(height: 16),
-          Center(
-            child: ElevatedButton(
-              onPressed: _loading
-                  ? null
-                  : () async {
-                      final result =
-                          await showDialog<(String name, Gender gender)>(
-                        context: context,
-                        builder: (context) {
-                          return AlertDialog(
-                            title: const Text('Start a family tree'),
-                            content: Consumer(builder: (context, ref, child) {
-                              return CreateRootDisplay(
-                                padding: const EdgeInsets.all(16),
-                                onDone: (name, gender) {
-                                  Navigator.of(context).pop((name, gender));
-                                },
-                              );
-                            }),
-                          );
-                        },
-                      );
-                      if (!mounted || result == null) {
-                        return;
-                      }
-                      _start(result.$1, result.$2);
-                    },
-              child: _loading
-                  ? const CircularProgressIndicator.adaptive()
-                  : const Text('Start a family tree'),
+      body: AnimatedCrossFade(
+        duration: const Duration(milliseconds: 500),
+        crossFadeState: _roots == null
+            ? CrossFadeState.showFirst
+            : CrossFadeState.showSecond,
+        firstChild: const LoadingPage(),
+        secondChild: Column(
+          children: [
+            SizedBox(
+              height: MediaQuery.of(context).padding.top,
             ),
-          ),
-          const SizedBox(height: 16),
-          const Divider(),
-          const Text(
-            'Open an existing tree (Debug)',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          if (roots == null)
-            const Expanded(
-              child: Center(
-                child: CircularProgressIndicator.adaptive(),
-              ),
-            )
-          else
-            Expanded(
-              child: ListView.builder(
-                itemCount: roots.length,
-                itemBuilder: (context, index) {
-                  final person = roots[index];
-                  return ListTile(
-                    onTap: () => _navigate(person.id),
-                    title: Text(
-                        '${person.profile.name} (${person.profile.gender.name})'),
-                    subtitle: Text(person.id),
-                  );
-                },
+            const SizedBox(height: 16),
+            const AppVersion(),
+            const SizedBox(height: 16),
+            Center(
+              child: ElevatedButton(
+                onPressed: _loading
+                    ? null
+                    : () async {
+                        final result =
+                            await showDialog<(String name, Gender gender)>(
+                          context: context,
+                          builder: (context) {
+                            return AlertDialog(
+                              title: const Text('Start a family tree'),
+                              content: Consumer(builder: (context, ref, child) {
+                                return CreateRootDisplay(
+                                  padding: const EdgeInsets.all(16),
+                                  onDone: (name, gender) {
+                                    Navigator.of(context).pop((name, gender));
+                                  },
+                                );
+                              }),
+                            );
+                          },
+                        );
+                        if (!mounted || result == null) {
+                          return;
+                        }
+                        _start(result.$1, result.$2);
+                      },
+                child: _loading
+                    ? const CircularProgressIndicator.adaptive()
+                    : const Text('Start a family tree'),
               ),
             ),
-        ],
+            const SizedBox(height: 16),
+            const Divider(),
+            const Text(
+              'Open an existing tree (Debug)',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            if (roots == null)
+              const SizedBox.shrink()
+            else
+              Expanded(
+                child: ListView.builder(
+                  itemCount: roots.length,
+                  itemBuilder: (context, index) {
+                    final person = roots[index];
+                    return ListTile(
+                      onTap: () => _navigate(person.id),
+                      title: Text(
+                          '${person.profile.name} (${person.profile.gender.name})'),
+                      subtitle: Text(person.id),
+                    );
+                  },
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }

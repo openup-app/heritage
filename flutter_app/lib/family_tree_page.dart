@@ -13,6 +13,7 @@ import 'package:heritage/graph.dart';
 import 'package:heritage/graph_provider.dart';
 import 'package:heritage/graph_view.dart';
 import 'package:heritage/heritage_app.dart';
+import 'package:heritage/loading_page.dart';
 import 'package:heritage/profile_display.dart';
 import 'package:heritage/util.dart';
 import 'package:heritage/zoomable_pannable_viewport.dart';
@@ -57,11 +58,13 @@ class ViewPageState extends ConsumerState<FamilyTreeLoadingPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       resizeToAvoidBottomInset: false,
-      body: !_ready
-          ? const Center(
-              child: CircularProgressIndicator.adaptive(),
-            )
-          : widget.child,
+      body: AnimatedCrossFade(
+        duration: const Duration(milliseconds: 500),
+        crossFadeState:
+            !_ready ? CrossFadeState.showFirst : CrossFadeState.showSecond,
+        firstChild: const LoadingPage(),
+        secondChild: !_ready ? const SizedBox.shrink() : widget.child,
+      ),
     );
   }
 }

@@ -90,7 +90,7 @@ class _PanelsState extends ConsumerState<Panels> {
             child: Padding(
               padding:
                   EdgeInsets.only(top: 16 + MediaQuery.of(context).padding.top),
-              child: const _LogoText(),
+              child: const LogoText(),
             ),
           ),
           Positioned(
@@ -186,7 +186,7 @@ class _PanelsState extends ConsumerState<Panels> {
             width: 390,
             child: const Padding(
               padding: EdgeInsets.symmetric(vertical: 32.0),
-              child: _LogoText(),
+              child: LogoText(),
             ),
           ),
           const Positioned(
@@ -637,8 +637,8 @@ class ProfileDisplay extends StatelessWidget {
   }
 }
 
-class _LogoText extends StatelessWidget {
-  const _LogoText({super.key});
+class LogoText extends StatelessWidget {
+  const LogoText({super.key});
 
   @override
   Widget build(BuildContext context) {
