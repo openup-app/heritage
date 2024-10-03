@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:heritage/api.dart';
 import 'package:heritage/heritage_app.dart';
+import 'package:path_drawing/path_drawing.dart' as path_drawing;
 
 class AddConnectionButtons extends StatelessWidget {
   final bool enabled;
@@ -373,22 +374,25 @@ class NodeProfile extends StatelessWidget {
                   fit: StackFit.expand,
                   clipBehavior: Clip.none,
                   children: [
-                    Container(
-                      clipBehavior: Clip.hardEdge,
-                      decoration: const BoxDecoration(
-                        borderRadius: BorderRadius.all(
-                          Radius.circular(32),
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            offset: Offset(0, 22),
-                            blurRadius: 44,
-                            spreadRadius: -11,
-                            color: Color.fromRGBO(0x00, 0x00, 0x00, 0.33),
+                    _DashedBorder(
+                      radius: const Radius.circular(32),
+                      child: Container(
+                        clipBehavior: Clip.hardEdge,
+                        decoration: const BoxDecoration(
+                          borderRadius: BorderRadius.all(
+                            Radius.circular(32),
                           ),
-                        ],
+                          boxShadow: [
+                            BoxShadow(
+                              offset: Offset(0, 22),
+                              blurRadius: 44,
+                              spreadRadius: -11,
+                              color: Color.fromRGBO(0x00, 0x00, 0x00, 0.33),
+                            ),
+                          ],
+                        ),
+                        child: ProfileImage(person.profile.imageUrl),
                       ),
-                      child: ProfileImage(person.profile.imageUrl),
                     ),
                     Positioned(
                       right: 8,
@@ -462,6 +466,60 @@ class ProfileImage extends StatelessWidget {
         );
       },
     );
+  }
+}
+
+class _DashedBorder extends StatelessWidget {
+  final Radius radius;
+  final Widget child;
+
+  const _DashedBorder({
+    super.key,
+    required this.radius,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      foregroundPainter: _DashedPainter(
+        radius: radius,
+      ),
+      child: child,
+    );
+  }
+}
+
+class _DashedPainter extends CustomPainter {
+  final Radius radius;
+
+  _DashedPainter({
+    required this.radius,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    // canvas.drawRect(Offset.zero & size, Paint()..color = Colors.orange);
+
+    final path = Path()
+      ..addRRect(RRect.fromRectAndRadius(Offset.zero & size, radius));
+    final dashedPath = path_drawing.dashPath(
+      path,
+      dashArray: path_drawing.CircularIntervalList<double>([13.0, 15.0]),
+    );
+    canvas.drawPath(
+      dashedPath,
+      Paint()
+        ..strokeWidth = 8
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round
+        ..color = Colors.white,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _DashedPainter oldDelegate) {
+    return oldDelegate.radius != radius;
   }
 }
 
