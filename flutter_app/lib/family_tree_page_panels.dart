@@ -182,7 +182,7 @@ class _PanelsState extends ConsumerState<Panels> {
         ] else ...[
           Positioned(
             top: MediaQuery.of(context).padding.top,
-            left: 16,
+            left: 24,
             width: 390,
             child: const Padding(
               padding: EdgeInsets.symmetric(vertical: 32.0),
@@ -196,52 +196,66 @@ class _PanelsState extends ConsumerState<Panels> {
           ),
           Positioned(
             top: MediaQuery.of(context).padding.top + 120 + 32,
-            left: 16,
-            bottom: 16 + MediaQuery.of(context).padding.bottom,
+            left: 24,
+            bottom: 24 + MediaQuery.of(context).padding.bottom,
             width: 390,
             child: Align(
               alignment: Alignment.topCenter,
-              child: switch (widget.panelPopupState) {
-                PanelPopupStateNone() => null,
-                PanelPopupStateProfile(:final person) => _SidePanelContainer(
-                    child: ProfileDisplay(
-                      id: person.id,
-                      profile: person.profile,
-                      isMe: isMe,
-                      isEditable: isOwnedByMe,
-                      hasDifferentOwner: person.ownedBy != person.id,
-                      header: null,
-                      onViewPerspective: widget.onViewPerspective,
+              child: AnimatedSidePanel(
+                child: switch (widget.panelPopupState) {
+                  PanelPopupStateNone() => null,
+                  PanelPopupStateProfile(:final person) => _SidePanelContainer(
+                      key: Key('profile_${person.id}'),
+                      child: ProfileDisplay(
+                        id: person.id,
+                        profile: person.profile,
+                        isMe: isMe,
+                        isEditable: isOwnedByMe,
+                        hasDifferentOwner: person.ownedBy != person.id,
+                        header: null,
+                        onViewPerspective: widget.onViewPerspective,
+                      ),
                     ),
-                  ),
-                PanelPopupStateAddConnection(
-                  :final person,
-                  :final relationship
-                ) =>
-                  _SidePanelContainer(
-                    child: AddConnectionDisplay(
-                      relationship: relationship,
-                      onSave: (name, gender) => _saveNewConnection(
-                          name, gender, person, relationship),
+                  PanelPopupStateAddConnection(
+                    :final person,
+                    :final relationship
+                  ) =>
+                    _SidePanelContainer(
+                      key: Key('connection_${relationship.name}'),
+                      child: AddConnectionDisplay(
+                        relationship: relationship,
+                        onSave: (name, gender) => _saveNewConnection(
+                            name, gender, person, relationship),
+                      ),
                     ),
-                  ),
-                PanelPopupStateWaitingForApproval(:final person) =>
-                  _SidePanelContainer(
-                    child: WaitingForApprovalDisplay(
-                      person: person,
-                      onAddConnectionPressed: null,
-                      onSaveAndShare: (name, gender) =>
-                          _onSaveAndShare(person.id, name, gender),
+                  PanelPopupStateWaitingForApproval(:final person) =>
+                    _SidePanelContainer(
+                      key: Key('approval_${person.id}'),
+                      child: Column(
+                        children: [
+                          Text(
+                            'Waiting for ${person.profile.name}\'s approval',
+                            style: Theme.of(context).textTheme.titleLarge,
+                          ),
+                          const SizedBox(height: 16),
+                          WaitingForApprovalDisplay(
+                            person: person,
+                            onAddConnectionPressed: null,
+                            onSaveAndShare: (name, gender) =>
+                                _onSaveAndShare(person.id, name, gender),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-              },
+                },
+              ),
             ),
           ),
           if (selectedPerson != null && relatedness != null)
             Align(
               alignment: Alignment.bottomCenter,
               child: Padding(
-                padding: const EdgeInsets.only(bottom: 16),
+                padding: const EdgeInsets.only(bottom: 24),
                 child: Container(
                   width: 447,
                   padding: const EdgeInsets.symmetric(vertical: 20),
@@ -491,19 +505,19 @@ class _MenuButtons extends StatelessWidget {
   }
 }
 
-class AnimatingSidePanel extends StatefulWidget {
+class AnimatedSidePanel extends StatefulWidget {
   final Widget? child;
 
-  const AnimatingSidePanel({
+  const AnimatedSidePanel({
     super.key,
     required this.child,
   });
 
   @override
-  State<AnimatingSidePanel> createState() => _AnimatingSidePanelState();
+  State<AnimatedSidePanel> createState() => _AnimatedSidePanelState();
 }
 
-class _AnimatingSidePanelState extends State<AnimatingSidePanel> {
+class _AnimatedSidePanelState extends State<AnimatedSidePanel> {
   Widget? _child;
 
   @override
@@ -513,32 +527,42 @@ class _AnimatingSidePanelState extends State<AnimatingSidePanel> {
   }
 
   @override
-  void didUpdateWidget(covariant AnimatingSidePanel oldWidget) {
+  void didUpdateWidget(covariant AnimatedSidePanel oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.child != widget.child && widget.child != null) {
+    if (oldWidget.child != widget.child) {
       _child = widget.child;
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final child = _child;
-    // return AnimatedSwitcher(
-    //   duration: const Duration(milliseconds: 500),
-    //   transitionBuilder: (context, animation) {
-    //     return SlideTransition(
-    //       position: Tween(
-    //         begin: const Offset(-1, 0),
-    //         end: Offset.zero,
-    //       ).animate(animation),
-    //     );
-    //   },
-    //   child: child,
-    // );
-    if (child == null) {
-      return const SizedBox.shrink();
-    }
-    return child;
+    return AnimatedSwitcher(
+      switchInCurve: Curves.easeOut,
+      switchOutCurve: Curves.easeIn,
+      duration: const Duration(milliseconds: 400),
+      transitionBuilder: (child, animation) {
+        return FadeTransition(
+          opacity: animation,
+          child: SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(-1, 0),
+              end: Offset.zero,
+            ).animate(animation),
+            child: child,
+          ),
+        );
+      },
+      layoutBuilder: (currentChild, previousChildren) {
+        return Stack(
+          alignment: Alignment.topCenter,
+          children: <Widget>[
+            ...previousChildren,
+            if (currentChild != null) currentChild,
+          ],
+        );
+      },
+      child: _child,
+    );
   }
 }
 
@@ -618,9 +642,11 @@ class _LogoText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Image.asset(
-      'assets/images/logo_text.webp',
-      width: 300,
+    return IgnorePointer(
+      child: Image.asset(
+        'assets/images/logo_text.webp',
+        width: 300,
+      ),
     );
   }
 }
