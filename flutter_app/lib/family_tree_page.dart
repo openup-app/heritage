@@ -60,6 +60,22 @@ class ViewPageState extends ConsumerState<FamilyTreeLoadingPage> {
       resizeToAvoidBottomInset: false,
       body: AnimatedCrossFade(
         duration: const Duration(milliseconds: 500),
+        layoutBuilder: (topChild, topChildKey, bottomChild, bottomChildKey) {
+          return Stack(
+            clipBehavior: Clip.none,
+            alignment: Alignment.center,
+            children: <Widget>[
+              KeyedSubtree(
+                key: bottomChildKey,
+                child: bottomChild,
+              ),
+              KeyedSubtree(
+                key: topChildKey,
+                child: topChild,
+              ),
+            ],
+          );
+        },
         crossFadeState:
             !_ready ? CrossFadeState.showFirst : CrossFadeState.showSecond,
         firstChild: const LoadingPage(),

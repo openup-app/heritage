@@ -33,6 +33,22 @@ class _MenuPageState extends ConsumerState<MenuPage> {
         crossFadeState: _roots == null
             ? CrossFadeState.showFirst
             : CrossFadeState.showSecond,
+        layoutBuilder: (topChild, topChildKey, bottomChild, bottomChildKey) {
+          return Stack(
+            clipBehavior: Clip.none,
+            alignment: Alignment.center,
+            children: <Widget>[
+              KeyedSubtree(
+                key: bottomChildKey,
+                child: bottomChild,
+              ),
+              KeyedSubtree(
+                key: topChildKey,
+                child: topChild,
+              ),
+            ],
+          );
+        },
         firstChild: const LoadingPage(),
         secondChild: Column(
           children: [
