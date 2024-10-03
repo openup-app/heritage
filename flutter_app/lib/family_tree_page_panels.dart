@@ -7,6 +7,7 @@ import 'package:heritage/family_tree_page.dart';
 import 'package:heritage/file_picker.dart';
 import 'package:heritage/graph_provider.dart';
 import 'package:heritage/graph_view.dart';
+import 'package:heritage/help.dart';
 import 'package:heritage/image_croper.dart';
 import 'package:heritage/layout.dart';
 import 'package:heritage/profile_display.dart';
@@ -78,13 +79,31 @@ class _PanelsState extends ConsumerState<Panels> {
 
     // Clamped in case of narrow, but extremely tall/short windows
     final windowSize = MediaQuery.of(context).size;
-    final minPanelRatio = (widget.selectedPerson?.ownedBy == null
-            ? (180 / windowSize.height)
-            : (250 / windowSize.height))
-        .clamp(0.05, 0.7);
+    final minPanelHeight =
+        widget.selectedPerson?.ownedBy == null ? 180.0 : 250.0;
+    final minPanelRatio = (minPanelHeight / windowSize.height).clamp(0.05, 0.7);
     return Stack(
       children: [
-        if (small)
+        if (small) ...[
+          Align(
+            alignment: Alignment.topCenter,
+            child: Padding(
+              padding:
+                  EdgeInsets.only(top: 16 + MediaQuery.of(context).padding.top),
+              child: const _LogoText(),
+            ),
+          ),
+          Positioned(
+            left: 0,
+            bottom: minPanelHeight,
+            child: const Align(
+              alignment: Alignment.centerLeft,
+              child: Padding(
+                padding: EdgeInsets.only(left: 16.0, bottom: 16),
+                child: _MenuButtons(),
+              ),
+            ),
+          ),
           Positioned.fill(
             child: Padding(
               padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top),
@@ -131,6 +150,7 @@ class _PanelsState extends ConsumerState<Panels> {
                               hasDifferentOwner: person.ownedBy != person.id,
                               header: Column(
                                 mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
                                   if (isMe)
                                     Center(
@@ -159,10 +179,24 @@ class _PanelsState extends ConsumerState<Panels> {
               ),
             ),
           )
-        else ...[
+        ] else ...[
           Positioned(
+            top: MediaQuery.of(context).padding.top,
             left: 16,
-            top: 16 + MediaQuery.of(context).padding.top,
+            width: 390,
+            child: const Padding(
+              padding: EdgeInsets.symmetric(vertical: 32.0),
+              child: _LogoText(),
+            ),
+          ),
+          const Positioned(
+            right: 24,
+            bottom: 24,
+            child: _MenuButtons(),
+          ),
+          Positioned(
+            top: MediaQuery.of(context).padding.top + 120 + 32,
+            left: 16,
             bottom: 16 + MediaQuery.of(context).padding.bottom,
             width: 390,
             child: Align(
@@ -340,7 +374,6 @@ class _PanelsState extends ConsumerState<Panels> {
       builder: (context) {
         return AlertDialog(
           key: _modalKey,
-          title: Text('Add a ${relationship.name}'),
           content: SingleChildScrollView(
             child: AddConnectionDisplay(
               relationship: relationship,
@@ -428,6 +461,34 @@ Widget buildAddConnectionButtons({
         relatedness.isAncestor || !relatedness.isGrandparentLevelOrHigher,
     onAddConnectionPressed: onAddConnectionPressed,
   );
+}
+
+class _MenuButtons extends StatelessWidget {
+  const _MenuButtons({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(),
+          style: FilledButton.styleFrom(
+            fixedSize: const Size.square(56),
+          ),
+          child: const Icon(Icons.home_filled),
+        ),
+        const SizedBox(width: 16),
+        FilledButton(
+          onPressed: () => showHelpDialog(context: context),
+          style: FilledButton.styleFrom(
+            fixedSize: const Size.square(56),
+          ),
+          child: const Icon(Icons.question_mark),
+        ),
+      ],
+    );
+  }
 }
 
 class AnimatingSidePanel extends StatefulWidget {
@@ -548,6 +609,18 @@ class ProfileDisplay extends StatelessWidget {
         header: header,
         onViewPerspective: onViewPerspective,
       ),
+    );
+  }
+}
+
+class _LogoText extends StatelessWidget {
+  const _LogoText({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Image.asset(
+      'assets/images/logo_text.webp',
+      width: 300,
     );
   }
 }

@@ -11,7 +11,6 @@ import 'package:heritage/family_tree_page_panels.dart';
 import 'package:heritage/graph.dart';
 import 'package:heritage/graph_provider.dart';
 import 'package:heritage/graph_view.dart';
-import 'package:heritage/help.dart';
 import 'package:heritage/heritage_app.dart';
 import 'package:heritage/profile_display.dart';
 import 'package:heritage/util.dart';
@@ -97,33 +96,6 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
           selectedPerson: _selectedPerson,
           onProfileSelected: _onProfileSelected,
           onFetchConnections: (ids) {},
-        ),
-        Positioned(
-          left: 16,
-          top: 16,
-          child: Opacity(
-            opacity: 0.2,
-            child: Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: BackButton(
-                onPressed: () => Navigator.of(context).pop(),
-              ),
-            ),
-          ),
-        ),
-        Positioned(
-          right: 16,
-          top: 16,
-          child: Opacity(
-            opacity: 0.2,
-            child: Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: IconButton(
-                onPressed: () => showHelpDialog(context: context),
-                icon: const Icon(Icons.question_mark),
-              ),
-            ),
-          ),
         ),
         Panels(
           selectedPerson: _selectedPerson,

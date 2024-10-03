@@ -48,6 +48,7 @@ flutter:
 
   assets:
     - assets/images/connection_spouse.webp
+    - assets/images/logo_text.webp
     - assets/images/tree_background.jpg
 
   fonts:

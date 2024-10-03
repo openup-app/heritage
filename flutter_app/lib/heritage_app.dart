@@ -36,51 +36,53 @@ class HeritageApp extends StatelessWidget {
           apiProvider.overrideWithValue(api),
         ],
         child: LayoutWidget(
-          child: _RouterBuilder(
-            redirectPath: redirectPath,
-            navigatorObservers: [
-              SentryNavigatorObserver(),
-            ],
-            builder: (context, router) {
-              return MaterialApp.router(
-                routerConfig: router,
-                title: 'Family Tree',
-                supportedLocales: const [
-                  Locale('en'),
-                  Locale('en', 'AU'),
-                ],
-                theme: ThemeData(
-                  useMaterial3: false,
-                  fontFamily: 'SF Pro Display',
-                  primaryColor: primaryColor,
-                  filledButtonTheme: FilledButtonThemeData(
-                    style: FilledButton.styleFrom(
-                      shape: const RoundedRectangleBorder(
+          child: _CacheAssets(
+            child: _RouterBuilder(
+              redirectPath: redirectPath,
+              navigatorObservers: [
+                SentryNavigatorObserver(),
+              ],
+              builder: (context, router) {
+                return MaterialApp.router(
+                  routerConfig: router,
+                  title: 'Family Tree',
+                  supportedLocales: const [
+                    Locale('en'),
+                    Locale('en', 'AU'),
+                  ],
+                  theme: ThemeData(
+                    useMaterial3: false,
+                    fontFamily: 'SF Pro Display',
+                    primaryColor: primaryColor,
+                    filledButtonTheme: FilledButtonThemeData(
+                      style: FilledButton.styleFrom(
+                        shape: const RoundedRectangleBorder(
+                          borderRadius: BorderRadius.all(
+                            Radius.circular(10),
+                          ),
+                        ),
+                      ),
+                    ),
+                    inputDecorationTheme: const InputDecorationTheme(
+                      filled: true,
+                      fillColor: greyColor,
+                      outlineBorder: BorderSide.none,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(10)),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                    dialogTheme: const DialogTheme(
+                      shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.all(
-                          Radius.circular(10),
+                          Radius.circular(16),
                         ),
                       ),
                     ),
                   ),
-                  inputDecorationTheme: const InputDecorationTheme(
-                    filled: true,
-                    fillColor: greyColor,
-                    outlineBorder: BorderSide.none,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.all(Radius.circular(10)),
-                      borderSide: BorderSide.none,
-                    ),
-                  ),
-                  dialogTheme: const DialogTheme(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.all(
-                        Radius.circular(16),
-                      ),
-                    ),
-                  ),
-                ),
-              );
-            },
+                );
+              },
+            ),
           ),
         ),
       ),
@@ -219,6 +221,43 @@ class _RouterBuilderState extends State<_RouterBuilder> {
         ),
       ],
     );
+  }
+}
+
+class _CacheAssets extends StatefulWidget {
+  final Widget child;
+
+  const _CacheAssets({
+    super.key,
+    required this.child,
+  });
+
+  @override
+  State<_CacheAssets> createState() => _CacheAssetsState();
+}
+
+class _CacheAssetsState extends State<_CacheAssets> {
+  bool _cached = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_cached) {
+      _cached = true;
+      const assets = [
+        'assets/images/connection_spouse.webp',
+        'assets/images/logo_text.webp',
+        'assets/images/tree_background.jpg',
+      ];
+      for (final asset in assets) {
+        precacheImage(AssetImage(asset), context);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return widget.child;
   }
 }
 
