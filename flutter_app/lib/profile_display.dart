@@ -365,24 +365,54 @@ class NodeProfile extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
+          SizedBox(
             width: 260,
-            clipBehavior: Clip.hardEdge,
-            decoration: const BoxDecoration(
-              borderRadius: BorderRadius.all(
-                Radius.circular(32),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  offset: Offset(0, 22),
-                  blurRadius: 44,
-                  spreadRadius: -11,
-                  color: Color.fromRGBO(0x00, 0x00, 0x00, 0.33),
+            child: Center(
+              child: ImageAspect(
+                child: Stack(
+                  fit: StackFit.expand,
+                  clipBehavior: Clip.none,
+                  children: [
+                    Container(
+                      clipBehavior: Clip.hardEdge,
+                      decoration: const BoxDecoration(
+                        borderRadius: BorderRadius.all(
+                          Radius.circular(32),
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            offset: Offset(0, 22),
+                            blurRadius: 44,
+                            spreadRadius: -11,
+                            color: Color.fromRGBO(0x00, 0x00, 0x00, 0.33),
+                          ),
+                        ],
+                      ),
+                      child: ProfileImage(person.profile.imageUrl),
+                    ),
+                    Positioned(
+                      right: 8,
+                      top: 8,
+                      child: FilledButton(
+                        onPressed: () {},
+                        style: FilledButton.styleFrom(
+                          fixedSize: const Size.square(64),
+                          backgroundColor:
+                              const Color.fromRGBO(0x00, 0x00, 0x00, 0.6),
+                          shape: const CircleBorder(),
+                        ),
+                        child: const _Binoculars(),
+                      ),
+                    ),
+                    if (person.ownedBy != null)
+                      const Positioned(
+                        right: 4,
+                        bottom: -32,
+                        child: _VerifiedBadge(),
+                      ),
+                  ],
                 ),
-              ],
-            ),
-            child: ImageAspect(
-              child: ProfileImage(person.profile.imageUrl),
+              ),
             ),
           ),
           Text(
@@ -670,8 +700,36 @@ class _MouseHoverState extends State<MouseHover> {
   }
 }
 
+class _Binoculars extends StatelessWidget {
+  const _Binoculars({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Image.asset(
+      'assets/images/binoculars.png',
+      width: 48,
+      fit: BoxFit.cover,
+    );
+  }
+}
+
+class _VerifiedBadge extends StatelessWidget {
+  const _VerifiedBadge({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: Image.asset(
+        'assets/images/badge.webp',
+        width: 64,
+        fit: BoxFit.cover,
+      ),
+    );
+  }
+}
+
 class ImageAspect extends StatelessWidget {
-  static const ratio = 260 / 336;
+  static const ratio = 102 / 117;
 
   final Widget child;
 

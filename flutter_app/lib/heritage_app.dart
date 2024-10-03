@@ -245,6 +245,8 @@ class _CacheAssetsState extends State<_CacheAssets> {
     if (!_cached) {
       _cached = true;
       const assets = [
+        'assets/images/badge.webp',
+        'assets/images/binoculars.png',
         'assets/images/connection_spouse.webp',
         'assets/images/logo_text.webp',
         'assets/images/tree_background.jpg',
