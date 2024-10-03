@@ -14,8 +14,6 @@ import 'package:heritage/graph_view.dart';
 import 'package:heritage/help.dart';
 import 'package:heritage/heritage_app.dart';
 import 'package:heritage/profile_display.dart';
-import 'package:heritage/profile_update.dart';
-import 'package:heritage/share.dart';
 import 'package:heritage/util.dart';
 import 'package:heritage/zoomable_pannable_viewport.dart';
 import 'package:path_drawing/path_drawing.dart' as path_drawing;
@@ -58,6 +56,7 @@ class ViewPageState extends ConsumerState<FamilyTreeLoadingPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       body: !_ready
           ? const Center(
               child: CircularProgressIndicator.adaptive(),
@@ -83,11 +82,10 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
   final _familyTreeViewKey = GlobalKey<FamilyTreeViewState>();
   Person? _selectedPerson;
   Relatedness? _relatedness;
+  PanelPopupState _panelPopupState = const PanelPopupStateNone();
 
   @override
   Widget build(BuildContext context) {
-    final selectedPerson = _selectedPerson;
-    final relatedness = _relatedness;
     final graph = ref.watch(graphProvider);
     return Stack(
       fit: StackFit.expand,
@@ -98,7 +96,6 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
           people: graph.people.values.toList(),
           selectedPerson: _selectedPerson,
           onProfileSelected: _onProfileSelected,
-          onAddConnectionPressed: _showAddConnectionModal,
           onFetchConnections: (ids) {},
         ),
         Positioned(
@@ -128,156 +125,72 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
             ),
           ),
         ),
-        if (selectedPerson != null && relatedness != null)
-          Panels(
-            key: Key(selectedPerson.id),
-            person: selectedPerson,
-            relatedness: relatedness,
-            myId: graph.focalPerson.id,
-            onAddConnectionPressed: (relationship) =>
-                _showAddConnectionModal(selectedPerson, relationship),
-            onUpdate: (name, gender) =>
-                _onUpdate(selectedPerson.id, name, gender),
-            onViewPerspective: () {
-              final pathParameters = {
-                'focalPersonId': graph.focalPerson.id,
-                'perspectivePersonId': selectedPerson.id,
-              };
-              if (!widget.isPerspectiveMode) {
-                context.pushNamed(
-                  'perspective',
-                  pathParameters: pathParameters,
-                );
-              } else {
-                context.pushReplacementNamed(
-                  'perspective',
-                  pathParameters: pathParameters,
-                );
-              }
-            },
-            onClose: () {
+        Panels(
+          selectedPerson: _selectedPerson,
+          relatedness: _relatedness,
+          focalPerson: graph.focalPerson,
+          panelPopupState: _panelPopupState,
+          onDismissPanelPopup: () =>
+              setState(() => _panelPopupState = const PanelPopupStateNone()),
+          onAddConnectionPressed: (relationship) {
+            final person = _selectedPerson;
+            if (person != null) {
               setState(() {
-                _selectedPerson = null;
-                _relatedness = null;
+                _panelPopupState = PanelPopupStateAddConnection(
+                  person: person,
+                  relationship: relationship,
+                );
               });
-            },
-          ),
+            }
+          },
+          onViewPerspective: () {
+            final selectedPerson = _selectedPerson;
+            if (selectedPerson == null) {
+              return;
+            }
+            final pathParameters = {
+              'focalPersonId': graph.focalPerson.id,
+              'perspectivePersonId': selectedPerson.id,
+            };
+            if (!widget.isPerspectiveMode) {
+              context.pushNamed(
+                'perspective',
+                pathParameters: pathParameters,
+              );
+            } else {
+              context.pushReplacementNamed(
+                'perspective',
+                pathParameters: pathParameters,
+              );
+            }
+          },
+        ),
       ],
     );
   }
 
-  void _showAddConnectionModal(Person person, Relationship relationship) {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text('Add a ${relationship.name}'),
-          content: SingleChildScrollView(
-            child: BasicProfileDisplay(
-              relationship: relationship,
-              isNewPerson: true,
-              padding: const EdgeInsets.all(16),
-              onSave: (name, gender) {
-                _saveNewConnection(name, gender, person, relationship);
-              },
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  void _saveNewConnection(String name, Gender gender, Person person,
-      Relationship relationship) async {
-    final graphNotifier = ref.read(graphProvider.notifier);
-    final addConnectionFuture = graphNotifier.addConnection(
-      source: person.id,
-      name: name,
-      gender: gender,
-      relationship: relationship,
-    );
-    final newId = await showBlockingModal(context, addConnectionFuture);
-    if (!mounted) {
-      return;
-    }
-    if (newId != null) {
-      await _shareLink(name, newId);
-      if (mounted) {
-        WidgetsBinding.instance.endOfFrame.then((_) {
-          if (mounted) {
-            _familyTreeViewKey.currentState?.centerOnPersonWithId(newId);
-          }
-        });
-      }
-    }
-    if (!mounted) {
-      return;
-    }
-    Navigator.of(context).pop();
-  }
-
-  void _onUpdate(Id id, String name, Gender gender) async {
-    final graph = ref.read(graphProvider);
-    final person = graph.people[id];
-    if (person == null) {
-      return;
-    }
-    if (person.profile.name != name || person.profile.gender != gender) {
-      final graphNotifier = ref.read(graphProvider.notifier);
-      final addConnectionFuture = graphNotifier.updateProfile(
-        id,
-        ProfileUpdate(
-            profile: person.profile.copyWith(name: name, gender: gender)),
-      );
-      await showBlockingModal(context, addConnectionFuture);
-      if (!mounted) {
-        return;
-      }
-    }
-
-    await _shareLink(name, id);
-
-    if (!mounted) {
-      return;
-    }
-  }
-
-  Future<void> _shareLink(String name, String id) async {
-    final data = ShareData(
-      title: '$name\'s family tree invite!',
-      text: 'https://breakfastsearch.xyz/$id',
-      url: 'https://breakfastsearch.xyz/$id',
-    );
-    if (await canShare(data)) {
-      await shareContent(data);
-    } else {
-      await Clipboard.setData(ClipboardData(text: data.url!));
-      if (!mounted) {
-        return;
-      }
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Link copied to clipboard!'),
-        ),
-      );
-    }
-  }
-
   void _onProfileSelected(Person? person, Relatedness? relatedness) {
     setState(() => _relatedness = relatedness);
-    if (person == null) {
+    if (person == null || relatedness == null) {
       setState(() {
         _selectedPerson = null;
         _relatedness = null;
+        _panelPopupState = const PanelPopupStateNone();
       });
       return;
+    } else {
+      _familyTreeViewKey.currentState?.centerOnPersonWithId(person.id);
+      setState(() {
+        _selectedPerson = person;
+        _relatedness = relatedness;
+        if (person.ownedBy == null) {
+          _panelPopupState = PanelPopupStateWaitingForApproval(
+              person: person, relatedness: relatedness);
+        } else {
+          _panelPopupState = PanelPopupStateProfile(person: person);
+        }
+      });
     }
-
-    _familyTreeViewKey.currentState?.centerOnPersonWithId(person.id);
-    setState(() {
-      _selectedPerson = person;
-      _relatedness = relatedness;
-    });
   }
 }
 
@@ -287,8 +200,6 @@ class FamilyTreeView extends ConsumerStatefulWidget {
   final Person? selectedPerson;
   final void Function(Person? person, Relatedness? relatedness)
       onProfileSelected;
-  final void Function(Person person, Relationship relationship)
-      onAddConnectionPressed;
   final void Function(List<Id> ids) onFetchConnections;
 
   const FamilyTreeView({
@@ -297,7 +208,6 @@ class FamilyTreeView extends ConsumerStatefulWidget {
     required this.people,
     required this.selectedPerson,
     required this.onProfileSelected,
-    required this.onAddConnectionPressed,
     required this.onFetchConnections,
   });
 
@@ -609,35 +519,158 @@ class _TilePainter extends CustomPainter {
       !tile.isCloneOf(oldDelegate.tile) || transform != oldDelegate.transform;
 }
 
-class BasicProfileDisplay extends ConsumerStatefulWidget {
-  final bool isRootCreation;
-  final bool isNewPerson;
+class AddConnectionDisplay extends ConsumerStatefulWidget {
   final Relationship relationship;
-  final String? initialName;
-  final Gender? initialGender;
-  final EdgeInsets padding;
   final void Function(String name, Gender gender) onSave;
 
-  const BasicProfileDisplay({
+  const AddConnectionDisplay({
     super.key,
-    this.isRootCreation = false,
-    required this.isNewPerson,
     required this.relationship,
-    this.initialName,
-    this.initialGender,
-    required this.padding,
     required this.onSave,
   });
 
   @override
-  ConsumerState<BasicProfileDisplay> createState() =>
+  ConsumerState<AddConnectionDisplay> createState() =>
       _BasicProfileDisplayState();
 }
 
-class _BasicProfileDisplayState extends ConsumerState<BasicProfileDisplay> {
+class _BasicProfileDisplayState extends ConsumerState<AddConnectionDisplay> {
+  String _name = '';
+  Gender _gender = Gender.male;
+  final _shareButtonKey = GlobalKey();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Center(
+          child: Text(
+            'Add a ${widget.relationship.name}',
+            style: const TextStyle(fontSize: 24),
+          ),
+        ),
+        const SizedBox(height: 16),
+        SizedBox(
+          width: double.infinity,
+          child: Image.asset(
+            'assets/images/connection_spouse.webp',
+            fit: BoxFit.cover,
+          ),
+        ),
+        const SizedBox(height: 16),
+        MinimalProfileEditor(
+          onUpdate: (name, gender) {
+            setState(() {
+              _name = name;
+              _gender = gender;
+            });
+          },
+        ),
+        const SizedBox(height: 24),
+        ShareLinkButton(
+          key: _shareButtonKey,
+          firstName: _name,
+          onPressed: _name.isEmpty ? null : _done,
+        ),
+        const SizedBox(height: 16),
+        Center(
+          child: TextButton(
+            onPressed: () {},
+            child: const Text(
+                'They can\'t complete their profile, I will instead'),
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _done() {
+    if (_name.isEmpty) {
+      return;
+    }
+    widget.onSave(_name, _gender);
+  }
+}
+
+class CreateRootDisplay extends ConsumerStatefulWidget {
+  final EdgeInsets padding;
+  final void Function(String name, Gender gender) onDone;
+
+  const CreateRootDisplay({
+    super.key,
+    required this.padding,
+    required this.onDone,
+  });
+
+  @override
+  ConsumerState<CreateRootDisplay> createState() => _CreateRootDisplayState();
+}
+
+class _CreateRootDisplayState extends ConsumerState<CreateRootDisplay> {
+  String _name = '';
+  Gender _gender = Gender.male;
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      padding: EdgeInsets.only(
+        left: widget.padding.left,
+        right: widget.padding.right,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 16),
+          MinimalProfileEditor(
+            onUpdate: (name, gender) {
+              setState(() {
+                _name = name;
+                _gender = gender;
+              });
+            },
+          ),
+          const SizedBox(height: 16),
+          Center(
+            child: TextButton(
+              onPressed: _name.isEmpty ? null : _done,
+              child: const Text('Done'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _done() {
+    if (_name.isEmpty) {
+      return;
+    }
+    widget.onDone(_name, _gender);
+  }
+}
+
+class MinimalProfileEditor extends StatefulWidget {
+  final String? initialName;
+  final Gender? initialGender;
+  final void Function(String name, Gender gender) onUpdate;
+
+  const MinimalProfileEditor({
+    super.key,
+    this.initialName,
+    this.initialGender,
+    required this.onUpdate,
+  });
+
+  @override
+  State<MinimalProfileEditor> createState() => _MinimalProfileEditorState();
+}
+
+class _MinimalProfileEditorState extends State<MinimalProfileEditor> {
   late final TextEditingController _nameController;
   late Gender _gender;
-  final _shareButtonKey = GlobalKey();
 
   @override
   void initState() {
@@ -654,157 +687,44 @@ class _BasicProfileDisplayState extends ConsumerState<BasicProfileDisplay> {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: EdgeInsets.only(
-        left: widget.padding.left,
-        right: widget.padding.right,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(height: widget.padding.top),
-          Center(
-            child: Text(
-              'Add a ${widget.relationship.name}',
-              style: const TextStyle(fontSize: 24),
-            ),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextFormField(
+          controller: _nameController,
+          textCapitalization: TextCapitalization.words,
+          textInputAction: TextInputAction.next,
+          onChanged: (text) => widget.onUpdate(text, _gender),
+          decoration: const InputDecoration(
+            label: Text('First & Last Name'),
           ),
-          const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            child: Image.asset(
-              'assets/images/connection_spouse.webp',
-              fit: BoxFit.cover,
-            ),
-          ),
-          const SizedBox(height: 16),
-          const SelectableText('First & Last Name'),
-          const SizedBox(height: 4),
-          TextFormField(
-            controller: _nameController,
-            textCapitalization: TextCapitalization.words,
-            textInputAction: TextInputAction.next,
-          ),
-          const SizedBox(height: 16),
-          widget.isRootCreation
-              ? const SelectableText('Your Gender')
-              : widget.relationship != Relationship.spouse
-                  ? const SelectableText('Relationship')
-                  : const Text('Gender'),
-          const SizedBox(height: 4),
-          Row(
-            children: [
+        ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            for (final gender in Gender.values) ...[
+              if (gender != Gender.values.first) const SizedBox(width: 16),
               Expanded(
                 child: FilledButton(
-                  onPressed: () => setState(() => _gender = Gender.male),
+                  onPressed: () {
+                    setState(() => _gender = gender);
+                    widget.onUpdate(_nameController.text, _gender);
+                  },
                   style: FilledButton.styleFrom(
                     fixedSize: const Size.fromHeight(44),
                     backgroundColor:
-                        _gender == Gender.male ? primaryColor : unselectedColor,
+                        _gender == gender ? primaryColor : unselectedColor,
                   ),
-                  child: (widget.relationship != Relationship.spouse &&
-                          !widget.isRootCreation)
-                      ? Text(genderedRelationship(
-                          widget.relationship, Gender.male))
-                      : const Text('Male'),
-                ),
-              ),
-              const SizedBox(width: 24),
-              Expanded(
-                child: FilledButton(
-                  onPressed: () => setState(() => _gender = Gender.female),
-                  style: FilledButton.styleFrom(
-                    fixedSize: const Size.fromHeight(44),
-                    backgroundColor:
-                        _gender == Gender.male ? unselectedColor : primaryColor,
-                  ),
-                  child: (widget.relationship != Relationship.spouse &&
-                          !widget.isRootCreation)
-                      ? Text(genderedRelationship(
-                          widget.relationship, Gender.female))
-                      : const Text('Female'),
+                  child: Text(
+                      '${gender.name[0].toUpperCase()}${gender.name.substring(1)}'),
                 ),
               ),
             ],
-          ),
-          if (!widget.isRootCreation) ...[
-            const SizedBox(height: 24),
-            AnimatedBuilder(
-              animation: _nameController,
-              builder: (context, child) {
-                return FilledButton(
-                  key: _shareButtonKey,
-                  onPressed: _nameController.text.isEmpty ? null : _done,
-                  style: _bigButtonStyle,
-                  child: child,
-                );
-              },
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  const Icon(CupertinoIcons.share),
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          AnimatedBuilder(
-                            animation: _nameController,
-                            builder: (context, child) {
-                              return Text(
-                                'Only share this link with ${_nameController.text}',
-                                textAlign: TextAlign.center,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              );
-                            },
-                          ),
-                          const Text('They can complete their profile'),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ] else ...[
-            const SizedBox(height: 16),
-            Center(
-              child: AnimatedBuilder(
-                animation: _nameController,
-                builder: (context, child) {
-                  return TextButton(
-                    onPressed: _nameController.text.isEmpty ? null : _done,
-                    child: const Text('Done'),
-                  );
-                },
-              ),
-            ),
           ],
-          if (!widget.isRootCreation) ...[
-            const SizedBox(height: 16),
-            Center(
-              child: TextButton(
-                onPressed: () {},
-                child: const Text(
-                    'Tap here for a child or deceased family member'),
-              ),
-            ),
-          ],
-          SizedBox(height: widget.padding.bottom),
-        ],
-      ),
+        ),
+      ],
     );
-  }
-
-  void _done() {
-    final name = _nameController.text;
-    if (name.isEmpty) {
-      return;
-    }
-    widget.onSave(name, _gender);
   }
 }
 
@@ -997,5 +917,47 @@ class _EdgePainter extends CustomPainter {
     return !const DeepCollectionEquality.unordered()
             .equals(nodeRects, oldDelegate.nodeRects) ||
         spacing != oldDelegate.spacing;
+  }
+}
+
+class ShareLinkButton extends StatelessWidget {
+  final String firstName;
+  final VoidCallback? onPressed;
+
+  const ShareLinkButton({
+    super.key,
+    required this.firstName,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return FilledButton(
+      onPressed: onPressed,
+      style: _bigButtonStyle,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          const Icon(CupertinoIcons.share),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Only share this link with $firstName',
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const Text('They can complete their profile'),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

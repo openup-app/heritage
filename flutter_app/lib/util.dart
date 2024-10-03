@@ -1,7 +1,10 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:heritage/api.dart';
+import 'package:heritage/share.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 Rect? locateWidget(GlobalKey key) {
@@ -37,6 +40,23 @@ String genderedRelationship(Relationship relationship, Gender gender) {
   }
 }
 
+Future<ShareType> shareInvite(String name, String id) async {
+  final data = ShareData(
+    title: '$name\'s family tree invite!',
+    text: 'https://breakfastsearch.xyz/$id',
+    url: 'https://breakfastsearch.xyz/$id',
+  );
+  if (!kDebugMode && await canShare(data)) {
+    await shareContent(data);
+    return ShareType.share;
+  } else {
+    await Clipboard.setData(ClipboardData(text: data.url!));
+    return ShareType.clipboard;
+  }
+}
+
+enum ShareType { share, clipboard }
+
 void launchEmail() {
   final uri = Uri(
     scheme: 'mailto',
@@ -46,6 +66,20 @@ void launchEmail() {
     },
   );
   launchUrl(uri);
+}
+
+Future<void> showShareSuccess({
+  required BuildContext context,
+  required ShareType type,
+}) async {
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text(switch (type) {
+        ShareType.share => 'Link   shared!',
+        ShareType.clipboard => 'Link copied to clipboard!',
+      }),
+    ),
+  );
 }
 
 Future<T> showBlockingModal<T>(BuildContext context, Future<T> future) async {
