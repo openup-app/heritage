@@ -56,13 +56,15 @@ class GraphNotifier extends StateNotifier<Graph> {
 
   Future<Id?> addConnection({
     required Id source,
-    required String name,
+    required String firstName,
+    required String lastName,
     required Gender gender,
     required Relationship relationship,
   }) async {
     final result = await api.addConnection(
       sourceId: source,
-      name: name,
+      firstName: firstName,
+      lastName: lastName,
       gender: gender,
       relationship: relationship,
     );

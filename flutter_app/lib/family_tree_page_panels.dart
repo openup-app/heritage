@@ -154,7 +154,7 @@ class _PanelsState extends ConsumerState<Panels> {
                                 children: [
                                   if (isMe)
                                     Center(
-                                      child: Text(person.profile.name),
+                                      child: Text(person.profile.fullName),
                                     ),
                                   buildAddConnectionButtons(
                                     person: person,
@@ -224,8 +224,9 @@ class _PanelsState extends ConsumerState<Panels> {
                       key: Key('connection_${relationship.name}'),
                       child: AddConnectionDisplay(
                         relationship: relationship,
-                        onSave: (name, gender) => _saveNewConnection(
-                            name, gender, person, relationship),
+                        onSave: (firstName, lastName, gender) =>
+                            _saveNewConnection(firstName, lastName, gender,
+                                person, relationship),
                       ),
                     ),
                   PanelPopupStateWaitingForApproval(:final person) =>
@@ -234,15 +235,16 @@ class _PanelsState extends ConsumerState<Panels> {
                       child: Column(
                         children: [
                           Text(
-                            'Waiting for ${person.profile.name}\'s approval',
+                            'Waiting for ${person.profile.firstName}\'s approval',
                             style: Theme.of(context).textTheme.titleLarge,
                           ),
                           const SizedBox(height: 16),
                           WaitingForApprovalDisplay(
                             person: person,
                             onAddConnectionPressed: null,
-                            onSaveAndShare: (name, gender) =>
-                                _onSaveAndShare(person.id, name, gender),
+                            onSaveAndShare: (firstName, lastName, gender) =>
+                                _onSaveAndShare(
+                                    person.id, firstName, lastName, gender),
                           ),
                         ],
                       ),
@@ -360,15 +362,15 @@ class _PanelsState extends ConsumerState<Panels> {
       builder: (context) {
         return AlertDialog(
           key: _modalKey,
-          title: Text('Waiting for ${person.profile.name}\'s approval'),
+          title: Text('Waiting for ${person.profile.firstName}\'s approval'),
           content: WaitingForApprovalDisplay(
             person: person,
             onAddConnectionPressed: () {
               Navigator.of(context).pop(true);
               onAddConnectionPressed();
             },
-            onSaveAndShare: (name, gender) async {
-              await _onSaveAndShare(person.id, name, gender);
+            onSaveAndShare: (firstName, lastName, gender) async {
+              await _onSaveAndShare(person.id, firstName, lastName, gender);
               if (context.mounted) {
                 Navigator.of(context).pop(true);
               }
@@ -391,8 +393,9 @@ class _PanelsState extends ConsumerState<Panels> {
           content: SingleChildScrollView(
             child: AddConnectionDisplay(
               relationship: relationship,
-              onSave: (name, gender) async {
-                await _saveNewConnection(name, gender, person, relationship);
+              onSave: (firstName, lastName, gender) async {
+                await _saveNewConnection(
+                    firstName, lastName, gender, person, relationship);
                 if (context.mounted) {
                   Navigator.of(context).pop(true);
                 }
@@ -407,12 +410,13 @@ class _PanelsState extends ConsumerState<Panels> {
     }
   }
 
-  Future<void> _saveNewConnection(String name, Gender gender, Person person,
-      Relationship relationship) async {
+  Future<void> _saveNewConnection(String firstName, String lastName,
+      Gender gender, Person person, Relationship relationship) async {
     final graphNotifier = ref.read(graphProvider.notifier);
     final addConnectionFuture = graphNotifier.addConnection(
       source: person.id,
-      name: name,
+      firstName: firstName,
+      lastName: lastName,
       gender: gender,
       relationship: relationship,
     );
@@ -421,7 +425,7 @@ class _PanelsState extends ConsumerState<Panels> {
       return;
     }
     if (newId != null) {
-      await shareInvite(name, newId);
+      await shareInvite(firstName, newId);
       // if (mounted) {
       // WidgetsBinding.instance.endOfFrame.then((_) {
       //   if (mounted) {
@@ -432,19 +436,23 @@ class _PanelsState extends ConsumerState<Panels> {
     }
   }
 
-  Future<void> _onSaveAndShare(Id id, String name, Gender gender) async {
+  Future<void> _onSaveAndShare(
+      Id id, String firstName, String lastName, Gender gender) async {
     final graph = ref.read(graphProvider);
     final person = graph.people[id];
     if (person == null) {
       return;
     }
-    if (person.profile.name != name || person.profile.gender != gender) {
+    if (person.profile.firstName != firstName ||
+        person.profile.lastName != lastName ||
+        person.profile.gender != gender) {
       final graphNotifier = ref.read(graphProvider.notifier);
       final updateFuture = graphNotifier.updateProfile(
         id,
         ProfileUpdate(
           profile: person.profile.copyWith(
-            name: name,
+            firstName: firstName,
+            lastName: lastName,
             gender: gender,
           ),
         ),
@@ -455,7 +463,7 @@ class _PanelsState extends ConsumerState<Panels> {
       }
     }
 
-    final type = await shareInvite(name, id);
+    final type = await shareInvite(firstName, id);
     if (!mounted) {
       return;
     }
@@ -674,7 +682,8 @@ class _ProfileDisplay extends ConsumerStatefulWidget {
 }
 
 class _ProfileEditorState extends ConsumerState<_ProfileDisplay> {
-  late final TextEditingController _nameController;
+  late final TextEditingController _firstNameController;
+  late final TextEditingController _lastNameController;
   late final TextEditingController _birthdayController;
   late final TextEditingController _deathdayController;
   late final TextEditingController _birthplaceController;
@@ -685,7 +694,8 @@ class _ProfileEditorState extends ConsumerState<_ProfileDisplay> {
     super.initState();
     final profile = ref.read(profileUpdateProvider);
     final deathday = profile.deathday;
-    _nameController = TextEditingController(text: profile.name);
+    _firstNameController = TextEditingController(text: profile.firstName);
+    _lastNameController = TextEditingController(text: profile.lastName);
     _birthdayController = TextEditingController();
     _deathdayController = TextEditingController(
         text: deathday == null ? '' : formatDate(deathday));
@@ -704,7 +714,8 @@ class _ProfileEditorState extends ConsumerState<_ProfileDisplay> {
 
   @override
   void dispose() {
-    _nameController.dispose();
+    _firstNameController.dispose();
+    _lastNameController.dispose();
     _birthdayController.dispose();
     _birthplaceController.dispose();
     super.dispose();
@@ -720,7 +731,7 @@ class _ProfileEditorState extends ConsumerState<_ProfileDisplay> {
         Padding(
           padding: const EdgeInsets.only(left: 8.0),
           child: Text(
-            ref.watch(profileUpdateProvider.select((p) => p.name)),
+            ref.watch(profileUpdateProvider.select((p) => p.fullName)),
             style: const TextStyle(
               fontSize: 24,
             ),
@@ -755,18 +766,29 @@ class _ProfileEditorState extends ConsumerState<_ProfileDisplay> {
               fixedSize: const Size.fromHeight(48),
             ),
             child: Text(
-                'View ${ref.watch(profileUpdateProvider.select((s) => s.name))}\'s tree'),
+                'View ${ref.watch(profileUpdateProvider.select((s) => s.firstName))}\'s tree'),
           ),
           const SizedBox(height: 24),
         ],
         TextFormField(
-          controller: _nameController,
+          controller: _firstNameController,
           enabled: widget.isEditable,
-          onChanged: ref.read(profileUpdateProvider.notifier).name,
+          onChanged: ref.read(profileUpdateProvider.notifier).firstName,
           textCapitalization: TextCapitalization.words,
           textInputAction: TextInputAction.next,
           decoration: const InputDecoration(
-            label: Text('Name'),
+            label: Text('First Name'),
+          ),
+        ),
+        const SizedBox(height: 24),
+        TextFormField(
+          controller: _lastNameController,
+          enabled: widget.isEditable,
+          onChanged: ref.read(profileUpdateProvider.notifier).lastName,
+          textCapitalization: TextCapitalization.words,
+          textInputAction: TextInputAction.next,
+          decoration: const InputDecoration(
+            label: Text('Last Name'),
           ),
         ),
         const SizedBox(height: 24),
@@ -935,7 +957,8 @@ class _ProfileEditorState extends ConsumerState<_ProfileDisplay> {
 class WaitingForApprovalDisplay extends StatefulWidget {
   final Person person;
   final VoidCallback? onAddConnectionPressed;
-  final void Function(String name, Gender gender) onSaveAndShare;
+  final void Function(String firstName, String lastName, Gender gender)
+      onSaveAndShare;
 
   const WaitingForApprovalDisplay({
     super.key,
@@ -950,7 +973,8 @@ class WaitingForApprovalDisplay extends StatefulWidget {
 }
 
 class _WaitingForApprovalDisplayState extends State<WaitingForApprovalDisplay> {
-  late String _name = widget.person.profile.name;
+  late String _firstName = widget.person.profile.firstName;
+  late String _lastName = widget.person.profile.lastName;
   late Gender _gender = widget.person.profile.gender;
 
   @override
@@ -959,19 +983,22 @@ class _WaitingForApprovalDisplayState extends State<WaitingForApprovalDisplay> {
       mainAxisSize: MainAxisSize.min,
       children: [
         MinimalProfileEditor(
-          initialName: widget.person.profile.name,
+          initialFirstName: widget.person.profile.firstName,
+          initialLastName: widget.person.profile.lastName,
           initialGender: widget.person.profile.gender,
-          onUpdate: (name, gender) {
+          onUpdate: (firstName, lastName, gender) {
             setState(() {
-              _name = name;
+              _firstName = firstName;
+              _lastName = lastName;
               _gender = gender;
             });
           },
         ),
         const SizedBox(height: 16),
         ShareLinkButton(
-          firstName: _name,
-          onPressed: () => widget.onSaveAndShare(_name, _gender),
+          firstName: _firstName,
+          onPressed: () =>
+              widget.onSaveAndShare(_firstName, _lastName, _gender),
         ),
         const SizedBox(height: 16),
         if (widget.onAddConnectionPressed != null)

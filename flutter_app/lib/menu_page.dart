@@ -47,8 +47,8 @@ class _MenuPageState extends ConsumerState<MenuPage> {
                 onPressed: _loading
                     ? null
                     : () async {
-                        final result =
-                            await showDialog<(String name, Gender gender)>(
+                        final result = await showDialog<
+                            (String firstName, String lastName, Gender gender)>(
                           context: context,
                           builder: (context) {
                             return AlertDialog(
@@ -56,8 +56,9 @@ class _MenuPageState extends ConsumerState<MenuPage> {
                               content: Consumer(builder: (context, ref, child) {
                                 return CreateRootDisplay(
                                   padding: const EdgeInsets.all(16),
-                                  onDone: (name, gender) {
-                                    Navigator.of(context).pop((name, gender));
+                                  onDone: (firstName, lastName, gender) {
+                                    Navigator.of(context)
+                                        .pop((firstName, lastName, gender));
                                   },
                                 );
                               }),
@@ -67,7 +68,7 @@ class _MenuPageState extends ConsumerState<MenuPage> {
                         if (!mounted || result == null) {
                           return;
                         }
-                        _start(result.$1, result.$2);
+                        _start(result.$1, result.$2, result.$3);
                       },
                 child: _loading
                     ? const CircularProgressIndicator.adaptive()
@@ -94,7 +95,7 @@ class _MenuPageState extends ConsumerState<MenuPage> {
                     return ListTile(
                       onTap: () => _navigate(person.id),
                       title: Text(
-                          '${person.profile.name} (${person.profile.gender.name})'),
+                          '${person.profile.fullName} (${person.profile.gender.name})'),
                       subtitle: Text(person.id),
                     );
                   },
@@ -118,10 +119,11 @@ class _MenuPageState extends ConsumerState<MenuPage> {
     );
   }
 
-  void _start(String name, Gender gender) async {
+  void _start(String firstName, String lastName, Gender gender) async {
     final api = ref.read(apiProvider);
     setState(() => _loading = true);
-    final result = await api.createRoot(name: name, gender: gender);
+    final result = await api.createRoot(
+        firstName: firstName, lastName: lastName, gender: gender);
     if (!mounted) {
       return;
     }

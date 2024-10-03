@@ -43,7 +43,8 @@ class Api {
 
   Future<Either<Error, (Id id, List<Person> people)>> addConnection({
     required Id sourceId,
-    required String name,
+    required String firstName,
+    required String lastName,
     required Gender gender,
     required Relationship relationship,
   }) {
@@ -52,7 +53,8 @@ class Api {
         Uri.parse('$_baseUrl/v1/people/$sourceId/connections'),
         headers: _headers,
         body: jsonEncode({
-          'name': name,
+          'firstName': firstName,
+          'lastName': lastName,
           'gender': gender.name,
           'relationship': relationship.name,
         }),
@@ -67,7 +69,8 @@ class Api {
   }
 
   Future<Either<Error, Person>> createRoot({
-    required String name,
+    required String firstName,
+    required String lastName,
     required Gender gender,
   }) {
     return _makeRequest(
@@ -75,7 +78,8 @@ class Api {
         Uri.parse('$_baseUrl/v1/people'),
         headers: _headers,
         body: jsonEncode({
-          'name': name,
+          'firstName': firstName,
+          'lastName': lastName,
           'gender': gender.name,
         }),
       ),
@@ -261,7 +265,8 @@ class Person with _$Person implements GraphNode {
 @freezed
 class Profile with _$Profile {
   const factory Profile({
-    required String name,
+    required String firstName,
+    required String lastName,
     required Gender gender,
     required String imageUrl,
     required DateTime? birthday,
@@ -271,6 +276,10 @@ class Profile with _$Profile {
 
   factory Profile.fromJson(Map<String, Object?> json) =>
       _$ProfileFromJson(json);
+
+  const Profile._();
+
+  String get fullName => '$firstName $lastName';
 }
 
 class DateTimeConverter implements JsonConverter<DateTime, String> {

@@ -10,7 +10,7 @@ export class Database {
     this.firestore = getFirestore();
   }
 
-  public async addConnection(sourceId: Id, name: string, gender: Gender, relationship: Relationship, creatorId: Id): Promise<{ id: Id, people: Person[] } | undefined> {
+  public async addConnection(sourceId: Id, firstName: string, lastName: string, gender: Gender, relationship: Relationship, creatorId: Id): Promise<{ id: Id, people: Person[] } | undefined> {
     return this.firestore.runTransaction(async (t: Transaction) => {
       const sourceRef = this.personRef(sourceId);
       const sourceDoc = await t.get(sourceRef);
@@ -33,7 +33,8 @@ export class Database {
       // TODO: Don't allow adding of any spouse's family
 
       const newPerson = this.newEmptyPerson(gender, creatorId);
-      newPerson.profile.name = name;
+      newPerson.profile.firstName = firstName;
+      newPerson.profile.lastName = lastName;
       createdPeople.push(newPerson);
 
       if (relationship == "parent") {
@@ -127,9 +128,10 @@ export class Database {
     });
   }
 
-  public async createRootPerson(name: string, gender: Gender): Promise<Person> {
+  public async createRootPerson(firstName: string, lastName: string, gender: Gender): Promise<Person> {
     const person = this.newEmptyPerson(gender, "root");
-    person.profile.name = name;
+    person.profile.firstName = firstName;
+    person.profile.lastName = lastName;
     person.ownedBy = person.id;
     await this.personRef(person.id).create(person);
     return person;
@@ -284,7 +286,8 @@ export class Database {
       "ownedBy": null,
       "createdAt": new Date().toISOString(),
       "profile": {
-        "name": "Unknown",
+        "firstName": "Unknown",
+        "lastName": "",
         "gender": gender,
         "imageKey": null,
         "birthday": null,
@@ -306,7 +309,8 @@ export const genderSchema = z.enum(["male", "female"]);
 export const relationshipSchema = z.enum(["parent", "sibling", "spouse", "child"]);
 
 export const profileSchema = z.object({
-  name: z.string(),
+  firstName: z.string(),
+  lastName: z.string(),
   gender: genderSchema,
   imageKey: z.string().nullable().optional(),
   birthday: z.string().nullable(),

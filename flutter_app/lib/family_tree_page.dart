@@ -497,7 +497,7 @@ class _TilePainter extends CustomPainter {
 
 class AddConnectionDisplay extends ConsumerStatefulWidget {
   final Relationship relationship;
-  final void Function(String name, Gender gender) onSave;
+  final void Function(String firstName, String lastName, Gender gender) onSave;
 
   const AddConnectionDisplay({
     super.key,
@@ -511,7 +511,8 @@ class AddConnectionDisplay extends ConsumerStatefulWidget {
 }
 
 class _BasicProfileDisplayState extends ConsumerState<AddConnectionDisplay> {
-  String _name = '';
+  String _firstName = '';
+  String _lastName = '';
   Gender _gender = Gender.male;
   final _shareButtonKey = GlobalKey();
 
@@ -537,9 +538,10 @@ class _BasicProfileDisplayState extends ConsumerState<AddConnectionDisplay> {
         ),
         const SizedBox(height: 16),
         MinimalProfileEditor(
-          onUpdate: (name, gender) {
+          onUpdate: (firstName, lastName, gender) {
             setState(() {
-              _name = name;
+              _firstName = firstName;
+              _lastName = lastName;
               _gender = gender;
             });
           },
@@ -547,8 +549,8 @@ class _BasicProfileDisplayState extends ConsumerState<AddConnectionDisplay> {
         const SizedBox(height: 24),
         ShareLinkButton(
           key: _shareButtonKey,
-          firstName: _name,
-          onPressed: _name.isEmpty ? null : _done,
+          firstName: _firstName,
+          onPressed: (_firstName.isEmpty || _lastName.isEmpty) ? null : _done,
         ),
         const SizedBox(height: 16),
         Center(
@@ -563,16 +565,16 @@ class _BasicProfileDisplayState extends ConsumerState<AddConnectionDisplay> {
   }
 
   void _done() {
-    if (_name.isEmpty) {
+    if (_firstName.isEmpty || _lastName.isEmpty) {
       return;
     }
-    widget.onSave(_name, _gender);
+    widget.onSave(_firstName, _lastName, _gender);
   }
 }
 
 class CreateRootDisplay extends ConsumerStatefulWidget {
   final EdgeInsets padding;
-  final void Function(String name, Gender gender) onDone;
+  final void Function(String firstName, String lastName, Gender gender) onDone;
 
   const CreateRootDisplay({
     super.key,
@@ -585,7 +587,8 @@ class CreateRootDisplay extends ConsumerStatefulWidget {
 }
 
 class _CreateRootDisplayState extends ConsumerState<CreateRootDisplay> {
-  String _name = '';
+  String _firstName = '';
+  String _lastName = '';
   Gender _gender = Gender.male;
 
   @override
@@ -601,9 +604,10 @@ class _CreateRootDisplayState extends ConsumerState<CreateRootDisplay> {
         children: [
           const SizedBox(height: 16),
           MinimalProfileEditor(
-            onUpdate: (name, gender) {
+            onUpdate: (firstName, lastName, gender) {
               setState(() {
-                _name = name;
+                _firstName = firstName;
+                _lastName = lastName;
                 _gender = gender;
               });
             },
@@ -611,7 +615,8 @@ class _CreateRootDisplayState extends ConsumerState<CreateRootDisplay> {
           const SizedBox(height: 16),
           Center(
             child: TextButton(
-              onPressed: _name.isEmpty ? null : _done,
+              onPressed:
+                  (_firstName.isEmpty || _lastName.isEmpty) ? null : _done,
               child: const Text('Done'),
             ),
           ),
@@ -621,21 +626,24 @@ class _CreateRootDisplayState extends ConsumerState<CreateRootDisplay> {
   }
 
   void _done() {
-    if (_name.isEmpty) {
+    if (_firstName.isEmpty || _lastName.isEmpty) {
       return;
     }
-    widget.onDone(_name, _gender);
+    widget.onDone(_firstName, _lastName, _gender);
   }
 }
 
 class MinimalProfileEditor extends StatefulWidget {
-  final String? initialName;
+  final String? initialFirstName;
+  final String? initialLastName;
   final Gender? initialGender;
-  final void Function(String name, Gender gender) onUpdate;
+  final void Function(String firstName, String lastName, Gender gender)
+      onUpdate;
 
   const MinimalProfileEditor({
     super.key,
-    this.initialName,
+    this.initialFirstName,
+    this.initialLastName,
     this.initialGender,
     required this.onUpdate,
   });
@@ -645,19 +653,24 @@ class MinimalProfileEditor extends StatefulWidget {
 }
 
 class _MinimalProfileEditorState extends State<MinimalProfileEditor> {
-  late final TextEditingController _nameController;
+  late final TextEditingController _firstNameController;
+  late final TextEditingController _lastNameController;
   late Gender _gender;
 
   @override
   void initState() {
     super.initState();
-    _nameController = TextEditingController(text: widget.initialName ?? '');
+    _firstNameController =
+        TextEditingController(text: widget.initialFirstName ?? '');
+    _lastNameController =
+        TextEditingController(text: widget.initialLastName ?? '');
     _gender = widget.initialGender ?? Gender.male;
   }
 
   @override
   void dispose() {
-    _nameController.dispose();
+    _firstNameController.dispose();
+    _lastNameController.dispose();
     super.dispose();
   }
 
@@ -668,12 +681,24 @@ class _MinimalProfileEditorState extends State<MinimalProfileEditor> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         TextFormField(
-          controller: _nameController,
+          controller: _firstNameController,
           textCapitalization: TextCapitalization.words,
           textInputAction: TextInputAction.next,
-          onChanged: (text) => widget.onUpdate(text, _gender),
+          onChanged: (text) =>
+              widget.onUpdate(text, _lastNameController.text, _gender),
           decoration: const InputDecoration(
-            label: Text('First & Last Name'),
+            label: Text('First name'),
+          ),
+        ),
+        const SizedBox(height: 16),
+        TextFormField(
+          controller: _lastNameController,
+          textCapitalization: TextCapitalization.words,
+          textInputAction: TextInputAction.next,
+          onChanged: (text) =>
+              widget.onUpdate(_firstNameController.text, text, _gender),
+          decoration: const InputDecoration(
+            label: Text('Last name'),
           ),
         ),
         const SizedBox(height: 16),
@@ -685,7 +710,8 @@ class _MinimalProfileEditorState extends State<MinimalProfileEditor> {
                 child: FilledButton(
                   onPressed: () {
                     setState(() => _gender = gender);
-                    widget.onUpdate(_nameController.text, _gender);
+                    widget.onUpdate(_firstNameController.text,
+                        _lastNameController.text, _gender);
                   },
                   style: FilledButton.styleFrom(
                     fixedSize: const Size.fromHeight(44),
@@ -720,21 +746,21 @@ class OwnershipDialog extends StatelessWidget {
     return AlertDialog(
       title: addedBy == null
           ? Text(
-              '${focalPerson.profile.name} has been added to the family tree')
+              '${focalPerson.profile.fullName} has been added to the family tree')
           : Text(
-              '${focalPerson.profile.name} has been added to the family tree by ${addedBy.profile.name}'),
+              '${focalPerson.profile.fullName} has been added to the family tree by ${addedBy.profile.fullName}'),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Center(
-            child: Text('Are you ${focalPerson.profile.name}?'),
+            child: Text('Are you ${focalPerson.profile.fullName}?'),
           ),
           const SizedBox(height: 16),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: _bigButtonStyle,
-            child: Text('Yes, I am ${focalPerson.profile.name}'),
+            child: Text('Yes, I am ${focalPerson.profile.fullName}'),
           ),
           const SizedBox(height: 16),
           TextButton(
@@ -850,7 +876,7 @@ class _EdgePainter extends CustomPainter {
       final person = node.data;
       final bottom = _paintText(
         canvas: canvas,
-        text: person.profile.name,
+        text: person.profile.fullName,
         style: const TextStyle(
           color: Colors.black,
           fontSize: 27,

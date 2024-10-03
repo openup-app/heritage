@@ -26,7 +26,7 @@ export function router(auth: Auth, database: Database, storage: Storage): Router
     }
 
     try {
-      const result = await database.addConnection(sourceId, body.name, body.gender, body.relationship, creatorId);
+      const result = await database.addConnection(sourceId, body.firstName, body.lastName, body.gender, body.relationship, creatorId);
       if (!result) {
         return res.sendStatus(400);
       }
@@ -49,7 +49,7 @@ export function router(auth: Auth, database: Database, storage: Storage): Router
     }
 
     try {
-      const person = await database.createRootPerson(body.name, body.gender);
+      const person = await database.createRootPerson(body.firstName, body.lastName, body.gender);
       return res.json({
         'person': constructURLs(person, storage),
       })
@@ -186,13 +186,15 @@ function normalizeFields(fields: formidable.Fields) {
 
 
 const addConnectionSchema = z.object({
-  name: z.string(),
+  firstName: z.string(),
+  lastName: z.string(),
   gender: genderSchema,
   relationship: relationshipSchema,
 });
 
 const createRootSchema = z.object({
-  name: z.string(),
+  firstName: z.string(),
+  lastName: z.string(),
   gender: genderSchema,
 });
 

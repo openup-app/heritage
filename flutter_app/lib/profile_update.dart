@@ -19,7 +19,11 @@ class ProfileUpdateNotifier extends StateNotifier<ProfileUpdate> {
     required this.initialProfile,
   }) : super(ProfileUpdate(profile: initialProfile));
 
-  void name(String value) => state = state.copyWith.profile(name: value);
+  void firstName(String value) =>
+      state = state.copyWith.profile(firstName: value);
+
+  void lastName(String value) =>
+      state = state.copyWith.profile(lastName: value);
 
   void gender(Gender gender) => state = state.copyWith.profile(gender: gender);
 
@@ -77,7 +81,9 @@ class ProfileUpdate with _$ProfileUpdate {
 
   const ProfileUpdate._();
 
-  String get name => profile.name;
+  String get firstName => profile.firstName;
+  String get lastName => profile.lastName;
+  String get fullName => profile.fullName;
   Gender get gender => profile.gender;
   String? get imageUrl => profile.imageUrl;
   DateTime? get birthday => profile.birthday;
