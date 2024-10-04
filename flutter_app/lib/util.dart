@@ -68,19 +68,20 @@ void launchEmail() {
   launchUrl(uri);
 }
 
-Future<void> showShareSuccess({
-  required BuildContext context,
-  required ShareType type,
-}) async {
+Future<void> showProfileUpdateSuccess({required BuildContext context}) async {
   final textStyle = Theme.of(context).textTheme.bodyMedium ?? const TextStyle();
   final overlay = Overlay.of(context);
   late OverlayEntry overlayEntry;
   overlayEntry = OverlayEntry(
-    builder: (context) => DefaultTextStyle(
-      style: textStyle,
-      child: Center(
-        child: _AnimatedSuccessPopup(
-          onDone: overlayEntry.remove,
+    builder: (context) => Align(
+      alignment: Alignment.bottomCenter,
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 24),
+        child: DefaultTextStyle(
+          style: textStyle,
+          child: _AnimatedSuccessPopup(
+            onDone: overlayEntry.remove,
+          ),
         ),
       ),
     ),
@@ -168,42 +169,31 @@ class _SuccessPopup extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
+    return const DecoratedBox(
       decoration: BoxDecoration(
-        border: Border.all(color: Colors.white, width: 3),
-        borderRadius: const BorderRadius.all(
-          Radius.circular(35),
+        borderRadius: BorderRadius.all(
+          Radius.circular(10),
         ),
-        color: const Color.fromRGBO(0x01, 0xEE, 0x11, 0.95),
-        boxShadow: const [
+        color: Color.fromRGBO(0x07, 0xCA, 0x35, 1.0),
+        boxShadow: [
           BoxShadow(
-            offset: Offset(0, 14),
+            offset: Offset(0, 5),
             blurRadius: 15,
-            color: Color.fromRGBO(0x00, 0x00, 0x00, 0.1),
+            color: Color.fromRGBO(0x00, 0x00, 0x00, 0.3),
           ),
         ],
       ),
-      child: const SizedBox(
-        width: 206,
-        height: 206,
+      child: SizedBox(
+        width: 250,
+        height: 54,
         child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.done,
-                size: 140,
-                color: Colors.white,
-              ),
-              Text(
-                'Profile Saved',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
-                ),
-              ),
-            ],
+          child: Text(
+            'Profile Saved',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+              color: Colors.white,
+            ),
           ),
         ),
       ),

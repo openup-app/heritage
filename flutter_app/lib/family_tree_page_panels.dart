@@ -172,6 +172,7 @@ class _PanelsState extends ConsumerState<Panels> {
                                 ],
                               ),
                               onViewPerspective: widget.onViewPerspective,
+                              onSaved: () {},
                             ),
                           ),
                         );
@@ -217,6 +218,10 @@ class _PanelsState extends ConsumerState<Panels> {
                         hasDifferentOwner: person.ownedBy != person.id,
                         header: null,
                         onViewPerspective: widget.onViewPerspective,
+                        onSaved: () {
+                          showProfileUpdateSuccess(context: context);
+                          widget.onDismissPanelPopup();
+                        },
                       ),
                     ),
                   PanelPopupStateAddConnection(
@@ -448,7 +453,7 @@ class _PanelsState extends ConsumerState<Panels> {
       if (!mounted) {
         return;
       }
-      showShareSuccess(context: context, type: type);
+      showProfileUpdateSuccess(context: context);
     }
   }
 
@@ -483,7 +488,7 @@ class _PanelsState extends ConsumerState<Panels> {
     if (!mounted) {
       return;
     }
-    showShareSuccess(context: context, type: type);
+    showProfileUpdateSuccess(context: context);
   }
 }
 
@@ -673,6 +678,7 @@ class ProfileDisplay extends StatelessWidget {
   final ScrollController? scrollController;
   final Widget? header;
   final VoidCallback onViewPerspective;
+  final VoidCallback onSaved;
 
   const ProfileDisplay({
     super.key,
@@ -684,6 +690,7 @@ class ProfileDisplay extends StatelessWidget {
     this.scrollController,
     this.header,
     required this.onViewPerspective,
+    required this.onSaved,
   });
 
   @override
@@ -700,6 +707,7 @@ class ProfileDisplay extends StatelessWidget {
         hasDifferentOwner: hasDifferentOwner,
         header: header,
         onViewPerspective: onViewPerspective,
+        onSaved: onSaved,
       ),
     );
   }
@@ -712,6 +720,7 @@ class _ProfileDisplay extends ConsumerStatefulWidget {
   final bool hasDifferentOwner;
   final Widget? header;
   final VoidCallback onViewPerspective;
+  final VoidCallback onSaved;
 
   const _ProfileDisplay({
     super.key,
@@ -721,6 +730,7 @@ class _ProfileDisplay extends ConsumerStatefulWidget {
     required this.hasDifferentOwner,
     required this.header,
     required this.onViewPerspective,
+    required this.onSaved,
   });
 
   @override
@@ -1038,7 +1048,7 @@ class _ProfileEditorState extends ConsumerState<_ProfileDisplay> {
             foregroundColor: Colors.white,
             backgroundColor: primaryColor,
           ),
-          child: Text(
+          child: const Text(
             'Share Login Link',
           ),
         ),
@@ -1095,6 +1105,7 @@ class _ProfileEditorState extends ConsumerState<_ProfileDisplay> {
     await notifier.updateProfile(widget.id, profileUpdate);
     if (mounted) {
       setState(() => _submitting = false);
+      widget.onSaved();
     }
   }
 }
