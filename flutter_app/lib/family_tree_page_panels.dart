@@ -205,14 +205,14 @@ class _PanelsState extends ConsumerState<Panels> {
               alignment: Alignment.centerLeft,
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxHeight: 660),
-                child: AspectRatio(
-                  aspectRatio: 390 / 660,
-                  child: AnimatedSidePanel(
-                    child: switch (widget.panelPopupState) {
-                      PanelPopupStateNone() => null,
-                      PanelPopupStateProfile(:final person) =>
-                        _SidePanelContainer(
-                          key: Key('profile_${person.id}'),
+                child: AnimatedSidePanel(
+                  child: switch (widget.panelPopupState) {
+                    PanelPopupStateNone() => null,
+                    PanelPopupStateProfile(:final person) =>
+                      _SidePanelContainer(
+                        key: Key('profile_${person.id}'),
+                        child: SingleChildScrollView(
+                          padding: const EdgeInsets.all(15),
                           child: ProfileDisplay(
                             id: person.id,
                             profile: person.profile,
@@ -223,12 +223,15 @@ class _PanelsState extends ConsumerState<Panels> {
                             onViewPerspective: widget.onViewPerspective,
                           ),
                         ),
-                      PanelPopupStateAddConnection(
-                        :final person,
-                        :final relationship
-                      ) =>
-                        _SidePanelContainer(
-                          key: Key('connection_${relationship.name}'),
+                      ),
+                    PanelPopupStateAddConnection(
+                      :final person,
+                      :final relationship
+                    ) =>
+                      _SidePanelContainer(
+                        key: Key('connection_${relationship.name}'),
+                        child: Padding(
+                          padding: const EdgeInsets.all(15),
                           child: AddConnectionDisplay(
                             relationship: relationship,
                             onSave:
@@ -237,14 +240,24 @@ class _PanelsState extends ConsumerState<Panels> {
                                         gender, person, relationship),
                           ),
                         ),
-                      PanelPopupStateWaitingForApproval(:final person) =>
-                        _SidePanelContainer(
-                          key: Key('approval_${person.id}'),
+                      ),
+                    PanelPopupStateWaitingForApproval(:final person) =>
+                      _SidePanelContainer(
+                        key: Key('approval_${person.id}'),
+                        child: Padding(
+                          padding: const EdgeInsets.all(15),
                           child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Waiting for ${person.profile.firstName}\'s approval',
-                                style: Theme.of(context).textTheme.titleLarge,
+                                'Waiting for\n${person.profile.firstName}\'s\napproval',
+                                textAlign: TextAlign.start,
+                                style: const TextStyle(
+                                  fontSize: 48,
+                                  fontWeight: FontWeight.w900,
+                                  color: Color.fromRGBO(0x3C, 0x3C, 0x3C, 1.0),
+                                ),
                               ),
                               const SizedBox(height: 16),
                               WaitingForApprovalDisplay(
@@ -257,8 +270,8 @@ class _PanelsState extends ConsumerState<Panels> {
                             ],
                           ),
                         ),
-                    },
-                  ),
+                      ),
+                  },
                 ),
               ),
             ),
@@ -620,23 +633,23 @@ class _SidePanelContainer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      clipBehavior: Clip.hardEdge,
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.all(Radius.circular(10)),
-        boxShadow: [
-          BoxShadow(
-            offset: Offset(0, 4),
-            blurRadius: 16,
-            color: Color.fromRGBO(0x00, 0x00, 0x00, 0.25),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.only(top: 8.0),
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(15),
+    return AspectRatio(
+      aspectRatio: 390 / 660,
+      child: Container(
+        clipBehavior: Clip.hardEdge,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.all(Radius.circular(10)),
+          boxShadow: [
+            BoxShadow(
+              offset: Offset(0, 4),
+              blurRadius: 16,
+              color: Color.fromRGBO(0x00, 0x00, 0x00, 0.25),
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.only(top: 8.0),
           child: child,
         ),
       ),
@@ -967,17 +980,17 @@ class _ProfileEditorState extends ConsumerState<_ProfileDisplay> {
             ],
           ),
         ),
-        const SizedBox(height: 24),
-        Text(
-          'Gender',
-          style: Theme.of(context).textTheme.titleLarge,
-        ),
-        const SizedBox(height: 4),
-        Text(
-          'Needed to list you properly in the tree',
-          style: Theme.of(context).textTheme.labelLarge,
-        ),
         if (widget.isEditable) ...[
+          const SizedBox(height: 24),
+          Text(
+            'Gender',
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Needed to list you properly in the tree',
+            style: Theme.of(context).textTheme.labelLarge,
+          ),
           const SizedBox(height: 8),
           Row(
             children: [
@@ -1164,7 +1177,9 @@ class _WaitingForApprovalDisplayState extends State<WaitingForApprovalDisplay> {
   Widget build(BuildContext context) {
     return Column(
       mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        const SizedBox(height: 20),
         MinimalProfileEditor(
           initialFirstName: widget.person.profile.firstName,
           initialLastName: widget.person.profile.lastName,
@@ -1178,16 +1193,36 @@ class _WaitingForApprovalDisplayState extends State<WaitingForApprovalDisplay> {
           },
         ),
         const SizedBox(height: 16),
+        const SizedBox(height: 20),
         ShareLinkButton(
           firstName: _firstName,
           onPressed: () =>
               widget.onSaveAndShare(_firstName, _lastName, _gender),
         ),
         const SizedBox(height: 16),
+        const SizedBox(height: 20),
+        Center(
+          child: TextButton(
+            onPressed: () {},
+            style: TextButton.styleFrom(
+              foregroundColor: const Color.fromRGBO(0xFF, 0x00, 0x00, 1.0),
+            ),
+            child: const Text('Delete relative'),
+          ),
+        ),
+        const SizedBox(height: 16),
+        Center(
+          child: TextButton(
+            onPressed: (_firstName.isEmpty || _lastName.isEmpty) ? null : () {},
+            style: TextButton.styleFrom(foregroundColor: Colors.black),
+            child: Text('I will complete $_firstName\'s profile'),
+          ),
+        ),
+        const SizedBox(height: 16),
         if (widget.onAddConnectionPressed != null)
           TextButton(
             onPressed: widget.onAddConnectionPressed,
-            child: const Text('Attach a family member'),
+            child: const Text('Attach a relative'),
           ),
       ],
     );

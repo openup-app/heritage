@@ -76,6 +76,7 @@ class HeritageApp extends StatelessWidget {
                         backgroundColor:
                             const Color.fromRGBO(0xEB, 0xEB, 0xEB, 1.0),
                         padding: EdgeInsets.zero,
+                        textStyle: subtitleStyle,
                         shape: const RoundedRectangleBorder(
                           borderRadius: BorderRadius.all(
                             Radius.circular(13),
@@ -83,6 +84,10 @@ class HeritageApp extends StatelessWidget {
                         ),
                       ),
                     ),
+                    textButtonTheme: TextButtonThemeData(
+                        style: TextButton.styleFrom(
+                      textStyle: subtitleStyle,
+                    )),
                     textTheme: const TextTheme(
                       displayLarge: titleStyle,
                       displayMedium: titleStyle,

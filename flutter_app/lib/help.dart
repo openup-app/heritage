@@ -13,6 +13,7 @@ Future<void> showHelpDialog({
         title: const AppVersion(),
         content: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             FilledButton(
               onPressed: launchEmail,

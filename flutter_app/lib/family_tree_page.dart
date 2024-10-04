@@ -6,6 +6,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:heritage/api.dart';
 import 'package:heritage/family_tree_page_panels.dart';
@@ -329,7 +330,7 @@ class FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
                   opacity: widget.selectedPerson == null ? 0.0 : 1.0,
                   child: const IgnorePointer(
                     child: ColoredBox(
-                      color: Color.fromRGBO(0x00, 0x00, 0x00, 0.6),
+                      color: Color.fromRGBO(0x00, 0x00, 0x00, 0.8),
                     ),
                   ),
                 ),
@@ -543,20 +544,21 @@ class _BasicProfileDisplayState extends ConsumerState<AddConnectionDisplay> {
   Widget build(BuildContext context) {
     return Column(
       mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Center(
-          child: Text(
-            'Add a ${widget.relationship.name}',
-            style: const TextStyle(fontSize: 24),
+        Text(
+          'Add a ${widget.relationship.name}',
+          style: const TextStyle(
+            fontSize: 32,
+            fontWeight: FontWeight.w900,
+            color: Color.fromRGBO(0x3C, 0x3C, 0x3C, 1.0),
           ),
         ),
-        const SizedBox(height: 16),
-        SizedBox(
-          width: double.infinity,
-          child: Image.asset(
-            'assets/images/connection_spouse.webp',
-            fit: BoxFit.cover,
+        Center(
+          child: SvgPicture.asset(
+            'assets/images/connection_${widget.relationship.name}.svg',
+            height: 250,
           ),
         ),
         const SizedBox(height: 16),
@@ -569,23 +571,13 @@ class _BasicProfileDisplayState extends ConsumerState<AddConnectionDisplay> {
             });
           },
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 32),
         ShareLinkButton(
           key: _shareButtonKey,
           firstName: _firstName,
           onPressed: (_firstName.isEmpty || _lastName.isEmpty)
               ? null
               : () => _done(takeOwnership: false),
-        ),
-        const SizedBox(height: 16),
-        Center(
-          child: TextButton(
-            onPressed: (_firstName.isEmpty || _lastName.isEmpty)
-                ? null
-                : () => _done(takeOwnership: true),
-            child: const Text(
-                'They can\'t complete their profile, I will instead'),
-          ),
         ),
       ],
     );
@@ -1015,25 +1007,28 @@ class ShareLinkButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return FilledButton(
       onPressed: onPressed,
-      style: _bigButtonStyle,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
+      style: FilledButton.styleFrom(
+        foregroundColor: Colors.white,
+        backgroundColor: primaryColor,
+        fixedSize: const Size.fromHeight(64),
+      ),
+      child: Stack(
         children: [
-          const Icon(CupertinoIcons.share),
-          Expanded(
+          const Align(
+            alignment: Alignment.centerLeft,
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8.0),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'Only share this link with $firstName',
-                    textAlign: TextAlign.center,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const Text('They can complete their profile'),
-                ],
+              padding: EdgeInsets.only(left: 25),
+              child: Icon(CupertinoIcons.share),
+            ),
+          ),
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 54.0),
+              child: Text(
+                '$firstName will now verify this profile\n ONLY share this profile with $firstName',
+                textAlign: TextAlign.center,
+                overflow: TextOverflow.ellipsis,
+                maxLines: 2,
               ),
             ),
           ),
