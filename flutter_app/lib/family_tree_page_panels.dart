@@ -628,7 +628,7 @@ class _SidePanelContainer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      constraints: const BoxConstraints(maxHeight: 660),
+      height: 660,
       clipBehavior: Clip.hardEdge,
       padding: const EdgeInsets.only(top: 8),
       decoration: const BoxDecoration(
