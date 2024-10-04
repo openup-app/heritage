@@ -123,8 +123,13 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
           relatedness: _relatedness,
           focalPerson: graph.focalPerson,
           panelPopupState: _panelPopupState,
-          onDismissPanelPopup: () =>
-              setState(() => _panelPopupState = const PanelPopupStateNone()),
+          onDismissPanelPopup: () {
+            setState(() {
+              _panelPopupState = const PanelPopupStateNone();
+              _selectedPerson = null;
+              _relatedness = null;
+            });
+          },
           onAddConnectionPressed: (relationship) {
             final person = _selectedPerson;
             if (person != null) {

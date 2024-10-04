@@ -227,9 +227,14 @@ class _PanelsState extends ConsumerState<Panels> {
                       key: Key('connection_${relationship.name}'),
                       child: AddConnectionDisplay(
                         relationship: relationship,
-                        onSave: (firstName, lastName, gender, takeOwnership) =>
-                            _saveNewConnection(firstName, lastName, gender,
-                                person, relationship),
+                        onSave:
+                            (firstName, lastName, gender, takeOwnership) async {
+                          await _saveNewConnection(firstName, lastName, gender,
+                              person, relationship);
+                          if (mounted) {
+                            widget.onDismissPanelPopup();
+                          }
+                        },
                       ),
                     ),
                   PanelPopupStateWaitingForApproval(:final person) =>
@@ -252,9 +257,14 @@ class _PanelsState extends ConsumerState<Panels> {
                           WaitingForApprovalDisplay(
                             person: person,
                             onAddConnectionPressed: null,
-                            onSaveAndShare: (firstName, lastName, gender) =>
-                                _onSaveAndShare(
-                                    person.id, firstName, lastName, gender),
+                            onSaveAndShare:
+                                (firstName, lastName, gender) async {
+                              await _onSaveAndShare(
+                                  person.id, firstName, lastName, gender);
+                              if (mounted) {
+                                widget.onDismissPanelPopup();
+                              }
+                            },
                           ),
                         ],
                       ),
@@ -434,14 +444,11 @@ class _PanelsState extends ConsumerState<Panels> {
       return;
     }
     if (newId != null) {
-      await shareInvite(firstName, newId);
-      // if (mounted) {
-      // WidgetsBinding.instance.endOfFrame.then((_) {
-      //   if (mounted) {
-      //     _familyTreeViewKey.currentState?.centerOnPersonWithId(person.id);
-      //   }
-      // });
-      // }
+      final type = await shareInvite(firstName, newId);
+      if (!mounted) {
+        return;
+      }
+      showShareSuccess(context: context, type: type);
     }
   }
 

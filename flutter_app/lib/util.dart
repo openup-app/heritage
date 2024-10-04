@@ -72,14 +72,21 @@ Future<void> showShareSuccess({
   required BuildContext context,
   required ShareType type,
 }) async {
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: Text(switch (type) {
-        ShareType.share => 'Link   shared!',
-        ShareType.clipboard => 'Link copied to clipboard!',
-      }),
+  final textStyle = Theme.of(context).textTheme.bodyMedium ?? const TextStyle();
+  final overlay = Overlay.of(context);
+  late OverlayEntry overlayEntry;
+  overlayEntry = OverlayEntry(
+    builder: (context) => DefaultTextStyle(
+      style: textStyle,
+      child: Center(
+        child: _AnimatedSuccessPopup(
+          onDone: overlayEntry.remove,
+        ),
+      ),
     ),
   );
+
+  overlay.insert(overlayEntry);
 }
 
 Future<T> showBlockingModal<T>(BuildContext context, Future<T> future) async {
@@ -110,6 +117,97 @@ Future<T> showBlockingModal<T>(BuildContext context, Future<T> future) async {
       Navigator.of(modalContext).pop();
     }
     return Future.error(e);
+  }
+}
+
+class _AnimatedSuccessPopup extends StatefulWidget {
+  final VoidCallback onDone;
+
+  const _AnimatedSuccessPopup({
+    super.key,
+    required this.onDone,
+  });
+
+  @override
+  State<_AnimatedSuccessPopup> createState() => _AnimatedSuccessPopupState();
+}
+
+class _AnimatedSuccessPopupState extends State<_AnimatedSuccessPopup>
+    with SingleTickerProviderStateMixin {
+  late final _controller = AnimationController(vsync: this)
+    ..duration = const Duration(milliseconds: 150);
+
+  @override
+  void initState() {
+    super.initState();
+    _controller.forward();
+    Future.delayed(const Duration(seconds: 1)).then((_) {
+      _controller.reverse().then((_) {
+        widget.onDone();
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: _controller,
+      child: const _SuccessPopup(),
+    );
+  }
+}
+
+class _SuccessPopup extends StatelessWidget {
+  const _SuccessPopup({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.white, width: 3),
+        borderRadius: const BorderRadius.all(
+          Radius.circular(35),
+        ),
+        color: const Color.fromRGBO(0x01, 0xEE, 0x11, 0.95),
+        boxShadow: const [
+          BoxShadow(
+            offset: Offset(0, 14),
+            blurRadius: 15,
+            color: Color.fromRGBO(0x00, 0x00, 0x00, 0.1),
+          ),
+        ],
+      ),
+      child: const SizedBox(
+        width: 206,
+        height: 206,
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.done,
+                size: 140,
+                color: Colors.white,
+              ),
+              Text(
+                'Profile Saved',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 
