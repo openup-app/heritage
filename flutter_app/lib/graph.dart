@@ -22,6 +22,7 @@ class LinkedNode<T extends GraphNode> {
   final T data;
   bool isBloodRelative;
   bool isAncestor;
+  bool isSibling;
   int relativeLevel;
   bool shouldBeRightChild;
 
@@ -33,6 +34,7 @@ class LinkedNode<T extends GraphNode> {
     required this.data,
     this.isBloodRelative = false,
     this.isAncestor = false,
+    this.isSibling = false,
     this.relativeLevel = 0,
     this.shouldBeRightChild = true,
   });
@@ -161,6 +163,14 @@ void markRelatives<T extends GraphNode>(LinkedNode<T> focalNode) {
     }
     visited.add(node.id);
     node.isBloodRelative = true;
+    if (node.children.map((e) => e.id).contains(focalNode.id)) {
+      for (final node in node.children) {
+        if (node.id != focalNode.id) {
+          node.isSibling = true;
+        }
+      }
+    }
+    ;
     fringe.addAll(node.children);
   }
 }

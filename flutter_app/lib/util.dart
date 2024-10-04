@@ -43,7 +43,7 @@ String genderedRelationship(Relationship relationship, Gender gender) {
 Future<ShareType> shareInvite(String name, String id) async {
   final data = ShareData(
     title: '$name\'s family tree invite!',
-    text: 'https://breakfastsearch.xyz/$id',
+    text: 'Verify your place on the family tree',
     url: 'https://breakfastsearch.xyz/$id',
   );
   if (!kDebugMode && await canShare(data)) {

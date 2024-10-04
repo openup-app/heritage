@@ -260,9 +260,9 @@ class FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
   @override
   Widget build(BuildContext context) {
     const spacing = Spacing(
-      level: 302,
-      spouse: 52,
-      sibling: 297,
+      level: 240,
+      spouse: 30,
+      sibling: 50,
     );
     return Center(
       child: Overlay.wrap(
@@ -310,6 +310,9 @@ class FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
                       return HoverableNodeProfile(
                         key: key,
                         person: data,
+                        hasAdditionalRelatives: !relatedness.isSibling &&
+                            data.id != widget.focalPerson.id &&
+                            data.ownedBy != null,
                         enabled: enabled,
                         forceHover: widget.selectedPerson?.id == data.id,
                         onTap: !enabled
@@ -377,6 +380,7 @@ class FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
 
 class HoverableNodeProfile extends StatelessWidget {
   final Person person;
+  final bool hasAdditionalRelatives;
   final bool enabled;
   final bool forceHover;
   final VoidCallback? onTap;
@@ -384,6 +388,7 @@ class HoverableNodeProfile extends StatelessWidget {
   const HoverableNodeProfile({
     super.key,
     required this.person,
+    required this.hasAdditionalRelatives,
     this.enabled = true,
     this.forceHover = false,
     this.onTap,
@@ -401,6 +406,7 @@ class HoverableNodeProfile extends StatelessWidget {
             onTap: onTap,
             child: NodeProfile(
               person: person,
+              hasAdditionalRelatives: hasAdditionalRelatives,
             ),
           ),
         );
@@ -460,7 +466,7 @@ class _TiledBackgroundState extends State<_TiledBackground> {
   }
 
   void _initImage() async {
-    final bytes = await rootBundle.load('assets/images/tree_background.webp');
+    final bytes = await rootBundle.load('assets/images/tree_background.png');
     final codec = await ui.instantiateImageCodec(bytes.buffer.asUint8List(),
         targetHeight: 300);
     final frame = await codec.getNextFrame();
@@ -512,7 +518,9 @@ class _TilePainter extends CustomPainter {
 
 class AddConnectionDisplay extends ConsumerStatefulWidget {
   final Relationship relationship;
-  final void Function(String firstName, String lastName, Gender gender) onSave;
+  final void Function(
+          String firstName, String lastName, Gender gender, bool takeOwnership)
+      onSave;
 
   const AddConnectionDisplay({
     super.key,
@@ -565,12 +573,16 @@ class _BasicProfileDisplayState extends ConsumerState<AddConnectionDisplay> {
         ShareLinkButton(
           key: _shareButtonKey,
           firstName: _firstName,
-          onPressed: (_firstName.isEmpty || _lastName.isEmpty) ? null : _done,
+          onPressed: (_firstName.isEmpty || _lastName.isEmpty)
+              ? null
+              : () => _done(takeOwnership: false),
         ),
         const SizedBox(height: 16),
         Center(
           child: TextButton(
-            onPressed: () {},
+            onPressed: (_firstName.isEmpty || _lastName.isEmpty)
+                ? null
+                : () => _done(takeOwnership: true),
             child: const Text(
                 'They can\'t complete their profile, I will instead'),
           ),
@@ -579,11 +591,11 @@ class _BasicProfileDisplayState extends ConsumerState<AddConnectionDisplay> {
     );
   }
 
-  void _done() {
+  void _done({required bool takeOwnership}) {
     if (_firstName.isEmpty || _lastName.isEmpty) {
       return;
     }
-    widget.onSave(_firstName, _lastName, _gender);
+    widget.onSave(_firstName, _lastName, _gender, takeOwnership);
   }
 }
 
@@ -730,8 +742,8 @@ class _MinimalProfileEditorState extends State<MinimalProfileEditor> {
                   },
                   style: FilledButton.styleFrom(
                     fixedSize: const Size.fromHeight(44),
-                    backgroundColor:
-                        _gender == gender ? primaryColor : unselectedColor,
+                    foregroundColor: _gender == gender ? Colors.white : null,
+                    backgroundColor: _gender == gender ? primaryColor : null,
                   ),
                   child: Text(
                       '${gender.name[0].toUpperCase()}${gender.name.substring(1)}'),
@@ -789,6 +801,7 @@ class OwnershipDialog extends StatelessWidget {
 }
 
 ButtonStyle _bigButtonStyle = FilledButton.styleFrom(
+  foregroundColor: Colors.white,
   backgroundColor: primaryColor,
   fixedSize: const Size.fromHeight(64),
 );
@@ -893,11 +906,12 @@ class _EdgePainter extends CustomPainter {
         canvas: canvas,
         text: person.profile.fullName,
         style: const TextStyle(
-          color: Colors.black,
-          fontSize: 27,
-          fontWeight: FontWeight.w700,
+          color: Color.fromRGBO(0x37, 0x37, 0x37, 1),
+          fontSize: 19,
+          fontWeight: FontWeight.w800,
         ),
         topCenter: rect.bottomCenter + const Offset(0, 16),
+        maxWidth: rect.width,
       );
       final birthyear = person.profile.birthday?.year.toString();
       if (birthyear != null) {
@@ -905,11 +919,12 @@ class _EdgePainter extends CustomPainter {
           canvas: canvas,
           text: birthyear,
           style: const TextStyle(
-            color: Colors.black,
-            fontSize: 24,
-            fontWeight: FontWeight.w500,
+            color: Color.fromRGBO(0x37, 0x37, 0x37, 1),
+            fontSize: 17,
+            fontWeight: FontWeight.w800,
           ),
           topCenter: Offset(rect.bottomCenter.dx, bottom),
+          maxWidth: rect.width,
         );
       }
     }
@@ -926,7 +941,7 @@ class _EdgePainter extends CustomPainter {
           : !node.isBloodRelative;
     });
 
-    final topOffset = min(30, spacing.level);
+    final topOffset = min(70, spacing.level);
     for (final (fromNode, fromRect) in leftNodeInCouples) {
       final path = Path();
       for (final toNode in fromNode.children) {
@@ -945,13 +960,13 @@ class _EdgePainter extends CustomPainter {
 
       final dashedPath = path_drawing.dashPath(
         path,
-        dashArray: path_drawing.CircularIntervalList<double>([10.0, 10.0]),
+        dashArray: path_drawing.CircularIntervalList<double>([8.0, 10.0]),
       );
 
       canvas.drawPath(
         dashedPath,
         Paint()
-          ..strokeWidth = 8
+          ..strokeWidth = 6
           ..style = PaintingStyle.stroke
           ..color = const Color.fromRGBO(0xB2, 0xB2, 0xB2, 1.0),
       );
@@ -970,14 +985,16 @@ class _EdgePainter extends CustomPainter {
     required String text,
     required TextStyle style,
     required Offset topCenter,
+    required double maxWidth,
   }) {
     final textSpan = TextSpan(text: text, style: style);
     final textPainter = TextPainter(
       text: textSpan,
       textDirection: TextDirection.ltr,
       maxLines: 1,
+      ellipsis: '...',
     );
-    textPainter.layout();
+    textPainter.layout(maxWidth: maxWidth);
     final lineMetrics = textPainter.computeLineMetrics().first;
     textPainter.paint(canvas, topCenter - Offset(lineMetrics.width / 2, 0));
     return topCenter.dy + lineMetrics.height;

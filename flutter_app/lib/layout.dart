@@ -16,7 +16,7 @@ class LayoutWidget extends StatelessWidget {
       builder: (context, constraints) {
         return Layout(
           type:
-              constraints.maxWidth <= 800 ? LayoutType.small : LayoutType.large,
+              constraints.maxWidth <= 500 ? LayoutType.small : LayoutType.large,
           child: child,
         );
       },

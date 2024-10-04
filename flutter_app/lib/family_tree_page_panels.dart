@@ -8,6 +8,7 @@ import 'package:heritage/file_picker.dart';
 import 'package:heritage/graph_provider.dart';
 import 'package:heritage/graph_view.dart';
 import 'package:heritage/help.dart';
+import 'package:heritage/heritage_app.dart';
 import 'package:heritage/image_croper.dart';
 import 'package:heritage/layout.dart';
 import 'package:heritage/profile_display.dart';
@@ -160,9 +161,11 @@ class _PanelsState extends ConsumerState<Panels> {
                                     person: person,
                                     relatedness: relatedness ??
                                         const Relatedness(
-                                            isBloodRelative: true,
-                                            isAncestor: false,
-                                            relativeLevel: 0),
+                                          isBloodRelative: true,
+                                          isAncestor: false,
+                                          isSibling: false,
+                                          relativeLevel: 0,
+                                        ),
                                     onAddConnectionPressed:
                                         widget.onAddConnectionPressed,
                                   ),
@@ -182,10 +185,10 @@ class _PanelsState extends ConsumerState<Panels> {
         ] else ...[
           Positioned(
             top: MediaQuery.of(context).padding.top,
-            left: 24,
-            width: 390,
+            left: 7,
+            width: 250,
             child: const Padding(
-              padding: EdgeInsets.symmetric(vertical: 32.0),
+              padding: EdgeInsets.symmetric(vertical: 8.0),
               child: LogoText(),
             ),
           ),
@@ -195,61 +198,68 @@ class _PanelsState extends ConsumerState<Panels> {
             child: _MenuButtons(),
           ),
           Positioned(
-            top: MediaQuery.of(context).padding.top + 120 + 32,
+            top: 100,
             left: 24,
-            bottom: 24 + MediaQuery.of(context).padding.bottom,
-            width: 390,
+            bottom: 100,
             child: Align(
-              alignment: Alignment.topCenter,
-              child: AnimatedSidePanel(
-                child: switch (widget.panelPopupState) {
-                  PanelPopupStateNone() => null,
-                  PanelPopupStateProfile(:final person) => _SidePanelContainer(
-                      key: Key('profile_${person.id}'),
-                      child: ProfileDisplay(
-                        id: person.id,
-                        profile: person.profile,
-                        isMe: isMe,
-                        isEditable: isOwnedByMe,
-                        hasDifferentOwner: person.ownedBy != person.id,
-                        header: null,
-                        onViewPerspective: widget.onViewPerspective,
-                      ),
-                    ),
-                  PanelPopupStateAddConnection(
-                    :final person,
-                    :final relationship
-                  ) =>
-                    _SidePanelContainer(
-                      key: Key('connection_${relationship.name}'),
-                      child: AddConnectionDisplay(
-                        relationship: relationship,
-                        onSave: (firstName, lastName, gender) =>
-                            _saveNewConnection(firstName, lastName, gender,
-                                person, relationship),
-                      ),
-                    ),
-                  PanelPopupStateWaitingForApproval(:final person) =>
-                    _SidePanelContainer(
-                      key: Key('approval_${person.id}'),
-                      child: Column(
-                        children: [
-                          Text(
-                            'Waiting for ${person.profile.firstName}\'s approval',
-                            style: Theme.of(context).textTheme.titleLarge,
+              alignment: Alignment.centerLeft,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 660),
+                child: AspectRatio(
+                  aspectRatio: 390 / 660,
+                  child: AnimatedSidePanel(
+                    child: switch (widget.panelPopupState) {
+                      PanelPopupStateNone() => null,
+                      PanelPopupStateProfile(:final person) =>
+                        _SidePanelContainer(
+                          key: Key('profile_${person.id}'),
+                          child: ProfileDisplay(
+                            id: person.id,
+                            profile: person.profile,
+                            isMe: isMe,
+                            isEditable: isOwnedByMe,
+                            hasDifferentOwner: person.ownedBy != person.id,
+                            header: null,
+                            onViewPerspective: widget.onViewPerspective,
                           ),
-                          const SizedBox(height: 16),
-                          WaitingForApprovalDisplay(
-                            person: person,
-                            onAddConnectionPressed: null,
-                            onSaveAndShare: (firstName, lastName, gender) =>
-                                _onSaveAndShare(
-                                    person.id, firstName, lastName, gender),
+                        ),
+                      PanelPopupStateAddConnection(
+                        :final person,
+                        :final relationship
+                      ) =>
+                        _SidePanelContainer(
+                          key: Key('connection_${relationship.name}'),
+                          child: AddConnectionDisplay(
+                            relationship: relationship,
+                            onSave:
+                                (firstName, lastName, gender, takeOwnership) =>
+                                    _saveNewConnection(firstName, lastName,
+                                        gender, person, relationship),
                           ),
-                        ],
-                      ),
-                    ),
-                },
+                        ),
+                      PanelPopupStateWaitingForApproval(:final person) =>
+                        _SidePanelContainer(
+                          key: Key('approval_${person.id}'),
+                          child: Column(
+                            children: [
+                              Text(
+                                'Waiting for ${person.profile.firstName}\'s approval',
+                                style: Theme.of(context).textTheme.titleLarge,
+                              ),
+                              const SizedBox(height: 16),
+                              WaitingForApprovalDisplay(
+                                person: person,
+                                onAddConnectionPressed: null,
+                                onSaveAndShare: (firstName, lastName, gender) =>
+                                    _onSaveAndShare(
+                                        person.id, firstName, lastName, gender),
+                              ),
+                            ],
+                          ),
+                        ),
+                    },
+                  ),
+                ),
               ),
             ),
           ),
@@ -259,11 +269,10 @@ class _PanelsState extends ConsumerState<Panels> {
               child: Padding(
                 padding: const EdgeInsets.only(bottom: 24),
                 child: Container(
-                  width: 447,
-                  padding: const EdgeInsets.symmetric(vertical: 20),
+                  padding: const EdgeInsets.symmetric(vertical: 10),
                   decoration: const BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.all(Radius.circular(36)),
+                    borderRadius: BorderRadius.all(Radius.circular(20)),
                     boxShadow: [
                       BoxShadow(
                         offset: Offset(0, 4),
@@ -393,7 +402,7 @@ class _PanelsState extends ConsumerState<Panels> {
           content: SingleChildScrollView(
             child: AddConnectionDisplay(
               relationship: relationship,
-              onSave: (firstName, lastName, gender) async {
+              onSave: (firstName, lastName, gender, takeOwnership) async {
                 await _saveNewConnection(
                     firstName, lastName, gender, person, relationship);
                 if (context.mounted) {
@@ -490,23 +499,51 @@ class _MenuButtons extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    const decoration = BoxDecoration(
+      borderRadius: BorderRadius.all(
+        Radius.circular(13),
+      ),
+      boxShadow: [
+        BoxShadow(
+          offset: Offset(0, 1),
+          blurRadius: 10,
+          color: Color.fromRGBO(0x00, 0x00, 0x00, 0.2),
+        ),
+      ],
+    );
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        FilledButton(
-          onPressed: () => Navigator.of(context).pop(),
-          style: FilledButton.styleFrom(
-            fixedSize: const Size.square(56),
+        DecoratedBox(
+          decoration: decoration,
+          child: FilledButton(
+            onPressed: () => Navigator.of(context).pop(),
+            style: FilledButton.styleFrom(
+              fixedSize: const Size.square(56),
+              foregroundColor: Colors.black,
+              backgroundColor: Colors.white,
+            ),
+            child: const Icon(
+              Icons.home_filled,
+              size: 34.0,
+            ),
           ),
-          child: const Icon(Icons.home_filled),
         ),
         const SizedBox(width: 16),
-        FilledButton(
-          onPressed: () => showHelpDialog(context: context),
-          style: FilledButton.styleFrom(
-            fixedSize: const Size.square(56),
+        DecoratedBox(
+          decoration: decoration,
+          child: FilledButton(
+            onPressed: () => showHelpDialog(context: context),
+            style: FilledButton.styleFrom(
+              fixedSize: const Size.square(56),
+              foregroundColor: Colors.black,
+              backgroundColor: Colors.white,
+            ),
+            child: const Icon(
+              Icons.question_mark,
+              size: 34.0,
+            ),
           ),
-          child: const Icon(Icons.question_mark),
         ),
       ],
     );
@@ -587,7 +624,7 @@ class _SidePanelContainer extends StatelessWidget {
       clipBehavior: Clip.hardEdge,
       decoration: const BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.all(Radius.circular(36)),
+        borderRadius: BorderRadius.all(Radius.circular(10)),
         boxShadow: [
           BoxShadow(
             offset: Offset(0, 4),
@@ -596,9 +633,26 @@ class _SidePanelContainer extends StatelessWidget {
           ),
         ],
       ),
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: child,
+      child: Padding(
+        padding: const EdgeInsets.only(top: 8.0),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(15),
+          child: child,
+        ),
+      ),
+    );
+  }
+}
+
+class LogoText extends StatelessWidget {
+  const LogoText({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: Image.asset(
+        'assets/images/logo_text.png',
+        width: 290,
       ),
     );
   }
@@ -640,20 +694,6 @@ class ProfileDisplay extends StatelessWidget {
         hasDifferentOwner: hasDifferentOwner,
         header: header,
         onViewPerspective: onViewPerspective,
-      ),
-    );
-  }
-}
-
-class LogoText extends StatelessWidget {
-  const LogoText({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return IgnorePointer(
-      child: Image.asset(
-        'assets/images/logo_text.webp',
-        width: 300,
       ),
     );
   }
@@ -728,14 +768,36 @@ class _ProfileEditorState extends ConsumerState<_ProfileDisplay> {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 8.0),
-          child: Text(
-            ref.watch(profileUpdateProvider.select((p) => p.fullName)),
-            style: const TextStyle(
-              fontSize: 24,
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                ref.watch(profileUpdateProvider.select((p) => p.fullName)),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
             ),
-          ),
+            const VerifiedBadge(
+              width: 24,
+            ),
+          ],
+        ),
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Tarlok\'s Sister\'s Husband',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: const Color.fromRGBO(0x7A, 0x7A, 0x7A, 1.0)),
+              ),
+            ),
+            Text(
+              'Verified by Parteek',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: const Color.fromRGBO(0x3F, 0x71, 0xFF, 1.0)),
+            )
+          ],
         ),
         if (header != null) ...[
           const SizedBox(height: 24),
@@ -743,13 +805,13 @@ class _ProfileEditorState extends ConsumerState<_ProfileDisplay> {
           const SizedBox(height: 16),
           const Divider(height: 1),
         ],
-        const SizedBox(height: 24),
+        const SizedBox(height: 12),
         MouseRegion(
           cursor: SystemMouseCursors.click,
           child: GestureDetector(
             onTap: () => _pickPhotoWithSource(context),
             child: ClipRRect(
-              borderRadius: const BorderRadius.all(Radius.circular(16)),
+              borderRadius: const BorderRadius.all(Radius.circular(10)),
               child: ProfileImage(
                 imageUrl:
                     ref.watch(profileUpdateProvider.select((p) => p.imageUrl)),
@@ -770,139 +832,216 @@ class _ProfileEditorState extends ConsumerState<_ProfileDisplay> {
           ),
           const SizedBox(height: 24),
         ],
-        TextFormField(
-          controller: _firstNameController,
-          enabled: widget.isEditable,
-          onChanged: ref.read(profileUpdateProvider.notifier).firstName,
-          textCapitalization: TextCapitalization.words,
-          textInputAction: TextInputAction.next,
-          decoration: const InputDecoration(
-            label: Text('First Name'),
-          ),
+        Text(
+          'Details',
+          style: Theme.of(context).textTheme.titleLarge,
         ),
-        const SizedBox(height: 24),
-        TextFormField(
-          controller: _lastNameController,
-          enabled: widget.isEditable,
-          onChanged: ref.read(profileUpdateProvider.notifier).lastName,
-          textCapitalization: TextCapitalization.words,
-          textInputAction: TextInputAction.next,
-          decoration: const InputDecoration(
-            label: Text('Last Name'),
+        const SizedBox(height: 8),
+        Container(
+          decoration: const BoxDecoration(
+            color: Color.fromRGBO(0xEB, 0xEB, 0xEB, 1.0),
+            borderRadius: BorderRadius.all(Radius.circular(10)),
           ),
-        ),
-        const SizedBox(height: 24),
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Expanded(
-              child: TextFormField(
-                controller: _birthdayController,
-                enabled: widget.isEditable,
-                keyboardType: TextInputType.number,
-                textInputAction: TextInputAction.next,
-                inputFormatters: [DateTextFormatter()],
-                onChanged: ref.read(profileUpdateProvider.notifier).birthday,
-                decoration: InputDecoration(
-                  label: const Text('Date of birth'),
-                  hintText: getFormattedDatePattern().formatted,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _Label(
+                label: 'First name',
+                child: SizedBox(
+                  child: TextFormField(
+                    controller: _firstNameController,
+                    enabled: widget.isEditable,
+                    onChanged:
+                        ref.read(profileUpdateProvider.notifier).firstName,
+                    textCapitalization: TextCapitalization.words,
+                    textInputAction: TextInputAction.next,
+                  ),
                 ),
               ),
-            ),
-            if (widget.isEditable)
-              IconButton(
-                onPressed: () async {
-                  final date = await showDatePicker(
-                    context: context,
-                    firstDate: DateTime(1500),
-                    lastDate: DateTime.now(),
-                    initialDate: ref.watch(profileUpdateProvider
-                        .select((p) => p.birthday ?? DateTime.now())),
-                  );
-                  if (!mounted || date == null) {
-                    return;
-                  }
-                  ref.read(profileUpdateProvider.notifier).birthdayObject(date);
-                },
-                icon: const Icon(Icons.calendar_month),
+              const Divider(
+                height: 1,
+                indent: 14,
+                color: Color.fromRGBO(0xD8, 0xD8, 0xD8, 1.0),
               ),
-          ],
+              _Label(
+                label: 'Last name',
+                child: TextFormField(
+                  controller: _lastNameController,
+                  enabled: widget.isEditable,
+                  onChanged: ref.read(profileUpdateProvider.notifier).lastName,
+                  textCapitalization: TextCapitalization.words,
+                  textInputAction: TextInputAction.next,
+                ),
+              ),
+              const Divider(
+                height: 1,
+                indent: 14,
+                color: Color.fromRGBO(0xD8, 0xD8, 0xD8, 1.0),
+              ),
+              _Label(
+                label: 'Date of birth',
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Expanded(
+                      child: TextFormField(
+                        controller: _birthdayController,
+                        enabled: widget.isEditable,
+                        keyboardType: TextInputType.number,
+                        textInputAction: TextInputAction.next,
+                        inputFormatters: [DateTextFormatter()],
+                        onChanged:
+                            ref.read(profileUpdateProvider.notifier).birthday,
+                        decoration: InputDecoration(
+                          //   label: const Text('Date of birth'),
+                          hintText: getFormattedDatePattern().formatted,
+                        ),
+                      ),
+                    ),
+                    if (widget.isEditable)
+                      IconButton(
+                        onPressed: () async {
+                          final date = await showDatePicker(
+                            context: context,
+                            firstDate: DateTime(1500),
+                            lastDate: DateTime.now(),
+                            initialDate: ref.watch(profileUpdateProvider
+                                .select((p) => p.birthday ?? DateTime.now())),
+                          );
+                          if (!mounted || date == null) {
+                            return;
+                          }
+                          ref
+                              .read(profileUpdateProvider.notifier)
+                              .birthdayObject(date);
+                        },
+                        icon: const Icon(
+                          Icons.calendar_month,
+                          color: Color.fromRGBO(138, 138, 138, 1),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              if (widget.hasDifferentOwner ||
+                  ref.watch(profileUpdateProvider
+                      .select((s) => s.deathday != null))) ...[
+                const Divider(
+                  height: 1,
+                  indent: 14,
+                  color: Color.fromRGBO(0xD8, 0xD8, 0xD8, 1.0),
+                ),
+                _Label(
+                  label: 'Date of passing',
+                  child: TextFormField(
+                    controller: _deathdayController,
+                    enabled: widget.isEditable,
+                    keyboardType: TextInputType.number,
+                    textInputAction: TextInputAction.next,
+                    inputFormatters: [DateTextFormatter()],
+                    onChanged:
+                        ref.read(profileUpdateProvider.notifier).deathday,
+                    decoration: InputDecoration(
+                      hintText: getFormattedDatePattern().formatted,
+                    ),
+                  ),
+                ),
+              ],
+              const Divider(
+                height: 1,
+                indent: 14,
+                color: Color.fromRGBO(0xD8, 0xD8, 0xD8, 1.0),
+              ),
+              _Label(
+                label: 'Place of birth',
+                child: TextFormField(
+                  controller: _birthplaceController,
+                  enabled: widget.isEditable,
+                  textCapitalization: TextCapitalization.words,
+                  textInputAction: TextInputAction.next,
+                  onChanged:
+                      ref.read(profileUpdateProvider.notifier).birthplace,
+                  onFieldSubmitted: (_) {},
+                ),
+              ),
+            ],
+          ),
         ),
-        if (widget.hasDifferentOwner ||
-            ref.watch(
-                profileUpdateProvider.select((s) => s.deathday != null))) ...[
-          const SizedBox(height: 24),
-          TextFormField(
-            controller: _deathdayController,
-            enabled: widget.isEditable,
-            keyboardType: TextInputType.number,
-            textInputAction: TextInputAction.next,
-            inputFormatters: [DateTextFormatter()],
-            onChanged: ref.read(profileUpdateProvider.notifier).deathday,
-            decoration: InputDecoration(
-              label: const Text('Date of passing'),
-              hintText: getFormattedDatePattern().formatted,
-            ),
+        const SizedBox(height: 24),
+        Text(
+          'Gender',
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Needed to list you properly in the tree',
+          style: Theme.of(context).textTheme.labelLarge,
+        ),
+        if (widget.isEditable) ...[
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              for (final gender in Gender.values) ...[
+                if (gender != Gender.values.first) const SizedBox(width: 16),
+                Expanded(
+                  child: Builder(builder: (context) {
+                    final selectedGender = ref
+                        .watch(profileUpdateProvider.select((p) => p.gender));
+                    return FilledButton(
+                      onPressed: () => ref
+                          .read(profileUpdateProvider.notifier)
+                          .gender(gender),
+                      style: FilledButton.styleFrom(
+                        fixedSize: const Size.fromHeight(44),
+                        foregroundColor:
+                            selectedGender == gender ? Colors.white : null,
+                        backgroundColor:
+                            selectedGender == gender ? primaryColor : null,
+                      ),
+                      child: Text(
+                          '${gender.name[0].toUpperCase()}${gender.name.substring(1)}'),
+                    );
+                  }),
+                ),
+              ],
+            ],
           ),
         ],
-        const SizedBox(height: 24),
-        TextFormField(
-          controller: _birthplaceController,
-          enabled: widget.isEditable,
-          textCapitalization: TextCapitalization.words,
-          textInputAction: TextInputAction.next,
-          onChanged: ref.read(profileUpdateProvider.notifier).birthplace,
-          decoration: const InputDecoration(
-            label: Text('Place of birth'),
-          ),
-          onFieldSubmitted: (_) {},
+        const SizedBox(height: 16),
+        Text(
+          'Login Link',
+          style: Theme.of(context).textTheme.titleLarge,
         ),
-        const SizedBox(height: 24),
-        Row(
-          children: [
-            Expanded(
-              child: FilledButton(
-                style: FilledButton.styleFrom(
-                  fixedSize: const Size.fromHeight(48),
-                  backgroundColor: ref.watch(profileUpdateProvider
-                          .select((p) => p.gender == Gender.male))
-                      ? null
-                      : Colors.grey,
-                ),
-                onPressed: !widget.isEditable
-                    ? null
-                    : () => ref
-                        .read(profileUpdateProvider.notifier)
-                        .gender(Gender.male),
-                child: const Text('Male'),
-              ),
-            ),
-            const SizedBox(width: 24),
-            Expanded(
-              child: FilledButton(
-                style: FilledButton.styleFrom(
-                  fixedSize: const Size.fromHeight(48),
-                  backgroundColor: ref.watch(profileUpdateProvider
-                          .select((p) => p.gender == Gender.female))
-                      ? null
-                      : Colors.grey,
-                ),
-                onPressed: !widget.isEditable
-                    ? null
-                    : () => ref
-                        .read(profileUpdateProvider.notifier)
-                        .gender(Gender.female),
-                child: const Text('Female'),
-              ),
-            ),
-          ],
+        const SizedBox(height: 4),
+        Builder(
+          builder: (context) {
+            final name =
+                ref.watch(profileUpdateProvider.select((s) => s.firstName));
+            return Text(
+              // 'If $name can\'t loses access, direct relatives can share this link with them.\nShare this link with no one else.',
+              'Visible to direct relatives for login assistance. Share this with $name, sharing it with others risks the family tree.',
+              style: Theme.of(context).textTheme.labelLarge,
+            );
+          },
+        ),
+        const SizedBox(height: 8),
+        FilledButton(
+          onPressed: () {},
+          style: FilledButton.styleFrom(
+            fixedSize: const Size.fromHeight(44),
+            foregroundColor: Colors.white,
+            backgroundColor: primaryColor,
+          ),
+          child: Text(
+            'Share Login Link',
+          ),
         ),
         if (widget.isEditable) ...[
           const SizedBox(height: 24),
-          FilledButton(
+          TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            style: FilledButton.styleFrom(
-              fixedSize: const Size.fromHeight(48),
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.red,
             ),
             child: const Text('Delete profile information from the tree'),
           ),
@@ -951,6 +1090,50 @@ class _ProfileEditorState extends ConsumerState<_ProfileDisplay> {
     if (mounted) {
       setState(() => _submitting = false);
     }
+  }
+}
+
+class _Label extends StatelessWidget {
+  final String label;
+  final String? hintText;
+  final Widget child;
+
+  const _Label({
+    super.key,
+    required this.label,
+    this.hintText,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 12.0, top: 8.0),
+          child: Text(
+            label,
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  color: const Color.fromRGBO(0x51, 0x51, 0x51, 1.0),
+                ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.only(top: 8.0),
+          child: Theme(
+            data: Theme.of(context).copyWith(
+                inputDecorationTheme: const InputDecorationTheme(
+              isCollapsed: true,
+              border: InputBorder.none,
+              contentPadding:
+                  EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+              fillColor: Colors.transparent,
+            )),
+            child: child,
+          ),
+        ),
+      ],
+    );
   }
 }
 

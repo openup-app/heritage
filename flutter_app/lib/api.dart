@@ -245,7 +245,6 @@ class Person with _$Person implements GraphNode {
     required Id addedBy,
     required Id? ownedBy,
     @DateTimeConverter() required DateTime createdAt,
-    @Default(false) hasAdditionalRelatives,
     required Profile profile,
   }) = _Person;
 

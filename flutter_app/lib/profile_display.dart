@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:heritage/api.dart';
 import 'package:heritage/heritage_app.dart';
 import 'package:path_drawing/path_drawing.dart' as path_drawing;
@@ -23,34 +24,38 @@ class AddConnectionButtons extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
+        const SizedBox(width: 20),
+        if (canAddParent)
+          _AddConnectionButton(
+            onPressed: () => onAddConnectionPressed(Relationship.parent),
+            icon: SvgPicture.asset(
+              'assets/images/connection_parent.svg',
+            ),
+            label: const Text('Parent'),
+          ),
         _AddConnectionButton(
-          onPressed: !(enabled && canAddParent)
-              ? null
-              : () => onAddConnectionPressed(Relationship.parent),
-          icon: const Icon(Icons.person_add),
-          label: const Text('Parent'),
-        ),
-        _AddConnectionButton(
-          onPressed: !enabled
-              ? null
-              : () => onAddConnectionPressed(Relationship.spouse),
-          icon: const Icon(Icons.person_add),
-          label: const Text('Spouse'),
-        ),
-        _AddConnectionButton(
-          onPressed: !enabled
-              ? null
-              : () => onAddConnectionPressed(Relationship.sibling),
-          icon: const Icon(Icons.person_add),
+          onPressed: () => onAddConnectionPressed(Relationship.sibling),
+          icon: SvgPicture.asset(
+            'assets/images/connection_sibling.svg',
+          ),
           label: const Text('Sibling'),
         ),
+        if (canAddChildren)
+          _AddConnectionButton(
+            onPressed: () => onAddConnectionPressed(Relationship.child),
+            icon: SvgPicture.asset(
+              'assets/images/connection_child.svg',
+            ),
+            label: const Text('Child'),
+          ),
         _AddConnectionButton(
-          onPressed: !(enabled && canAddChildren)
-              ? null
-              : () => onAddConnectionPressed(Relationship.child),
-          icon: const Icon(Icons.person_add),
-          label: const Text('Child'),
+          onPressed: () => onAddConnectionPressed(Relationship.spouse),
+          icon: SvgPicture.asset(
+            'assets/images/connection_spouse.svg',
+          ),
+          label: const Text('Spouse'),
         ),
+        const SizedBox(width: 20),
       ],
     );
   }
@@ -70,36 +75,39 @@ class _AddConnectionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      child: GestureDetector(
-        onTap: onPressed,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            FilledButton(
-              onPressed: onPressed,
-              style: FilledButton.styleFrom(
-                fixedSize: const Size.square(60),
-                shape: const RoundedRectangleBorder(
-                  borderRadius: BorderRadius.all(
-                    Radius.circular(13),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20.0),
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: GestureDetector(
+          onTap: onPressed,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              FilledButton(
+                onPressed: onPressed,
+                style: FilledButton.styleFrom(
+                  fixedSize: const Size.square(54),
+                  shape: const RoundedRectangleBorder(
+                    borderRadius: BorderRadius.all(
+                      Radius.circular(13),
+                    ),
                   ),
+                  foregroundColor: const Color.fromRGBO(0x00, 0xAE, 0xFF, 1.0),
+                  backgroundColor: const Color.fromRGBO(0xEB, 0xEB, 0xEB, 1.0),
                 ),
-                foregroundColor: const Color.fromRGBO(0x00, 0xAE, 0xFF, 1.0),
-                backgroundColor: const Color.fromRGBO(0xEB, 0xEB, 0xEB, 1.0),
+                child: icon,
               ),
-              child: icon,
-            ),
-            const SizedBox(height: 4),
-            DefaultTextStyle.merge(
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
+              const SizedBox(height: 4),
+              DefaultTextStyle.merge(
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+                child: label,
               ),
-              child: label,
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -344,10 +352,12 @@ class _HoverPersonDisplayState extends State<HoverPersonDisplay> {
 
 class NodeProfile extends StatelessWidget {
   final Person person;
+  final bool hasAdditionalRelatives;
 
   const NodeProfile({
     super.key,
     required this.person,
+    required this.hasAdditionalRelatives,
   });
 
   @override
@@ -367,7 +377,7 @@ class NodeProfile extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           SizedBox(
-            width: 260,
+            width: 180,
             child: Center(
               child: ImageAspect(
                 child: Stack(
@@ -375,44 +385,45 @@ class NodeProfile extends StatelessWidget {
                   clipBehavior: Clip.none,
                   children: [
                     _DashedBorder(
-                      radius: const Radius.circular(32),
+                      radius: const Radius.circular(20),
                       child: Container(
                         clipBehavior: Clip.hardEdge,
                         decoration: const BoxDecoration(
                           borderRadius: BorderRadius.all(
-                            Radius.circular(32),
+                            Radius.circular(20),
                           ),
                           boxShadow: [
                             BoxShadow(
-                              offset: Offset(0, 22),
+                              offset: Offset(0, 10),
                               blurRadius: 44,
                               spreadRadius: -11,
-                              color: Color.fromRGBO(0x00, 0x00, 0x00, 0.33),
+                              color: Color.fromRGBO(0x00, 0x00, 0x00, 0.4),
                             ),
                           ],
                         ),
                         child: ProfileImage(person.profile.imageUrl),
                       ),
                     ),
-                    Positioned(
-                      right: 8,
-                      top: 8,
-                      child: FilledButton(
-                        onPressed: () {},
-                        style: FilledButton.styleFrom(
-                          fixedSize: const Size.square(64),
-                          backgroundColor:
-                              const Color.fromRGBO(0x00, 0x00, 0x00, 0.6),
-                          shape: const CircleBorder(),
+                    if (hasAdditionalRelatives)
+                      Positioned(
+                        right: 0,
+                        top: 4,
+                        child: FilledButton(
+                          onPressed: () {},
+                          style: FilledButton.styleFrom(
+                            fixedSize: const Size.square(44),
+                            backgroundColor:
+                                const Color.fromRGBO(0x00, 0x00, 0x00, 0.6),
+                            shape: const CircleBorder(),
+                          ),
+                          child: const _Binoculars(),
                         ),
-                        child: const _Binoculars(),
                       ),
-                    ),
                     if (person.ownedBy != null)
                       const Positioned(
-                        right: 4,
-                        bottom: -32,
-                        child: _VerifiedBadge(),
+                        right: -16,
+                        bottom: -46,
+                        child: VerifiedBadge(),
                       ),
                   ],
                 ),
@@ -505,12 +516,12 @@ class _DashedPainter extends CustomPainter {
       ..addRRect(RRect.fromRectAndRadius(Offset.zero & size, radius));
     final dashedPath = path_drawing.dashPath(
       path,
-      dashArray: path_drawing.CircularIntervalList<double>([13.0, 15.0]),
+      dashArray: path_drawing.CircularIntervalList<double>([7.0, 12.0]),
     );
     canvas.drawPath(
       dashedPath,
       Paint()
-        ..strokeWidth = 8
+        ..strokeWidth = 5
         ..style = PaintingStyle.stroke
         ..strokeCap = StrokeCap.round
         ..color = Colors.white,
@@ -757,23 +768,31 @@ class _Binoculars extends StatelessWidget {
   }
 }
 
-class _VerifiedBadge extends StatelessWidget {
-  const _VerifiedBadge({super.key});
+class VerifiedBadge extends StatelessWidget {
+  final double width;
+
+  const VerifiedBadge({
+    super.key,
+    this.width = 80,
+  });
 
   @override
   Widget build(BuildContext context) {
     return IgnorePointer(
-      child: Image.asset(
-        'assets/images/badge.webp',
-        width: 64,
-        fit: BoxFit.cover,
+      child: Opacity(
+        opacity: 0.9,
+        child: SvgPicture.asset(
+          'assets/images/badge.svg',
+          width: width,
+          fit: BoxFit.contain,
+        ),
       ),
     );
   }
 }
 
 class ImageAspect extends StatelessWidget {
-  static const ratio = 102 / 117;
+  static const ratio = 151 / 173;
 
   final Widget child;
 

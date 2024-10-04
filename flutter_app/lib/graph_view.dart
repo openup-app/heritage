@@ -105,6 +105,7 @@ class _GraphViewState<T extends GraphNode> extends State<GraphView<T>> {
                           Relatedness(
                             isBloodRelative: node.isBloodRelative,
                             isAncestor: node.isAncestor,
+                            isSibling: node.isSibling,
                             relativeLevel: node.relativeLevel,
                           ),
                         ),
@@ -136,6 +137,7 @@ class _GraphViewState<T extends GraphNode> extends State<GraphView<T>> {
                         Relatedness(
                           isBloodRelative: node.isBloodRelative,
                           isAncestor: node.isAncestor,
+                          isSibling: node.isSibling,
                           relativeLevel: node.relativeLevel,
                         ),
                       ),
@@ -198,35 +200,43 @@ class _GraphViewState<T extends GraphNode> extends State<GraphView<T>> {
       return;
     }
 
-    final p1 = node.parents.first;
-    final p2 = node.parents.last;
-    if (p1 < p2) {
-      p1.shouldBeRightChild = true;
-      p2.shouldBeRightChild = false;
+    final s1 = node.parents.first;
+    final s2 = node.parents.last;
+    if (s1 < s2) {
+      s1.shouldBeRightChild = true;
+      s2.shouldBeRightChild = false;
       // P1 right-most sibling, P2 left-most sibling
-      if (p1.parents.isNotEmpty) {
-        p1.parents.first.children.remove(p1);
-        p1.parents.first.children.add(p1);
+      if (s1.parents.isNotEmpty) {
+        s1.parents.first.children.remove(s1);
+        s1.parents.first.children.add(s1);
+        s1.parents.last.children.remove(s1);
+        s1.parents.last.children.add(s1);
       }
-      if (p2.parents.isNotEmpty) {
-        p2.parents.first.children.remove(p2);
-        p2.parents.first.children.insert(0, p2);
+      if (s2.parents.isNotEmpty) {
+        s2.parents.first.children.remove(s2);
+        s2.parents.first.children.insert(0, s2);
+        s2.parents.last.children.remove(s2);
+        s2.parents.last.children.insert(0, s2);
       }
     } else {
-      p1.shouldBeRightChild = false;
-      p2.shouldBeRightChild = true;
+      s1.shouldBeRightChild = false;
+      s2.shouldBeRightChild = true;
       // P1 left-most sibling, P2 right-most sibling
-      if (p1.parents.isNotEmpty) {
-        p1.parents.first.children.remove(p1);
-        p1.parents.first.children.insert(0, p1);
+      if (s1.parents.isNotEmpty) {
+        s1.parents.first.children.remove(s1);
+        s1.parents.first.children.insert(0, s1);
+        s1.parents.last.children.remove(s1);
+        s1.parents.last.children.insert(0, s1);
       }
-      if (p2.parents.isNotEmpty) {
-        p2.parents.first.children.remove(p2);
-        p2.parents.first.children.add(p2);
+      if (s2.parents.isNotEmpty) {
+        s2.parents.first.children.remove(s2);
+        s2.parents.first.children.add(s2);
+        s2.parents.last.children.remove(s2);
+        s2.parents.last.children.add(s2);
       }
     }
-    _organizeSides(p1);
-    _organizeSides(p2);
+    _organizeSides(s1);
+    _organizeSides(s2);
   }
 }
 
@@ -688,6 +698,7 @@ class Relatedness with _$Relatedness {
   const factory Relatedness({
     required bool isBloodRelative,
     required bool isAncestor,
+    required bool isSibling,
     required int relativeLevel,
   }) = _Relatedness;
 

@@ -2,7 +2,7 @@ name: heritage
 description: "A new Flutter project."
 publish_to: 'none'
 
-version: 0.8.5+6
+version: 0.8.6+7
 
 environment:
   sdk: ^3.5.2
@@ -34,6 +34,7 @@ dependencies:
   share_plus: ^10.0.2
   url_launcher: ^6.3.0
   vector_math: ^2.1.4
+  flutter_svg: ^2.0.10+1
 
 dev_dependencies:
   flutter_test:
@@ -48,11 +49,14 @@ flutter:
 
   assets:
     - assets/images/app_loading.webp
-    - assets/images/badge.webp
+    - assets/images/badge.svg
     - assets/images/binoculars.png
-    - assets/images/connection_spouse.webp
-    - assets/images/logo_text.webp
-    - assets/images/tree_background.webp
+    - assets/images/connection_child.svg
+    - assets/images/connection_parent.svg
+    - assets/images/connection_sibling.svg
+    - assets/images/connection_spouse.svg
+    - assets/images/logo_text.png
+    - assets/images/tree_background.png
 
   fonts:
     - family: SF Pro Display

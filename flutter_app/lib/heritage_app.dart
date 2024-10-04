@@ -14,7 +14,7 @@ import 'package:heritage/restart_app.dart';
 
 import 'package:sentry_flutter/sentry_flutter.dart';
 
-const primaryColor = Color.fromRGBO(0x00, 0xAE, 0xFF, 1.0);
+const primaryColor = Color.fromRGBO(0x2A, 0xBB, 0xFF, 1.0);
 const greyColor = Color.fromRGBO(0xEC, 0xEC, 0xEC, 1.0);
 const unselectedColor = Color.fromRGBO(175, 175, 175, 1);
 
@@ -30,6 +30,21 @@ class HeritageApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    const titleStyle = TextStyle(
+      fontSize: 22,
+      fontWeight: FontWeight.w700,
+      fontFamily: 'SF Pro Display',
+    );
+    const subtitleStyle = TextStyle(
+      fontSize: 14,
+      fontWeight: FontWeight.w500,
+      fontFamily: 'SF Pro Display',
+    );
+    const miniTitleStyle = TextStyle(
+      fontSize: 12,
+      fontWeight: FontWeight.w400,
+      fontFamily: 'SF Pro Display',
+    );
     return RestartApp(
       child: ProviderScope(
         overrides: [
@@ -56,12 +71,34 @@ class HeritageApp extends StatelessWidget {
                     primaryColor: primaryColor,
                     filledButtonTheme: FilledButtonThemeData(
                       style: FilledButton.styleFrom(
+                        elevation: 0,
+                        foregroundColor: Colors.black,
+                        backgroundColor:
+                            const Color.fromRGBO(0xEB, 0xEB, 0xEB, 1.0),
+                        padding: EdgeInsets.zero,
                         shape: const RoundedRectangleBorder(
                           borderRadius: BorderRadius.all(
-                            Radius.circular(10),
+                            Radius.circular(13),
                           ),
                         ),
                       ),
+                    ),
+                    textTheme: const TextTheme(
+                      displayLarge: titleStyle,
+                      displayMedium: titleStyle,
+                      displaySmall: titleStyle,
+                      headlineLarge: titleStyle,
+                      headlineMedium: titleStyle,
+                      headlineSmall: titleStyle,
+                      titleLarge: titleStyle,
+                      titleMedium: subtitleStyle,
+                      titleSmall: subtitleStyle,
+                      bodyLarge: subtitleStyle,
+                      bodyMedium: subtitleStyle,
+                      bodySmall: miniTitleStyle,
+                      labelLarge: miniTitleStyle,
+                      labelMedium: miniTitleStyle,
+                      labelSmall: miniTitleStyle,
                     ),
                     inputDecorationTheme: const InputDecorationTheme(
                       filled: true,
@@ -246,11 +283,10 @@ class _CacheAssetsState extends State<_CacheAssets> {
       _cached = true;
       const assets = [
         'assets/images/app_loading.webp',
-        'assets/images/badge.webp',
         'assets/images/binoculars.png',
         'assets/images/connection_spouse.webp',
-        'assets/images/logo_text.webp',
-        'assets/images/tree_background.webp',
+        'assets/images/logo_text.png',
+        'assets/images/tree_background.png',
       ];
       for (final asset in assets) {
         precacheImage(AssetImage(asset), context);
