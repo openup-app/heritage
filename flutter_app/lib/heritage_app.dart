@@ -114,6 +114,10 @@ class HeritageApp extends StatelessWidget {
                         borderSide: BorderSide.none,
                       ),
                     ),
+                    scrollbarTheme: const ScrollbarThemeData(
+                      thumbColor: WidgetStatePropertyAll(Colors.grey),
+                      thumbVisibility: WidgetStatePropertyAll(true),
+                    ),
                     dialogTheme: const DialogTheme(
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.all(

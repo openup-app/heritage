@@ -200,79 +200,66 @@ class _PanelsState extends ConsumerState<Panels> {
           Positioned(
             top: 100,
             left: 24,
-            bottom: 100,
+            width: 390,
+            bottom: 144,
             child: Align(
               alignment: Alignment.centerLeft,
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxHeight: 660),
-                child: AnimatedSidePanel(
-                  child: switch (widget.panelPopupState) {
-                    PanelPopupStateNone() => null,
-                    PanelPopupStateProfile(:final person) =>
-                      _SidePanelContainer(
-                        key: Key('profile_${person.id}'),
-                        child: SingleChildScrollView(
-                          padding: const EdgeInsets.all(15),
-                          child: ProfileDisplay(
-                            id: person.id,
-                            profile: person.profile,
-                            isMe: isMe,
-                            isEditable: isOwnedByMe,
-                            hasDifferentOwner: person.ownedBy != person.id,
-                            header: null,
-                            onViewPerspective: widget.onViewPerspective,
-                          ),
-                        ),
+              child: AnimatedSidePanel(
+                child: switch (widget.panelPopupState) {
+                  PanelPopupStateNone() => null,
+                  PanelPopupStateProfile(:final person) => _SidePanelContainer(
+                      key: Key('profile_${person.id}'),
+                      child: ProfileDisplay(
+                        id: person.id,
+                        profile: person.profile,
+                        isMe: isMe,
+                        isEditable: isOwnedByMe,
+                        hasDifferentOwner: person.ownedBy != person.id,
+                        header: null,
+                        onViewPerspective: widget.onViewPerspective,
                       ),
-                    PanelPopupStateAddConnection(
-                      :final person,
-                      :final relationship
-                    ) =>
-                      _SidePanelContainer(
-                        key: Key('connection_${relationship.name}'),
-                        child: Padding(
-                          padding: const EdgeInsets.all(15),
-                          child: AddConnectionDisplay(
-                            relationship: relationship,
-                            onSave:
-                                (firstName, lastName, gender, takeOwnership) =>
-                                    _saveNewConnection(firstName, lastName,
-                                        gender, person, relationship),
-                          ),
-                        ),
+                    ),
+                  PanelPopupStateAddConnection(
+                    :final person,
+                    :final relationship
+                  ) =>
+                    _SidePanelContainer(
+                      key: Key('connection_${relationship.name}'),
+                      child: AddConnectionDisplay(
+                        relationship: relationship,
+                        onSave: (firstName, lastName, gender, takeOwnership) =>
+                            _saveNewConnection(firstName, lastName, gender,
+                                person, relationship),
                       ),
-                    PanelPopupStateWaitingForApproval(:final person) =>
-                      _SidePanelContainer(
-                        key: Key('approval_${person.id}'),
-                        child: Padding(
-                          padding: const EdgeInsets.all(15),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Waiting for\n${person.profile.firstName}\'s\napproval',
-                                textAlign: TextAlign.start,
-                                style: const TextStyle(
-                                  fontSize: 48,
-                                  fontWeight: FontWeight.w900,
-                                  color: Color.fromRGBO(0x3C, 0x3C, 0x3C, 1.0),
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-                              WaitingForApprovalDisplay(
-                                person: person,
-                                onAddConnectionPressed: null,
-                                onSaveAndShare: (firstName, lastName, gender) =>
-                                    _onSaveAndShare(
-                                        person.id, firstName, lastName, gender),
-                              ),
-                            ],
+                    ),
+                  PanelPopupStateWaitingForApproval(:final person) =>
+                    _SidePanelContainer(
+                      key: Key('approval_${person.id}'),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Waiting for\n${person.profile.firstName}\'s\napproval',
+                            textAlign: TextAlign.start,
+                            style: const TextStyle(
+                              fontSize: 48,
+                              fontWeight: FontWeight.w900,
+                              color: Color.fromRGBO(0x3C, 0x3C, 0x3C, 1.0),
+                            ),
                           ),
-                        ),
+                          const SizedBox(height: 16),
+                          WaitingForApprovalDisplay(
+                            person: person,
+                            onAddConnectionPressed: null,
+                            onSaveAndShare: (firstName, lastName, gender) =>
+                                _onSaveAndShare(
+                                    person.id, firstName, lastName, gender),
+                          ),
+                        ],
                       ),
-                  },
-                ),
+                    ),
+                },
               ),
             ),
           ),
@@ -633,25 +620,24 @@ class _SidePanelContainer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AspectRatio(
-      aspectRatio: 390 / 660,
-      child: Container(
-        clipBehavior: Clip.hardEdge,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.all(Radius.circular(10)),
-          boxShadow: [
-            BoxShadow(
-              offset: Offset(0, 4),
-              blurRadius: 16,
-              color: Color.fromRGBO(0x00, 0x00, 0x00, 0.25),
-            ),
-          ],
-        ),
-        child: Padding(
-          padding: const EdgeInsets.only(top: 8.0),
-          child: child,
-        ),
+    return Container(
+      constraints: const BoxConstraints(maxHeight: 660),
+      clipBehavior: Clip.hardEdge,
+      padding: const EdgeInsets.only(top: 8),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.all(Radius.circular(10)),
+        boxShadow: [
+          BoxShadow(
+            offset: Offset(0, 4),
+            blurRadius: 16,
+            color: Color.fromRGBO(0x00, 0x00, 0x00, 0.25),
+          ),
+        ],
+      ),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(15),
+        child: child,
       ),
     );
   }
