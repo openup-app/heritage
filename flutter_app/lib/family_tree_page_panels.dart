@@ -22,6 +22,7 @@ class Panels extends ConsumerStatefulWidget {
   final PanelPopupState panelPopupState;
   final VoidCallback onDismissPanelPopup;
   final void Function(Relationship relationship) onAddConnectionPressed;
+  final void Function(Id id) onSelectPerson;
   final VoidCallback onViewPerspective;
 
   const Panels({
@@ -32,6 +33,7 @@ class Panels extends ConsumerStatefulWidget {
     required this.panelPopupState,
     required this.onDismissPanelPopup,
     required this.onAddConnectionPressed,
+    required this.onSelectPerson,
     required this.onViewPerspective,
   });
 
@@ -208,6 +210,7 @@ class _PanelsState extends ConsumerState<Panels> {
                                 widget.onDismissPanelPopup();
                               }
                             },
+                            onTakeOwnership: _takeOwnership,
                           ),
                         ],
                       ),
@@ -337,6 +340,7 @@ class _PanelsState extends ConsumerState<Panels> {
         return AlertDialog(
           key: _modalKey,
           title: Text('Waiting for ${person.profile.firstName}\'s approval'),
+          scrollable: true,
           content: WaitingForApprovalDisplay(
             person: person,
             onAddConnectionPressed: () {
@@ -348,6 +352,10 @@ class _PanelsState extends ConsumerState<Panels> {
               if (context.mounted) {
                 Navigator.of(context).pop(true);
               }
+            },
+            onTakeOwnership: () {
+              Navigator.of(context).pop();
+              _takeOwnership();
             },
           ),
         );
@@ -439,6 +447,21 @@ class _PanelsState extends ConsumerState<Panels> {
       return;
     }
     showProfileUpdateSuccess(context: context);
+  }
+
+  void _takeOwnership() async {
+    final selectedPerson = widget.selectedPerson;
+    final relatedness = widget.relatedness;
+    if (selectedPerson != null && relatedness != null) {
+      final ownershipFuture =
+          ref.read(graphProvider.notifier).takeOwnership(selectedPerson.id);
+      await showBlockingModal(context, ownershipFuture);
+      // Wait for graph to update
+      await WidgetsBinding.instance.endOfFrame;
+      if (mounted) {
+        widget.onSelectPerson(selectedPerson.id);
+      }
+    }
   }
 }
 
@@ -1397,12 +1420,14 @@ class WaitingForApprovalDisplay extends StatefulWidget {
   final VoidCallback? onAddConnectionPressed;
   final void Function(String firstName, String lastName, Gender gender)
       onSaveAndShare;
+  final VoidCallback onTakeOwnership;
 
   const WaitingForApprovalDisplay({
     super.key,
     required this.person,
     required this.onAddConnectionPressed,
     required this.onSaveAndShare,
+    required this.onTakeOwnership,
   });
 
   @override
@@ -1455,7 +1480,9 @@ class _WaitingForApprovalDisplayState extends State<WaitingForApprovalDisplay> {
         const SizedBox(height: 16),
         Center(
           child: TextButton(
-            onPressed: (_firstName.isEmpty || _lastName.isEmpty) ? null : () {},
+            onPressed: (_firstName.isEmpty || _lastName.isEmpty)
+                ? null
+                : widget.onTakeOwnership,
             style: TextButton.styleFrom(foregroundColor: Colors.black),
             child: Text('I will complete $_firstName\'s profile'),
           ),

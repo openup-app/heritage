@@ -29,10 +29,10 @@ class GraphView<T extends GraphNode> extends StatefulWidget {
   });
 
   @override
-  State<GraphView<T>> createState() => _GraphViewState<T>();
+  State<GraphView<T>> createState() => GraphViewState<T>();
 }
 
-class _GraphViewState<T extends GraphNode> extends State<GraphView<T>> {
+class GraphViewState<T extends GraphNode> extends State<GraphView<T>> {
   late Map<Id, Key> _idToKey;
   late Couple<T> _focalCouple;
   late List<Couple<T>> _downRoots;
@@ -238,6 +238,8 @@ class _GraphViewState<T extends GraphNode> extends State<GraphView<T>> {
     _organizeSides(s1);
     _organizeSides(s2);
   }
+
+  LinkedNode<T>? linkedNodeForId(Id id) => _linkedNodes[id];
 }
 
 class SimpleTree<T extends GraphNode> extends StatelessWidget {

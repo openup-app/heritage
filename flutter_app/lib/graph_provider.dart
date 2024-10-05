@@ -120,21 +120,6 @@ class GraphNotifier extends StateNotifier<Graph> {
       people: people,
     );
   }
-
-  bool hasAdditionalRelativesFor(Id id) {
-    return true;
-    final person = state.people[id];
-    if (person == null) {
-      return false;
-    }
-    final relativeIds = [...person.parents, ...person.children];
-    for (final relativeId in relativeIds) {
-      if (!state.people.containsKey(relativeId)) {
-        return true;
-      }
-    }
-    return false;
-  }
 }
 
 class Graph {

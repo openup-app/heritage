@@ -137,6 +137,20 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
               });
             }
           },
+          onSelectPerson: (id) {
+            final linkedNode =
+                _familyTreeViewKey.currentState?.linkedNodeForId(id);
+            if (linkedNode != null) {
+              final person = linkedNode.data;
+              final relatedness = Relatedness(
+                isBloodRelative: linkedNode.isBloodRelative,
+                isAncestor: linkedNode.isAncestor,
+                isSibling: linkedNode.isSibling,
+                relativeLevel: linkedNode.relativeLevel,
+              );
+              _onProfileSelected(person, relatedness);
+            }
+          },
           onViewPerspective: () {
             final selectedPerson = _selectedPerson;
             if (selectedPerson == null) {
@@ -213,7 +227,7 @@ class FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
   bool _ready = false;
   final _idToKey = <Id, GlobalKey>{};
   final _nodeKeys = <(Person, GlobalKey)>[];
-  late Key _graphKey;
+  late GlobalKey<GraphViewState<Person>> _graphKey;
 
   @override
   void initState() {
@@ -240,7 +254,7 @@ class FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
   }
 
   void _reinitKeys() {
-    _graphKey = UniqueKey();
+    _graphKey = GlobalKey();
     _nodeKeys
       ..clear()
       ..addAll(widget.people.map(((e) => (e, GlobalKey()))));
@@ -353,6 +367,9 @@ class FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
       );
     }
   }
+
+  LinkedNode<Person>? linkedNodeForId(Id id) =>
+      _graphKey.currentState?.linkedNodeForId(id);
 
   void _showOwnershipModal() async {
     final addedBy = widget.people
