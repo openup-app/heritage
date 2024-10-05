@@ -105,6 +105,7 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
   Person? _selectedPerson;
   Relatedness? _relatedness;
   PanelPopupState _panelPopupState = const PanelPopupStateNone();
+  final _viewRectNotifier = ValueNotifier(Rect.zero);
 
   @override
   Widget build(BuildContext context) {
@@ -117,6 +118,7 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
           focalPerson: graph.focalPerson,
           people: graph.people.values.toList(),
           selectedPerson: _selectedPerson,
+          viewRectNotifier: _viewRectNotifier,
           onProfileSelected: _onProfileSelected,
           onDismissSelected: _onDismissSelected,
         ),
@@ -172,6 +174,7 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
               );
             }
           },
+          onViewRectUpdated: (rect) => _viewRectNotifier.value = rect,
         ),
       ],
     );
@@ -205,6 +208,7 @@ class FamilyTreeView extends ConsumerStatefulWidget {
   final Person focalPerson;
   final List<Person> people;
   final Person? selectedPerson;
+  final ValueNotifier<Rect> viewRectNotifier;
   final void Function(Person person, Relatedness relatedness) onProfileSelected;
   final VoidCallback onDismissSelected;
 
@@ -213,6 +217,7 @@ class FamilyTreeView extends ConsumerStatefulWidget {
     required this.focalPerson,
     required this.people,
     required this.selectedPerson,
+    required this.viewRectNotifier,
     required this.onProfileSelected,
     required this.onDismissSelected,
   });
@@ -233,15 +238,20 @@ class FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
   void initState() {
     super.initState();
     _reinitKeys();
+    // Until two frames pass it seems we can't locate the nodes on screen
     WidgetsBinding.instance.endOfFrame.then((_) {
-      if (mounted) {
-        if (widget.focalPerson.ownedBy == null) {
-          _showOwnershipModal();
+      WidgetsBinding.instance.endOfFrame.then((_) {
+        if (mounted) {
+          if (widget.focalPerson.ownedBy == null) {
+            _showOwnershipModal();
+          }
+          centerOnPersonWithId(widget.focalPerson.id, animate: false);
+          setState(() => _ready = true);
         }
-        centerOnPersonWithId(widget.focalPerson.id, animate: false);
-        setState(() => _ready = true);
-      }
+      });
     });
+
+    widget.viewRectNotifier.addListener(_onViewRectUpdated);
   }
 
   @override
@@ -268,6 +278,7 @@ class FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
   @override
   void dispose() {
     _transformNotifier.dispose();
+    widget.viewRectNotifier.removeListener(_onViewRectUpdated);
     super.dispose();
   }
 
@@ -355,6 +366,13 @@ class FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
     );
   }
 
+  void _onViewRectUpdated() {
+    final selectedPersonId = widget.selectedPerson?.id;
+    if (selectedPersonId != null) {
+      centerOnPersonWithId(selectedPersonId, animate: false);
+    }
+  }
+
   void centerOnPersonWithId(
     Id id, {
     bool animate = true,
@@ -364,6 +382,7 @@ class FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
       _viewportKey.currentState?.centerOnWidgetWithKey(
         key,
         animate: animate,
+        viewRect: widget.viewRectNotifier.value,
       );
     }
   }

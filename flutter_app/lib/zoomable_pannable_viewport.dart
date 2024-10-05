@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:heritage/util.dart';
 import 'package:vector_math/vector_math_64.dart' hide Colors;
@@ -88,6 +89,7 @@ class ZoomablePannableViewportState extends State<ZoomablePannableViewport>
   void centerOnWidgetWithKey(
     GlobalKey key, {
     bool animate = true,
+    Rect? viewRect,
   }) {
     final targetRect = locateWidgetLocal(key);
     final childRect = locateWidgetLocal(_childKey);
@@ -95,12 +97,20 @@ class ZoomablePannableViewportState extends State<ZoomablePannableViewport>
       return;
     }
 
-    final windowSize = MediaQuery.of(context).size;
-    final relative = targetRect.shift(-childRect.topLeft);
+    final viewport = viewRect ?? Offset.zero & MediaQuery.of(context).size;
+    final localOffset = targetRect.shift(-childRect.topLeft);
+
+    final currentScale = _transformationController.value.getMaxScaleOnAxis();
+    const minScale = 0.3;
+    const maxScale = 0.6;
+    final shouldChangeScale =
+        currentScale < minScale || currentScale > maxScale;
     _targetMatrix = Matrix4.identity()
+      ..translate(viewport.center.dx, viewport.center.dy)
+      ..scale(shouldChangeScale ? maxScale : currentScale)
       ..translate(
-        relative.left + windowSize.width / 2 - targetRect.width / 2,
-        relative.top + windowSize.height / 2 - targetRect.height / 2,
+        localOffset.left - targetRect.width / 2,
+        localOffset.top - targetRect.height / 2,
       );
     _oldMatrix = Matrix4.copy(_transformationController.value);
 

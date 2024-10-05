@@ -15,6 +15,8 @@ import 'package:heritage/profile_display.dart';
 import 'package:heritage/profile_update.dart';
 import 'package:heritage/util.dart';
 
+const _kMinPanelHeight = 240.0;
+
 class Panels extends ConsumerStatefulWidget {
   final Person? selectedPerson;
   final Relatedness? relatedness;
@@ -24,6 +26,7 @@ class Panels extends ConsumerStatefulWidget {
   final void Function(Relationship relationship) onAddConnectionPressed;
   final void Function(Id id) onSelectPerson;
   final VoidCallback onViewPerspective;
+  final void Function(Rect rect) onViewRectUpdated;
 
   const Panels({
     super.key,
@@ -35,6 +38,7 @@ class Panels extends ConsumerStatefulWidget {
     required this.onAddConnectionPressed,
     required this.onSelectPerson,
     required this.onViewPerspective,
+    required this.onViewRectUpdated,
   });
 
   @override
@@ -61,6 +65,7 @@ class _PanelsState extends ConsumerState<Panels> {
         _onChangePopupState();
       }
     }
+    _onEmitSize();
   }
 
   @override
@@ -274,6 +279,29 @@ class _PanelsState extends ConsumerState<Panels> {
     }
   }
 
+  void _onEmitSize() {
+    switch (_layout) {
+      case LayoutType.small:
+        WidgetsBinding.instance.endOfFrame.then((_) {
+          final context = this.context;
+          if (context.mounted) {
+            final windowSize = MediaQuery.of(context).size;
+            const logoTextOffset = 16.0;
+            widget.onViewRectUpdated(const Offset(0, logoTextOffset) &
+                Size(windowSize.width, windowSize.height - _kMinPanelHeight));
+          }
+        });
+      case LayoutType.large:
+        WidgetsBinding.instance.endOfFrame.then((_) {
+          final context = this.context;
+          if (context.mounted) {
+            final windowSize = MediaQuery.of(context).size;
+            widget.onViewRectUpdated(Offset.zero & windowSize);
+          }
+        });
+    }
+  }
+
   void _onChangePopupState() {
     switch (_layout) {
       case LayoutType.small:
@@ -282,7 +310,7 @@ class _PanelsState extends ConsumerState<Panels> {
             // TODO: Possibly declaratively dismiss popup
             break;
           case PanelPopupStateProfile():
-            // Handled in build() by bottom panel
+            // Displayed in build() by bottom panel
             break;
           case PanelPopupStateAddConnection(:final person, :final relationship):
             WidgetsBinding.instance.endOfFrame.then((_) {
@@ -326,7 +354,13 @@ class _PanelsState extends ConsumerState<Panels> {
             });
         }
       case LayoutType.large:
-      // Panels handled in build() by side panel
+        // Displayed in build() by side panel
+        WidgetsBinding.instance.endOfFrame.then((_) {
+          if (mounted) {
+            final windowSize = MediaQuery.of(context).size;
+            widget.onViewRectUpdated(Offset.zero & windowSize);
+          }
+        });
     }
   }
 
@@ -594,9 +628,9 @@ class _DraggableSheetState extends State<_DraggableSheet> {
   Widget build(BuildContext context) {
     // Clamped in case of narrow, but extremely tall/short windows
     final windowSize = MediaQuery.of(context).size;
-    const minPanelHeight = 240.0;
     final maxPanelHeight = windowSize.height - 10.0;
-    final minPanelRatio = (minPanelHeight / windowSize.height).clamp(0.05, 1.0);
+    final minPanelRatio =
+        (_kMinPanelHeight / windowSize.height).clamp(0.05, 1.0);
     final maxPanelRatio = (maxPanelHeight / windowSize.height).clamp(0.05, 1.0);
 
     return DraggableScrollableSheet(
