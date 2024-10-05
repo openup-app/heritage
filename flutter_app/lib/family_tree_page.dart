@@ -59,28 +59,30 @@ class ViewPageState extends ConsumerState<FamilyTreeLoadingPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       resizeToAvoidBottomInset: false,
-      body: AnimatedCrossFade(
-        duration: const Duration(milliseconds: 500),
-        layoutBuilder: (topChild, topChildKey, bottomChild, bottomChildKey) {
-          return Stack(
-            clipBehavior: Clip.none,
-            alignment: Alignment.center,
-            children: <Widget>[
-              KeyedSubtree(
-                key: bottomChildKey,
-                child: bottomChild,
-              ),
-              KeyedSubtree(
-                key: topChildKey,
-                child: topChild,
-              ),
-            ],
-          );
-        },
-        crossFadeState:
-            !_ready ? CrossFadeState.showFirst : CrossFadeState.showSecond,
-        firstChild: const LoadingPage(),
-        secondChild: !_ready ? const SizedBox.shrink() : widget.child,
+      body: SafeArea(
+        child: AnimatedCrossFade(
+          duration: const Duration(milliseconds: 500),
+          layoutBuilder: (topChild, topChildKey, bottomChild, bottomChildKey) {
+            return Stack(
+              clipBehavior: Clip.none,
+              alignment: Alignment.center,
+              children: <Widget>[
+                KeyedSubtree(
+                  key: bottomChildKey,
+                  child: bottomChild,
+                ),
+                KeyedSubtree(
+                  key: topChildKey,
+                  child: topChild,
+                ),
+              ],
+            );
+          },
+          crossFadeState:
+              !_ready ? CrossFadeState.showFirst : CrossFadeState.showSecond,
+          firstChild: const LoadingPage(),
+          secondChild: !_ready ? const SizedBox.shrink() : widget.child,
+        ),
       ),
     );
   }
@@ -185,7 +187,8 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
           _panelPopupState = PanelPopupStateWaitingForApproval(
               person: person, relatedness: relatedness);
         } else {
-          _panelPopupState = PanelPopupStateProfile(person: person);
+          _panelPopupState =
+              PanelPopupStateProfile(person: person, relatedness: relatedness);
         }
       });
     }

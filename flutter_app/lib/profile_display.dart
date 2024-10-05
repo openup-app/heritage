@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:heritage/api.dart';
 import 'package:heritage/heritage_app.dart';
+import 'package:heritage/util.dart';
 import 'package:path_drawing/path_drawing.dart' as path_drawing;
 
 class AddConnectionButtons extends StatelessWidget {
   final bool enabled;
   final bool canAddParent;
   final bool canAddChildren;
+  final double paddingWidth;
   final void Function(Relationship relationship) onAddConnectionPressed;
 
   const AddConnectionButtons({
@@ -15,6 +17,7 @@ class AddConnectionButtons extends StatelessWidget {
     required this.enabled,
     required this.canAddParent,
     required this.canAddChildren,
+    required this.paddingWidth,
     required this.onAddConnectionPressed,
   });
 
@@ -24,50 +27,63 @@ class AddConnectionButtons extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
-        const SizedBox(width: 20),
-        if (canAddParent)
-          _AddConnectionButton(
-            onPressed: () => onAddConnectionPressed(Relationship.parent),
-            icon: SvgPicture.asset(
-              'assets/images/connection_parent.svg',
-            ),
-            label: const Text('Parent'),
+        _AddConnectionButton(
+          onPressed: canAddParent
+              ? () => onAddConnectionPressed(Relationship.parent)
+              : null,
+          paddingWidth: paddingWidth,
+          icon: SvgPicture.asset(
+            'assets/images/connection_parent.svg',
+            width: 24,
           ),
+          label: const Text('Parent'),
+        ),
+        SizedBox(width: paddingWidth * 2),
         _AddConnectionButton(
           onPressed: () => onAddConnectionPressed(Relationship.sibling),
+          paddingWidth: paddingWidth,
           icon: SvgPicture.asset(
             'assets/images/connection_sibling.svg',
+            width: 32,
           ),
           label: const Text('Sibling'),
         ),
-        if (canAddChildren)
-          _AddConnectionButton(
-            onPressed: () => onAddConnectionPressed(Relationship.child),
-            icon: SvgPicture.asset(
-              'assets/images/connection_child.svg',
-            ),
-            label: const Text('Child'),
+        SizedBox(width: paddingWidth * 2),
+        _AddConnectionButton(
+          onPressed: canAddChildren
+              ? () => onAddConnectionPressed(Relationship.child)
+              : null,
+          paddingWidth: paddingWidth,
+          icon: SvgPicture.asset(
+            'assets/images/connection_child.svg',
+            width: 32,
           ),
+          label: const Text('Child'),
+        ),
+        SizedBox(width: paddingWidth * 2),
         _AddConnectionButton(
           onPressed: () => onAddConnectionPressed(Relationship.spouse),
+          paddingWidth: paddingWidth,
           icon: SvgPicture.asset(
             'assets/images/connection_spouse.svg',
+            width: 32,
           ),
           label: const Text('Spouse'),
         ),
-        const SizedBox(width: 20),
       ],
     );
   }
 }
 
 class _AddConnectionButton extends StatelessWidget {
+  final double paddingWidth;
   final Widget icon;
   final Widget label;
   final VoidCallback? onPressed;
 
   const _AddConnectionButton({
     super.key,
+    required this.paddingWidth,
     required this.icon,
     required this.label,
     required this.onPressed,
@@ -75,38 +91,38 @@ class _AddConnectionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20.0),
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        child: GestureDetector(
-          onTap: onPressed,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              FilledButton(
-                onPressed: onPressed,
-                style: FilledButton.styleFrom(
-                  fixedSize: const Size.square(54),
-                  shape: const RoundedRectangleBorder(
-                    borderRadius: BorderRadius.all(
-                      Radius.circular(13),
-                    ),
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: onPressed,
+        child: Opacity(
+          opacity: onPressed == null ? 0.4 : 1.0,
+          child: Greyscale(
+            enabled: onPressed == null,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                FilledButton(
+                  onPressed: onPressed,
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size.square(48),
+                    foregroundColor:
+                        const Color.fromRGBO(0x00, 0xAE, 0xFF, 1.0),
+                    backgroundColor:
+                        const Color.fromRGBO(0xEB, 0xEB, 0xEB, 1.0),
                   ),
-                  foregroundColor: const Color.fromRGBO(0x00, 0xAE, 0xFF, 1.0),
-                  backgroundColor: const Color.fromRGBO(0xEB, 0xEB, 0xEB, 1.0),
+                  child: icon,
                 ),
-                child: icon,
-              ),
-              const SizedBox(height: 4),
-              DefaultTextStyle.merge(
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
+                const SizedBox(height: 4),
+                DefaultTextStyle.merge(
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  child: label,
                 ),
-                child: label,
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

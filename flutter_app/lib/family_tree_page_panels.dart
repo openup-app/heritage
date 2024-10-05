@@ -73,116 +73,39 @@ class _PanelsState extends ConsumerState<Panels> {
   Widget build(BuildContext context) {
     final selectedPerson = widget.selectedPerson;
     final relatedness = widget.relatedness;
-    final isMe = selectedPerson?.id == widget.focalPerson.id;
+    final isMe = selectedPerson?.id == null ||
+        selectedPerson?.id == widget.focalPerson.id;
     final isOwnedByMe =
         isMe || selectedPerson?.ownedBy == widget.focalPerson.id;
     final small = _layout == LayoutType.small;
-
-    // Clamped in case of narrow, but extremely tall/short windows
-    final windowSize = MediaQuery.of(context).size;
-    final minPanelHeight =
-        widget.selectedPerson?.ownedBy == null ? 180.0 : 250.0;
-    final minPanelRatio = (minPanelHeight / windowSize.height).clamp(0.05, 0.7);
     return Stack(
       children: [
         if (small) ...[
-          Align(
+          const Align(
             alignment: Alignment.topCenter,
-            child: Padding(
-              padding:
-                  EdgeInsets.only(top: 16 + MediaQuery.of(context).padding.top),
-              child: const LogoText(),
+            child: LogoText(
+              width: 250,
             ),
           ),
-          Positioned(
-            left: 0,
-            bottom: minPanelHeight,
-            child: const Align(
-              alignment: Alignment.centerLeft,
-              child: Padding(
-                padding: EdgeInsets.only(left: 16.0, bottom: 16),
-                child: _MenuButtons(),
-              ),
-            ),
+          const Positioned(
+            left: 16,
+            bottom: 16,
+            child: _MenuButtons(),
           ),
-          Positioned.fill(
-            child: Padding(
-              padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top),
-              child: DraggableScrollableSheet(
-                expand: false,
-                snap: true,
-                initialChildSize: minPanelRatio,
-                minChildSize: minPanelRatio,
-                maxChildSize: 1.0,
-                builder: (context, controller) {
-                  return Container(
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.only(
-                        topLeft: Radius.circular(24),
-                        topRight: Radius.circular(24),
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          offset: Offset(0, 4),
-                          blurRadius: 16,
-                          color: Color.fromRGBO(0x00, 0x00, 0x00, 0.25),
-                        ),
-                      ],
-                    ),
-                    child: Builder(
-                      builder: (context) {
-                        final person = widget.selectedPerson?.ownedBy == null
-                            ? widget.focalPerson
-                            : widget.selectedPerson!;
-                        final relatedness = widget.relatedness;
-                        return SingleChildScrollView(
-                          key: Key(person.id),
-                          controller: controller,
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            child: ProfileDisplay(
-                              key: Key(person.id),
-                              id: person.id,
-                              profile: person.profile,
-                              isMe: isMe,
-                              isEditable: isOwnedByMe,
-                              hasDifferentOwner: person.ownedBy != person.id,
-                              header: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  if (isMe)
-                                    Center(
-                                      child: Text(person.profile.fullName),
-                                    ),
-                                  buildAddConnectionButtons(
-                                    person: person,
-                                    relatedness: relatedness ??
-                                        const Relatedness(
-                                          isBloodRelative: true,
-                                          isAncestor: false,
-                                          isSibling: false,
-                                          relativeLevel: 0,
-                                        ),
-                                    onAddConnectionPressed:
-                                        widget.onAddConnectionPressed,
-                                  ),
-                                ],
-                              ),
-                              onViewPerspective: widget.onViewPerspective,
-                              onSaved: () {},
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  );
-                },
+          if (selectedPerson != null &&
+              relatedness != null &&
+              selectedPerson.ownedBy != null)
+            Positioned.fill(
+              child: _DraggableSheet(
+                selectedPerson: selectedPerson,
+                relatedness: relatedness,
+                isMe: isMe,
+                isOwnedByMe: isOwnedByMe,
+                onAddConnectionPressed: widget.onAddConnectionPressed,
+                onDismissPanelPopup: widget.onDismissPanelPopup,
+                onViewPerspective: widget.onViewPerspective,
               ),
-            ),
-          )
+            )
         ] else ...[
           Positioned(
             top: MediaQuery.of(context).padding.top,
@@ -208,20 +131,29 @@ class _PanelsState extends ConsumerState<Panels> {
               child: AnimatedSidePanel(
                 child: switch (widget.panelPopupState) {
                   PanelPopupStateNone() => null,
-                  PanelPopupStateProfile(:final person) => _SidePanelContainer(
+                  PanelPopupStateProfile(:final person, :final relatedness) =>
+                    _SidePanelContainer(
                       key: Key('profile_${person.id}'),
-                      child: ProfileDisplay(
-                        id: person.id,
-                        profile: person.profile,
-                        isMe: isMe,
-                        isEditable: isOwnedByMe,
-                        hasDifferentOwner: person.ownedBy != person.id,
-                        header: null,
-                        onViewPerspective: widget.onViewPerspective,
-                        onSaved: () {
-                          showProfileUpdateSuccess(context: context);
-                          widget.onDismissPanelPopup();
-                        },
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          ProfileNameSection(
+                            person: person,
+                            relatedness: relatedness,
+                            isMe: isMe,
+                          ),
+                          ProfileDisplay(
+                            initialProfile: person.profile,
+                            isMe: isMe,
+                            isEditable: isOwnedByMe,
+                            hasDifferentOwner: person.ownedBy != person.id,
+                            onViewPerspective: widget.onViewPerspective,
+                            onSave: (update) {
+                              showProfileUpdateSuccess(context: context);
+                              widget.onDismissPanelPopup();
+                            },
+                          ),
+                        ],
                       ),
                     ),
                   PanelPopupStateAddConnection(
@@ -296,10 +228,14 @@ class _PanelsState extends ConsumerState<Panels> {
                       ),
                     ],
                   ),
-                  child: buildAddConnectionButtons(
-                    person: selectedPerson,
-                    relatedness: relatedness,
-                    onAddConnectionPressed: widget.onAddConnectionPressed,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                    child: buildAddConnectionButtons(
+                      person: selectedPerson,
+                      relatedness: relatedness,
+                      paddingWidth: 20,
+                      onAddConnectionPressed: widget.onAddConnectionPressed,
+                    ),
                   ),
                 ),
               ),
@@ -359,6 +295,7 @@ class _PanelsState extends ConsumerState<Panels> {
                           child: buildAddConnectionButtons(
                             person: person,
                             relatedness: relatedness,
+                            paddingWidth: 16,
                             onAddConnectionPressed: (relationship) {
                               Navigator.of(context).pop();
                               widget.onAddConnectionPressed(relationship);
@@ -495,15 +432,203 @@ class _PanelsState extends ConsumerState<Panels> {
 Widget buildAddConnectionButtons({
   required Person person,
   required Relatedness relatedness,
+  required double paddingWidth,
   required void Function(Relationship relationship) onAddConnectionPressed,
 }) {
   return AddConnectionButtons(
     enabled: relatedness.isBloodRelative,
+    paddingWidth: paddingWidth,
     canAddParent: person.parents.isEmpty,
     canAddChildren:
         relatedness.isAncestor || !relatedness.isGrandparentLevelOrHigher,
     onAddConnectionPressed: onAddConnectionPressed,
   );
+}
+
+class _DraggableSheet extends StatefulWidget {
+  final Person selectedPerson;
+  final Relatedness relatedness;
+  final bool isMe;
+  final bool isOwnedByMe;
+  final void Function(Relationship relationship) onAddConnectionPressed;
+  final VoidCallback onDismissPanelPopup;
+  final VoidCallback onViewPerspective;
+
+  const _DraggableSheet({
+    super.key,
+    required this.selectedPerson,
+    required this.relatedness,
+    required this.isMe,
+    required this.isOwnedByMe,
+    required this.onAddConnectionPressed,
+    required this.onDismissPanelPopup,
+    required this.onViewPerspective,
+  });
+
+  @override
+  State<_DraggableSheet> createState() => _DraggableSheetState();
+}
+
+class _DraggableSheetState extends State<_DraggableSheet> {
+  final _draggableScrollableController = DraggableScrollableController();
+
+  @override
+  Widget build(BuildContext context) {
+    // Clamped in case of narrow, but extremely tall/short windows
+    final windowSize = MediaQuery.of(context).size;
+    const minPanelHeight = 240.0;
+    final maxPanelHeight = windowSize.height - 10.0;
+    final minPanelRatio = (minPanelHeight / windowSize.height).clamp(0.05, 1.0);
+    final maxPanelRatio = (maxPanelHeight / windowSize.height).clamp(0.05, 1.0);
+
+    return DraggableScrollableSheet(
+      controller: _draggableScrollableController,
+      expand: false,
+      snap: true,
+      initialChildSize: minPanelRatio,
+      minChildSize: minPanelRatio,
+      maxChildSize: maxPanelRatio,
+      builder: (context, controller) {
+        return Container(
+          clipBehavior: Clip.hardEdge,
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(24),
+              topRight: Radius.circular(24),
+            ),
+            boxShadow: [
+              BoxShadow(
+                offset: Offset(0, 4),
+                blurRadius: 16,
+                color: Color.fromRGBO(0x00, 0x00, 0x00, 0.25),
+              ),
+            ],
+          ),
+          child: GestureDetector(
+            onTap: () {
+              _draggableScrollableController.animateTo(
+                maxPanelRatio,
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeOut,
+              );
+            },
+            child: CustomScrollView(
+              key: Key(widget.selectedPerson.id),
+              controller: controller,
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              slivers: [
+                PinnedHeaderSliver(
+                  child: ColoredBox(
+                    color: Colors.white,
+                    child: Column(
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Center(
+                                child: Padding(
+                                  padding: EdgeInsets.symmetric(vertical: 12.0),
+                                  child: _DragHandle(),
+                                ),
+                              ),
+                              Text(
+                                widget.isMe
+                                    ? 'I need to add a...'
+                                    : 'Missing a...',
+                                style: Theme.of(context).textTheme.titleLarge,
+                              ),
+                              const SizedBox(height: 4),
+                              Align(
+                                alignment: Alignment.centerLeft,
+                                child: buildAddConnectionButtons(
+                                  person: widget.selectedPerson,
+                                  relatedness: widget.relatedness,
+                                  paddingWidth: 12,
+                                  onAddConnectionPressed:
+                                      widget.onAddConnectionPressed,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        const Divider(
+                          height: 1,
+                          color: Color.fromRGBO(0xEB, 0xEB, 0xEB, 1.0),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: ProfileNameSection(
+                      person: widget.selectedPerson,
+                      relatedness: widget.relatedness,
+                      isMe: widget.isMe,
+                    ),
+                  ),
+                ),
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Consumer(builder: (context, ref, child) {
+                      return ProfileDisplay(
+                        initialProfile: widget.selectedPerson.profile,
+                        isMe: widget.isMe,
+                        isEditable: widget.isOwnedByMe,
+                        hasDifferentOwner: widget.selectedPerson.ownedBy !=
+                            widget.selectedPerson.id,
+                        onViewPerspective: widget.onViewPerspective,
+                        onSave: (update) async {
+                          final notifier = ref.read(graphProvider.notifier);
+                          await showBlockingModal(
+                              context,
+                              notifier.updateProfile(
+                                  widget.selectedPerson.id, update));
+                          if (context.mounted) {
+                            showProfileUpdateSuccess(context: context);
+                            _draggableScrollableController.animateTo(
+                              minPanelRatio,
+                              duration: const Duration(milliseconds: 300),
+                              curve: Curves.easeOut,
+                            );
+                            widget.onDismissPanelPopup();
+                          }
+                        },
+                      );
+                    }),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _DragHandle extends StatelessWidget {
+  const _DragHandle({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 36,
+      height: 4,
+      decoration: const BoxDecoration(
+        color: Colors.grey,
+        borderRadius: BorderRadius.all(
+          Radius.circular(2),
+        ),
+      ),
+    );
+  }
 }
 
 class _MenuButtons extends StatelessWidget {
@@ -531,13 +656,12 @@ class _MenuButtons extends StatelessWidget {
           child: FilledButton(
             onPressed: () => Navigator.of(context).pop(),
             style: FilledButton.styleFrom(
-              fixedSize: const Size.square(56),
+              minimumSize: const Size.square(48),
               foregroundColor: Colors.black,
               backgroundColor: Colors.white,
             ),
             child: const Icon(
               Icons.home_filled,
-              size: 34.0,
             ),
           ),
         ),
@@ -547,13 +671,12 @@ class _MenuButtons extends StatelessWidget {
           child: FilledButton(
             onPressed: () => showHelpDialog(context: context),
             style: FilledButton.styleFrom(
-              fixedSize: const Size.square(56),
+              minimumSize: const Size.square(48),
               foregroundColor: Colors.black,
               backgroundColor: Colors.white,
             ),
             child: const Icon(
               Icons.question_mark,
-              size: 34.0,
             ),
           ),
         ),
@@ -648,7 +771,8 @@ class _SidePanelContainer extends StatelessWidget {
         ],
       ),
       child: SingleChildScrollView(
-        padding: const EdgeInsets.all(15),
+        padding: const EdgeInsets.symmetric(horizontal: 16) +
+            const EdgeInsets.only(top: 8, bottom: 16),
         child: child,
       ),
     );
@@ -656,41 +780,115 @@ class _SidePanelContainer extends StatelessWidget {
 }
 
 class LogoText extends StatelessWidget {
-  const LogoText({super.key});
+  final double width;
+  const LogoText({
+    super.key,
+    this.width = 290,
+  });
 
   @override
   Widget build(BuildContext context) {
     return IgnorePointer(
       child: Image.asset(
         'assets/images/logo_text.png',
-        width: 290,
+        width: width,
       ),
     );
   }
 }
 
+class ProfileNameSection extends StatelessWidget {
+  final Person person;
+  final Relatedness relatedness;
+  final bool isMe;
+
+  const ProfileNameSection({
+    super.key,
+    required this.person,
+    required this.relatedness,
+    required this.isMe,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    const nameSectionHeight = 60.0;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          height: nameSectionHeight,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (isMe) ...[
+                Text(
+                  person.profile.fullName,
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                const Text('My profile'),
+              ] else ...[
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        person.profile.fullName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                    ),
+                    const VerifiedBadge(
+                      width: 24,
+                    ),
+                  ],
+                ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Tarlok\'s Sister\'s Husband',
+                        style: Theme.of(context)
+                            .textTheme
+                            .titleMedium
+                            ?.copyWith(
+                                color: const Color.fromRGBO(
+                                    0x7A, 0x7A, 0x7A, 1.0)),
+                      ),
+                    ),
+                    Text(
+                      'Verified by Parteek',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          color: const Color.fromRGBO(0x3F, 0x71, 0xFF, 1.0)),
+                    )
+                  ],
+                ),
+                const SizedBox(height: 12),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class ProfileDisplay extends StatelessWidget {
-  final String id;
-  final Profile profile;
+  final Profile initialProfile;
   final bool isMe;
   final bool isEditable;
   final bool hasDifferentOwner;
-  final ScrollController? scrollController;
-  final Widget? header;
   final VoidCallback onViewPerspective;
-  final VoidCallback onSaved;
+  final void Function(ProfileUpdate update) onSave;
 
   const ProfileDisplay({
     super.key,
-    required this.id,
-    required this.profile,
+    required this.initialProfile,
     required this.isMe,
     required this.isEditable,
     required this.hasDifferentOwner,
-    this.scrollController,
-    this.header,
     required this.onViewPerspective,
-    required this.onSaved,
+    required this.onSave,
   });
 
   @override
@@ -698,39 +896,33 @@ class ProfileDisplay extends StatelessWidget {
     return ProviderScope(
       overrides: [
         profileUpdateProvider.overrideWith(
-            (ref) => ProfileUpdateNotifier(initialProfile: profile)),
+            (ref) => ProfileUpdateNotifier(initialProfile: initialProfile)),
       ],
       child: _ProfileDisplay(
-        id: id,
         isMe: isMe,
         isEditable: isEditable,
         hasDifferentOwner: hasDifferentOwner,
-        header: header,
         onViewPerspective: onViewPerspective,
-        onSaved: onSaved,
+        onSave: onSave,
       ),
     );
   }
 }
 
 class _ProfileDisplay extends ConsumerStatefulWidget {
-  final String id;
   final bool isMe;
   final bool isEditable;
   final bool hasDifferentOwner;
-  final Widget? header;
   final VoidCallback onViewPerspective;
-  final VoidCallback onSaved;
+  final void Function(ProfileUpdate update) onSave;
 
   const _ProfileDisplay({
     super.key,
-    required this.id,
     required this.isMe,
     required this.isEditable,
     required this.hasDifferentOwner,
-    required this.header,
     required this.onViewPerspective,
-    required this.onSaved,
+    required this.onSave,
   });
 
   @override
@@ -743,7 +935,6 @@ class _ProfileEditorState extends ConsumerState<_ProfileDisplay> {
   late final TextEditingController _birthdayController;
   late final TextEditingController _deathdayController;
   late final TextEditingController _birthplaceController;
-  bool _submitting = false;
 
   @override
   void initState() {
@@ -779,49 +970,10 @@ class _ProfileEditorState extends ConsumerState<_ProfileDisplay> {
 
   @override
   Widget build(BuildContext context) {
-    final header = widget.header;
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                ref.watch(profileUpdateProvider.select((p) => p.fullName)),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-            ),
-            const VerifiedBadge(
-              width: 24,
-            ),
-          ],
-        ),
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                'Tarlok\'s Sister\'s Husband',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: const Color.fromRGBO(0x7A, 0x7A, 0x7A, 1.0)),
-              ),
-            ),
-            Text(
-              'Verified by Parteek',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: const Color.fromRGBO(0x3F, 0x71, 0xFF, 1.0)),
-            )
-          ],
-        ),
-        if (header != null) ...[
-          const SizedBox(height: 24),
-          header,
-          const SizedBox(height: 16),
-          const Divider(height: 1),
-        ],
-        const SizedBox(height: 12),
         MouseRegion(
           cursor: SystemMouseCursors.click,
           child: GestureDetector(
@@ -1063,15 +1215,11 @@ class _ProfileEditorState extends ConsumerState<_ProfileDisplay> {
           ),
           const SizedBox(height: 24),
           FilledButton(
-            onPressed: _submitting ? null : _submit,
+            onPressed: () => widget.onSave(ref.read(profileUpdateProvider)),
             style: FilledButton.styleFrom(
               fixedSize: const Size.fromHeight(73),
             ),
-            child: _submitting
-                ? const Center(
-                    child: CircularProgressIndicator(),
-                  )
-                : const Text('Save'),
+            child: const Text('Save'),
           ),
         ],
       ],
@@ -1095,17 +1243,6 @@ class _ProfileEditorState extends ConsumerState<_ProfileDisplay> {
     final cropped = await showCropDialog(context, frame, size);
     if (cropped != null) {
       ref.read(profileUpdateProvider.notifier).image(cropped);
-    }
-  }
-
-  void _submit() async {
-    final profileUpdate = ref.read(profileUpdateProvider);
-    final notifier = ref.read(graphProvider.notifier);
-    setState(() => _submitting = true);
-    await notifier.updateProfile(widget.id, profileUpdate);
-    if (mounted) {
-      setState(() => _submitting = false);
-      widget.onSaved();
     }
   }
 }
@@ -1281,17 +1418,21 @@ class PanelPopupStateNone implements PanelPopupState {
 
 class PanelPopupStateProfile implements PanelPopupState {
   final Person person;
+  final Relatedness relatedness;
 
   PanelPopupStateProfile({
     required this.person,
+    required this.relatedness,
   });
 
   @override
-  int get hashCode => person.hashCode;
+  int get hashCode => Object.hash(person, relatedness);
 
   @override
   bool operator ==(Object other) {
-    return other is PanelPopupStateProfile && other.person == person;
+    return other is PanelPopupStateProfile &&
+        other.person == person &&
+        other.relatedness == relatedness;
   }
 }
 

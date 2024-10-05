@@ -79,7 +79,7 @@ class HeritageApp extends StatelessWidget {
                         textStyle: subtitleStyle,
                         shape: const RoundedRectangleBorder(
                           borderRadius: BorderRadius.all(
-                            Radius.circular(13),
+                            Radius.circular(10),
                           ),
                         ),
                       ),
@@ -293,7 +293,6 @@ class _CacheAssetsState extends State<_CacheAssets> {
       const assets = [
         'assets/images/app_loading.webp',
         'assets/images/binoculars.png',
-        'assets/images/connection_spouse.webp',
         'assets/images/logo_text.png',
         'assets/images/tree_background.png',
       ];

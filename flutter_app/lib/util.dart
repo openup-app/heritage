@@ -242,3 +242,33 @@ class _BlockingModalState extends State<_BlockingModal> {
     );
   }
 }
+
+class Greyscale extends StatelessWidget {
+  final bool enabled;
+  final Widget child;
+
+  const Greyscale({
+    super.key,
+    this.enabled = true,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (!enabled) {
+      return child;
+    }
+    // Copied from Lomski's answer: https://stackoverflow.com/a/62078847/1702627
+    const ColorFilter greyscale = ColorFilter.matrix(<double>[
+      0.2126, 0.7152, 0.0722, 0, 0, //
+      0.2126, 0.7152, 0.0722, 0, 0, //
+      0.2126, 0.7152, 0.0722, 0, 0, //
+      0, 0, 0, 1, 0, //
+    ]);
+
+    return ColorFiltered(
+      colorFilter: greyscale,
+      child: child,
+    );
+  }
+}
