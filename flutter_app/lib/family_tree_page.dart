@@ -405,21 +405,19 @@ class HoverableNodeProfile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MouseHover(
+    return MouseOverlay(
       enabled: enabled,
-      forceHover: forceHover,
-      builder: (context, hovering) {
-        return MouseRegion(
-          cursor: enabled ? SystemMouseCursors.click : MouseCursor.defer,
-          child: GestureDetector(
-            onTap: onTap,
-            child: NodeProfile(
-              person: person,
-              hasAdditionalRelatives: hasAdditionalRelatives,
-            ),
+      forceOverlay: forceHover,
+      child: MouseRegion(
+        cursor: enabled ? SystemMouseCursors.click : MouseCursor.defer,
+        child: GestureDetector(
+          onTap: onTap,
+          child: NodeProfile(
+            person: person,
+            hasAdditionalRelatives: hasAdditionalRelatives,
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 }

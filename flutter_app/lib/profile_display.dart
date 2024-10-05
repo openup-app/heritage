@@ -550,71 +550,38 @@ class _DashedPainter extends CustomPainter {
   }
 }
 
-class MouseHoverAnimation extends StatefulWidget {
-  final bool enabled;
-  final bool forceHover;
+class MouseEnterBuilder extends StatefulWidget {
   final VoidCallback onMouseEnter;
   final VoidCallback onMouseExit;
-  final VoidCallback onHoverAnimationEnd;
-  final Widget child;
+  final Widget Function(BuildContext context, bool entered) builder;
 
-  const MouseHoverAnimation({
+  const MouseEnterBuilder({
     super.key,
-    this.enabled = true,
-    this.forceHover = false,
     required this.onMouseEnter,
     required this.onMouseExit,
-    required this.onHoverAnimationEnd,
-    required this.child,
+    required this.builder,
   });
 
   @override
-  State<MouseHoverAnimation> createState() => _MouseHoverAnimationState();
+  State<MouseEnterBuilder> createState() => _MouseEnterBuilderState();
 }
 
-class _MouseHoverAnimationState extends State<MouseHoverAnimation> {
-  bool _isScaling = false;
-
-  @override
-  void didUpdateWidget(covariant MouseHoverAnimation oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.enabled && !widget.enabled) {
-      if (_isScaling) {
-        setState(() => _isScaling = false);
-        WidgetsBinding.instance.endOfFrame.then((_) {
-          if (mounted) {
-            widget.onMouseExit();
-          }
-        });
-      }
-    }
-  }
+class _MouseEnterBuilderState extends State<MouseEnterBuilder> {
+  bool _entered = false;
 
   @override
   Widget build(BuildContext context) {
-    return Scaler(
-      duration: const Duration(milliseconds: 300),
-      shouldScale: _isScaling || widget.forceHover,
-      scale: 1.5,
-      onEnd: () {
-        if (!_isScaling) {
-          widget.onHoverAnimationEnd();
-        }
+    return MouseRegion(
+      opaque: false,
+      onEnter: (_) {
+        setState(() => _entered = true);
+        widget.onMouseEnter();
       },
-      child: MouseRegion(
-        opaque: false,
-        onEnter: (_) {
-          if (widget.enabled) {
-            setState(() => _isScaling = true);
-            widget.onMouseEnter();
-          }
-        },
-        onExit: (_) {
-          setState(() => _isScaling = false);
-          widget.onMouseExit();
-        },
-        child: widget.child,
-      ),
+      onExit: (_) {
+        setState(() => _entered = false);
+        widget.onMouseExit();
+      },
+      child: widget.builder(context, _entered),
     );
   }
 }
@@ -678,36 +645,41 @@ class _HoverState extends State<Scaler> {
   }
 }
 
-class MouseHover extends StatefulWidget {
+class MouseOverlay extends StatefulWidget {
   final bool enabled;
-  final bool forceHover;
+  final bool forceOverlay;
+  final Widget child;
 
-  final Widget Function(BuildContext context, bool hovering) builder;
-
-  const MouseHover({
+  const MouseOverlay({
     super.key,
     this.enabled = true,
-    this.forceHover = false,
-    required this.builder,
+    this.forceOverlay = false,
+    required this.child,
   });
 
   @override
-  State<MouseHover> createState() => _MouseHoverState();
+  State<MouseOverlay> createState() => _MouseOverlayState();
 }
 
-class _MouseHoverState extends State<MouseHover> {
-  bool _hovering = false;
+class _MouseOverlayState extends State<MouseOverlay> {
   final _controller = OverlayPortalController();
   final _layerLink = LayerLink();
+  bool _entered = false;
 
   @override
-  void didUpdateWidget(covariant MouseHover oldWidget) {
+  void didUpdateWidget(covariant MouseOverlay oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (!oldWidget.forceHover && widget.forceHover) {
-      _hovering = true;
+    if (!widget.enabled && _controller.isShowing) {
       WidgetsBinding.instance.endOfFrame.then((_) {
         if (mounted) {
-          _controller.show();
+          setState(() => _controller.hide());
+        }
+      });
+    }
+    if (!oldWidget.forceOverlay && widget.forceOverlay) {
+      WidgetsBinding.instance.endOfFrame.then((_) {
+        if (mounted) {
+          setState(() => _controller.show());
         }
       });
     }
@@ -720,39 +692,38 @@ class _MouseHoverState extends State<MouseHover> {
       child: OverlayPortal(
         controller: _controller,
         overlayChildBuilder: (context) {
+          final shouldScale =
+              widget.enabled && (_entered || widget.forceOverlay);
           return Align(
             alignment: Alignment.topLeft,
             child: CompositedTransformFollower(
               link: _layerLink,
-              child: MouseHoverAnimation(
-                enabled: widget.enabled,
-                forceHover: widget.forceHover,
-                onMouseEnter: () => setState(() => _hovering = true),
-                onMouseExit: () => setState(() => _hovering = false),
-                onHoverAnimationEnd: () => setState(() => _controller.hide()),
-                child: widget.builder(context, _hovering),
+              child: Scaler(
+                duration: const Duration(milliseconds: 300),
+                shouldScale: shouldScale,
+                scale: 1.5,
+                onEnd: () {
+                  if (!shouldScale) {
+                    setState(() => _controller.hide());
+                  }
+                },
+                child: _MouseRegionWithWorkaround(
+                  enabled: widget.enabled,
+                  onEnter: () => setState(() => _entered = true),
+                  onExit: () => setState(() => _entered = false),
+                  child: widget.child,
+                ),
               ),
             ),
           );
         },
-        child: MouseRegion(
-          opaque: false,
-          onEnter: (_) {
-            if (widget.enabled) {
-              setState(() {
-                _hovering = true;
-                _controller.show();
-              });
-            }
-          },
-          onHover: (_) {
-            // Edge case where mouse starts inside widget
-            if (widget.enabled && !_hovering) {
-              setState(() {
-                _hovering = true;
-                _controller.show();
-              });
-            }
+        child: _MouseRegionWithWorkaround(
+          enabled: widget.enabled,
+          onEnter: () {
+            setState(() {
+              _entered = true;
+              _controller.show();
+            });
           },
           child: Visibility(
             visible: !_controller.isShowing,
@@ -761,12 +732,63 @@ class _MouseHoverState extends State<MouseHover> {
             maintainAnimation: true,
             maintainSemantics: true,
             child: IgnorePointer(
-              ignoring: _hovering,
-              child: widget.builder(context, _hovering),
+              ignoring: _controller.isShowing,
+              child: widget.child,
             ),
           ),
         ),
       ),
+    );
+  }
+}
+
+/// MouseRegion that handles the edge case where cursor starts inside widget
+class _MouseRegionWithWorkaround extends StatefulWidget {
+  final bool enabled;
+  final VoidCallback? onEnter;
+  final VoidCallback? onExit;
+  final Widget child;
+
+  const _MouseRegionWithWorkaround({
+    super.key,
+    required this.enabled,
+    this.onEnter,
+    this.onExit,
+    required this.child,
+  });
+
+  @override
+  State<_MouseRegionWithWorkaround> createState() =>
+      _MouseRegionWithWorkaroundState();
+}
+
+class _MouseRegionWithWorkaroundState
+    extends State<_MouseRegionWithWorkaround> {
+  bool _entered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      opaque: false,
+      onEnter: (_) {
+        if (widget.enabled && !_entered) {
+          setState(() => _entered = true);
+          widget.onEnter?.call();
+        }
+      },
+      onHover: (_) {
+        if (widget.enabled && !_entered) {
+          setState(() => _entered = true);
+          widget.onEnter?.call();
+        }
+      },
+      onExit: (_) {
+        if (widget.enabled && _entered) {
+          setState(() => _entered = false);
+          widget.onExit?.call();
+        }
+      },
+      child: widget.child,
     );
   }
 }
@@ -778,7 +800,7 @@ class _Binoculars extends StatelessWidget {
   Widget build(BuildContext context) {
     return Image.asset(
       'assets/images/binoculars.png',
-      width: 48,
+      width: 24,
       fit: BoxFit.cover,
     );
   }
