@@ -241,34 +241,17 @@ class _PanelsState extends ConsumerState<Panels> {
                   PanelPopupStateWaitingForApproval(:final person) =>
                     _SidePanelContainer(
                       key: Key('approval_${person.id}'),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Waiting for\n${person.profile.firstName}\'s\napproval',
-                            textAlign: TextAlign.start,
-                            style: const TextStyle(
-                              fontSize: 48,
-                              fontWeight: FontWeight.w900,
-                              color: Color.fromRGBO(0x3C, 0x3C, 0x3C, 1.0),
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          WaitingForApprovalDisplay(
-                            person: person,
-                            onAddConnectionPressed: null,
-                            onSaveAndShare:
-                                (firstName, lastName, gender) async {
-                              await _onSaveAndShare(
-                                  person.id, firstName, lastName, gender);
-                              if (mounted) {
-                                widget.onDismissPanelPopup();
-                              }
-                            },
-                            onTakeOwnership: _takeOwnership,
-                          ),
-                        ],
+                      child: WaitingForApprovalDisplay(
+                        person: person,
+                        onAddConnectionPressed: null,
+                        onSaveAndShare: (firstName, lastName, gender) async {
+                          await _onSaveAndShare(
+                              person.id, firstName, lastName, gender);
+                          if (mounted) {
+                            widget.onDismissPanelPopup();
+                          }
+                        },
+                        onTakeOwnership: _takeOwnership,
                       ),
                     ),
                 },
@@ -419,30 +402,64 @@ class _PanelsState extends ConsumerState<Panels> {
     required Person person,
     required VoidCallback onAddConnectionPressed,
   }) async {
-    final shouldDismiss = await showDialog<bool>(
+    final shouldDismiss = await showModalBottomSheet<bool>(
       context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(10),
+          topRight: Radius.circular(10),
+        ),
+      ),
       builder: (context) {
-        return AlertDialog(
-          key: _modalKey,
-          title: Text('Waiting for ${person.profile.firstName}\'s approval'),
-          scrollable: true,
-          content: WaitingForApprovalDisplay(
-            person: person,
-            onAddConnectionPressed: () {
-              Navigator.of(context).pop(true);
-              onAddConnectionPressed();
-            },
-            onSaveAndShare: (firstName, lastName, gender) async {
-              await _onSaveAndShare(person.id, firstName, lastName, gender);
-              if (context.mounted) {
-                Navigator.of(context).pop(true);
-              }
-            },
-            onTakeOwnership: () {
-              Navigator.of(context).pop();
-              _takeOwnership();
-            },
-          ),
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: 8.0),
+                child: _DragHandle(),
+              ),
+            ),
+            SingleChildScrollView(
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 16.0) +
+                        EdgeInsets.only(
+                            bottom: MediaQuery.of(context).viewInsets.bottom),
+                    child: WaitingForApprovalDisplay(
+                      key: _modalKey,
+                      person: person,
+                      onAddConnectionPressed: () {
+                        Navigator.of(context).pop(true);
+                        onAddConnectionPressed();
+                      },
+                      onSaveAndShare: (firstName, lastName, gender) async {
+                        await _onSaveAndShare(
+                            person.id, firstName, lastName, gender);
+                        if (context.mounted) {
+                          Navigator.of(context).pop(true);
+                        }
+                      },
+                      onTakeOwnership: () {
+                        Navigator.of(context).pop();
+                        _takeOwnership();
+                      },
+                    ),
+                  ),
+                  // Container(
+                  //   width: 400,
+                  //   height: MediaQuery.of(context).viewInsets.bottom + 100,
+                  //   color: Colors.blue,
+                  // ),
+                ],
+              ),
+            ),
+          ],
         );
       },
     );
@@ -452,23 +469,43 @@ class _PanelsState extends ConsumerState<Panels> {
   }
 
   void _showAddConnectionModal(Person person, Relationship relationship) async {
-    final shouldDismiss = await showDialog<bool>(
+    final shouldDismiss = await showModalBottomSheet<bool>(
       context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(10),
+          topRight: Radius.circular(10),
+        ),
+      ),
       builder: (context) {
-        return AlertDialog(
-          key: _modalKey,
-          content: SingleChildScrollView(
-            child: AddConnectionDisplay(
-              relationship: relationship,
-              onSave: (firstName, lastName, gender, takeOwnership) async {
-                await _saveNewConnection(
-                    firstName, lastName, gender, person, relationship);
-                if (context.mounted) {
-                  Navigator.of(context).pop(true);
-                }
-              },
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: 8.0),
+                child: _DragHandle(),
+              ),
             ),
-          ),
+            SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 16.0),
+                child: AddConnectionDisplay(
+                  relationship: relationship,
+                  onSave: (firstName, lastName, gender, takeOwnership) async {
+                    await _saveNewConnection(
+                        firstName, lastName, gender, person, relationship);
+                    if (context.mounted) {
+                      Navigator.of(context).pop(true);
+                    }
+                  },
+                ),
+              ),
+            ),
+          ],
         );
       },
     );
@@ -981,7 +1018,6 @@ class _SidePanelContainer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 660,
       clipBehavior: Clip.hardEdge,
       padding: const EdgeInsets.only(top: 8),
       decoration: const BoxDecoration(
@@ -1236,135 +1272,102 @@ class _ProfileDisplayState extends ConsumerState<_ProfileDisplay> {
           style: Theme.of(context).textTheme.titleLarge,
         ),
         const SizedBox(height: 8),
-        Container(
-          decoration: const BoxDecoration(
-            color: Color.fromRGBO(0xEB, 0xEB, 0xEB, 1.0),
-            borderRadius: BorderRadius.all(Radius.circular(10)),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _Label(
-                label: 'First name',
-                child: SizedBox(
-                  child: TextFormField(
-                    controller: _firstNameController,
-                    enabled: widget.isEditable,
-                    onChanged:
-                        ref.read(profileUpdateProvider.notifier).firstName,
-                    textCapitalization: TextCapitalization.words,
-                    textInputAction: TextInputAction.next,
+        InputForm(
+          children: [
+            InputLabel(
+              label: 'First name',
+              child: TextFormField(
+                controller: _firstNameController,
+                enabled: widget.isEditable,
+                onChanged: ref.read(profileUpdateProvider.notifier).firstName,
+                textCapitalization: TextCapitalization.words,
+                textInputAction: TextInputAction.next,
+              ),
+            ),
+            InputLabel(
+              label: 'Last name',
+              child: TextFormField(
+                controller: _lastNameController,
+                enabled: widget.isEditable,
+                onChanged: ref.read(profileUpdateProvider.notifier).lastName,
+                textCapitalization: TextCapitalization.words,
+                textInputAction: TextInputAction.next,
+              ),
+            ),
+            InputLabel(
+              label: 'Date of birth',
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: _birthdayController,
+                      enabled: widget.isEditable,
+                      keyboardType: TextInputType.number,
+                      textInputAction: TextInputAction.next,
+                      inputFormatters: [DateTextFormatter()],
+                      onChanged:
+                          ref.read(profileUpdateProvider.notifier).birthday,
+                      decoration: InputDecoration(
+                        //   label: const Text('Date of birth'),
+                        hintText: getFormattedDatePattern().formatted,
+                      ),
+                    ),
+                  ),
+                  if (widget.isEditable)
+                    IconButton(
+                      onPressed: () async {
+                        final date = await showDatePicker(
+                          context: context,
+                          firstDate: DateTime(1500),
+                          lastDate: DateTime.now(),
+                          initialDate: ref.watch(profileUpdateProvider
+                              .select((p) => p.birthday ?? DateTime.now())),
+                        );
+                        if (!mounted || date == null) {
+                          return;
+                        }
+                        ref
+                            .read(profileUpdateProvider.notifier)
+                            .birthdayObject(date);
+                      },
+                      icon: const Icon(
+                        Icons.calendar_month,
+                        color: Color.fromRGBO(138, 138, 138, 1),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            if (widget.hasDifferentOwner ||
+                ref.watch(
+                    profileUpdateProvider.select((s) => s.deathday != null)))
+              InputLabel(
+                label: 'Date of passing',
+                child: TextFormField(
+                  controller: _deathdayController,
+                  enabled: widget.isEditable,
+                  keyboardType: TextInputType.number,
+                  textInputAction: TextInputAction.next,
+                  inputFormatters: [DateTextFormatter()],
+                  onChanged: ref.read(profileUpdateProvider.notifier).deathday,
+                  decoration: InputDecoration(
+                    hintText: getFormattedDatePattern().formatted,
                   ),
                 ),
               ),
-              const Divider(
-                height: 1,
-                indent: 14,
-                color: Color.fromRGBO(0xD8, 0xD8, 0xD8, 1.0),
+            InputLabel(
+              label: 'Place of birth',
+              child: TextFormField(
+                controller: _birthplaceController,
+                enabled: widget.isEditable,
+                textCapitalization: TextCapitalization.words,
+                textInputAction: TextInputAction.next,
+                onChanged: ref.read(profileUpdateProvider.notifier).birthplace,
+                onFieldSubmitted: (_) {},
               ),
-              _Label(
-                label: 'Last name',
-                child: TextFormField(
-                  controller: _lastNameController,
-                  enabled: widget.isEditable,
-                  onChanged: ref.read(profileUpdateProvider.notifier).lastName,
-                  textCapitalization: TextCapitalization.words,
-                  textInputAction: TextInputAction.next,
-                ),
-              ),
-              const Divider(
-                height: 1,
-                indent: 14,
-                color: Color.fromRGBO(0xD8, 0xD8, 0xD8, 1.0),
-              ),
-              _Label(
-                label: 'Date of birth',
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Expanded(
-                      child: TextFormField(
-                        controller: _birthdayController,
-                        enabled: widget.isEditable,
-                        keyboardType: TextInputType.number,
-                        textInputAction: TextInputAction.next,
-                        inputFormatters: [DateTextFormatter()],
-                        onChanged:
-                            ref.read(profileUpdateProvider.notifier).birthday,
-                        decoration: InputDecoration(
-                          //   label: const Text('Date of birth'),
-                          hintText: getFormattedDatePattern().formatted,
-                        ),
-                      ),
-                    ),
-                    if (widget.isEditable)
-                      IconButton(
-                        onPressed: () async {
-                          final date = await showDatePicker(
-                            context: context,
-                            firstDate: DateTime(1500),
-                            lastDate: DateTime.now(),
-                            initialDate: ref.watch(profileUpdateProvider
-                                .select((p) => p.birthday ?? DateTime.now())),
-                          );
-                          if (!mounted || date == null) {
-                            return;
-                          }
-                          ref
-                              .read(profileUpdateProvider.notifier)
-                              .birthdayObject(date);
-                        },
-                        icon: const Icon(
-                          Icons.calendar_month,
-                          color: Color.fromRGBO(138, 138, 138, 1),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-              if (widget.hasDifferentOwner ||
-                  ref.watch(profileUpdateProvider
-                      .select((s) => s.deathday != null))) ...[
-                const Divider(
-                  height: 1,
-                  indent: 14,
-                  color: Color.fromRGBO(0xD8, 0xD8, 0xD8, 1.0),
-                ),
-                _Label(
-                  label: 'Date of passing',
-                  child: TextFormField(
-                    controller: _deathdayController,
-                    enabled: widget.isEditable,
-                    keyboardType: TextInputType.number,
-                    textInputAction: TextInputAction.next,
-                    inputFormatters: [DateTextFormatter()],
-                    onChanged:
-                        ref.read(profileUpdateProvider.notifier).deathday,
-                    decoration: InputDecoration(
-                      hintText: getFormattedDatePattern().formatted,
-                    ),
-                  ),
-                ),
-              ],
-              const Divider(
-                height: 1,
-                indent: 14,
-                color: Color.fromRGBO(0xD8, 0xD8, 0xD8, 1.0),
-              ),
-              _Label(
-                label: 'Place of birth',
-                child: TextFormField(
-                  controller: _birthplaceController,
-                  enabled: widget.isEditable,
-                  textCapitalization: TextCapitalization.words,
-                  textInputAction: TextInputAction.next,
-                  onChanged:
-                      ref.read(profileUpdateProvider.notifier).birthplace,
-                  onFieldSubmitted: (_) {},
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
         if (widget.isEditable) ...[
           const SizedBox(height: 24),
@@ -1478,12 +1481,58 @@ class _ProfileDisplayState extends ConsumerState<_ProfileDisplay> {
   }
 }
 
-class _Label extends StatelessWidget {
+class FormBorder extends StatelessWidget {
+  final Widget child;
+
+  const FormBorder({
+    super.key,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: Color.fromRGBO(0xEB, 0xEB, 0xEB, 1.0),
+        borderRadius: BorderRadius.all(Radius.circular(10)),
+      ),
+      child: child,
+    );
+  }
+}
+
+class InputForm extends StatelessWidget {
+  final List<Widget> children;
+
+  const InputForm({super.key, required this.children});
+
+  @override
+  Widget build(BuildContext context) {
+    return FormBorder(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (final (index, child) in children.indexed) ...[
+            child,
+            if (index != children.length - 1)
+              const Divider(
+                height: 1,
+                indent: 14,
+                color: Color.fromRGBO(0xD8, 0xD8, 0xD8, 1.0),
+              ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class InputLabel extends StatelessWidget {
   final String label;
   final String? hintText;
   final Widget child;
 
-  const _Label({
+  const InputLabel({
     super.key,
     required this.label,
     this.hintText,
@@ -1553,7 +1602,35 @@ class _WaitingForApprovalDisplayState extends State<WaitingForApprovalDisplay> {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SizedBox(height: 20),
+        Text(
+          'Invite\n$_firstName',
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            fontSize: 48,
+            fontWeight: FontWeight.w800,
+            color: Color.fromRGBO(0x3C, 0x3C, 0x3C, 1.0),
+          ),
+        ),
+        const SizedBox(height: 16),
+        Text(
+          'Share with $_firstName only, so they can verify their profile and join the tree',
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: Theme.of(context)
+              .textTheme
+              .bodyMedium
+              ?.copyWith(color: const Color.fromRGBO(0x51, 0x51, 0x51, 1.0)),
+        ),
+        const SizedBox(height: 8),
+        ShareLinkButton(
+          firstName: _firstName,
+          onPressed: () =>
+              widget.onSaveAndShare(_firstName, _lastName, _gender),
+        ),
+        const SizedBox(height: 24),
+        const Divider(height: 1),
+        const SizedBox(height: 24),
         MinimalProfileEditor(
           initialFirstName: widget.person.profile.firstName,
           initialLastName: widget.person.profile.lastName,
@@ -1567,38 +1644,44 @@ class _WaitingForApprovalDisplayState extends State<WaitingForApprovalDisplay> {
           },
         ),
         const SizedBox(height: 16),
-        const SizedBox(height: 20),
-        ShareLinkButton(
-          firstName: _firstName,
-          onPressed: () =>
-              widget.onSaveAndShare(_firstName, _lastName, _gender),
-        ),
-        const SizedBox(height: 16),
-        const SizedBox(height: 20),
-        Center(
-          child: TextButton(
-            onPressed: () {},
-            style: TextButton.styleFrom(
-              foregroundColor: const Color.fromRGBO(0xFF, 0x00, 0x00, 1.0),
-            ),
-            child: const Text('Delete relative'),
-          ),
-        ),
-        const SizedBox(height: 16),
         Center(
           child: TextButton(
             onPressed: (_firstName.isEmpty || _lastName.isEmpty)
                 ? null
                 : widget.onTakeOwnership,
-            style: TextButton.styleFrom(foregroundColor: Colors.black),
-            child: Text('I will complete $_firstName\'s profile'),
+            style: TextButton.styleFrom(
+              foregroundColor: const Color.fromRGBO(0xB9, 0xB9, 0xB9, 1.0),
+            ),
+            child: const Text('I will complete this profile'),
           ),
         ),
         const SizedBox(height: 16),
-        if (widget.onAddConnectionPressed != null)
-          TextButton(
-            onPressed: widget.onAddConnectionPressed,
-            child: const Text('Attach a relative'),
+        if (widget.onAddConnectionPressed == null)
+          Center(
+            child: TextButton(
+              onPressed: () {},
+              style: TextButton.styleFrom(
+                foregroundColor: const Color.fromRGBO(0xFF, 0x00, 0x00, 1.0),
+              ),
+              child: const Text('Delete relative'),
+            ),
+          )
+        else
+          Row(
+            children: [
+              TextButton(
+                onPressed: () {},
+                style: TextButton.styleFrom(
+                  foregroundColor: const Color.fromRGBO(0xFF, 0x00, 0x00, 1.0),
+                ),
+                child: const Text('Delete relative'),
+              ),
+              const Spacer(),
+              TextButton(
+                onPressed: widget.onAddConnectionPressed,
+                child: const Text('Attach a relative'),
+              ),
+            ],
           ),
       ],
     );

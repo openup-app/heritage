@@ -551,20 +551,14 @@ class _BasicProfileDisplayState extends ConsumerState<AddConnectionDisplay> {
     return Column(
       mainAxisSize: MainAxisSize.min,
       mainAxisAlignment: MainAxisAlignment.center,
-      crossAxisAlignment: CrossAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Add a ${widget.relationship.name}',
+          'Invite\na ${widget.relationship.name}',
           style: const TextStyle(
-            fontSize: 32,
-            fontWeight: FontWeight.w900,
+            fontSize: 48,
+            fontWeight: FontWeight.w800,
             color: Color.fromRGBO(0x3C, 0x3C, 0x3C, 1.0),
-          ),
-        ),
-        Center(
-          child: SvgPicture.asset(
-            'assets/images/connection_${widget.relationship.name}.svg',
-            height: 250,
           ),
         ),
         const SizedBox(height: 16),
@@ -577,13 +571,34 @@ class _BasicProfileDisplayState extends ConsumerState<AddConnectionDisplay> {
             });
           },
         ),
-        const SizedBox(height: 32),
+        const SizedBox(height: 24),
+        Text(
+          'Share with $_firstName only, so they can verify their profile and join the tree',
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: Theme.of(context)
+              .textTheme
+              .bodyMedium
+              ?.copyWith(color: const Color.fromRGBO(0x51, 0x51, 0x51, 1.0)),
+        ),
+        const SizedBox(height: 8),
         ShareLinkButton(
-          key: _shareButtonKey,
           firstName: _firstName,
-          onPressed: (_firstName.isEmpty || _lastName.isEmpty)
-              ? null
-              : () => _done(takeOwnership: false),
+          onPressed: () => _done(takeOwnership: false),
+        ),
+        const SizedBox(height: 16),
+        Center(
+          child: TextButton(
+            onPressed: (_firstName.isEmpty || _lastName.isEmpty)
+                ? null
+                : () => _done(takeOwnership: true),
+            style: TextButton.styleFrom(
+              foregroundColor: const Color.fromRGBO(0xB9, 0xB9, 0xB9, 1.0),
+            ),
+            child: const Text(
+              'I will complete this profile',
+            ),
+          ),
         ),
       ],
     );
@@ -701,54 +716,27 @@ class _MinimalProfileEditorState extends State<MinimalProfileEditor> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return InputForm(
       children: [
-        TextFormField(
-          controller: _firstNameController,
-          textCapitalization: TextCapitalization.words,
-          textInputAction: TextInputAction.next,
-          onChanged: (text) =>
-              widget.onUpdate(text, _lastNameController.text, _gender),
-          decoration: const InputDecoration(
-            label: Text('First name'),
+        InputLabel(
+          label: 'First name',
+          child: TextFormField(
+            controller: _firstNameController,
+            textCapitalization: TextCapitalization.words,
+            textInputAction: TextInputAction.next,
+            onChanged: (text) =>
+                widget.onUpdate(text, _lastNameController.text, _gender),
           ),
         ),
-        const SizedBox(height: 16),
-        TextFormField(
-          controller: _lastNameController,
-          textCapitalization: TextCapitalization.words,
-          textInputAction: TextInputAction.next,
-          onChanged: (text) =>
-              widget.onUpdate(_firstNameController.text, text, _gender),
-          decoration: const InputDecoration(
-            label: Text('Last name'),
+        InputLabel(
+          label: 'Last name',
+          child: TextFormField(
+            controller: _lastNameController,
+            textCapitalization: TextCapitalization.words,
+            textInputAction: TextInputAction.next,
+            onChanged: (text) =>
+                widget.onUpdate(_firstNameController.text, text, _gender),
           ),
-        ),
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            for (final gender in Gender.values) ...[
-              if (gender != Gender.values.first) const SizedBox(width: 16),
-              Expanded(
-                child: FilledButton(
-                  onPressed: () {
-                    setState(() => _gender = gender);
-                    widget.onUpdate(_firstNameController.text,
-                        _lastNameController.text, _gender);
-                  },
-                  style: FilledButton.styleFrom(
-                    fixedSize: const Size.fromHeight(44),
-                    foregroundColor: _gender == gender ? Colors.white : null,
-                    backgroundColor: _gender == gender ? primaryColor : null,
-                  ),
-                  child: Text(
-                      '${gender.name[0].toUpperCase()}${gender.name.substring(1)}'),
-                ),
-              ),
-            ],
-          ],
         ),
       ],
     );
@@ -1031,10 +1019,10 @@ class ShareLinkButton extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 54.0),
               child: Text(
-                '$firstName will now verify this profile\n ONLY share this profile with $firstName',
+                'Share with $firstName ONLY',
                 textAlign: TextAlign.center,
+                maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                maxLines: 2,
               ),
             ),
           ),
