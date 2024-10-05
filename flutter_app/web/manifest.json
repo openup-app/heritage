@@ -1,11 +1,11 @@
 {
-    "name": "Family Tree",
-    "short_name": "Family Tree",
+    "name": "Stitchfam",
+    "short_name": "Stitchfam",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#00AEFF",
-    "description": "Join your legacy",
+    "description": "Build your family tree with your family!",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

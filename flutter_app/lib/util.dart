@@ -44,7 +44,7 @@ Future<ShareType> shareInvite(String name, String id) async {
   final data = ShareData(
     title: '$name\'s family tree invite!',
     text: 'Verify your place on the family tree',
-    url: 'https://breakfastsearch.xyz/$id',
+    url: 'https://stitchfam.com/$id',
   );
   if (!kDebugMode && await canShare(data)) {
     await shareContent(data);
