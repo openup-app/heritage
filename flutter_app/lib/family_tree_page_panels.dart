@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:heritage/api.dart';
 import 'package:heritage/date.dart';
 import 'package:heritage/family_tree_page.dart';
@@ -21,7 +22,7 @@ class Panels extends ConsumerStatefulWidget {
   final Person? selectedPerson;
   final Relatedness? relatedness;
   final Person focalPerson;
-  final String primaryUserId;
+  final ViewHistory viewHistory;
   final PanelPopupState panelPopupState;
   final VoidCallback onDismissPanelPopup;
   final void Function(Relationship relationship) onAddConnectionPressed;
@@ -34,7 +35,7 @@ class Panels extends ConsumerStatefulWidget {
     required this.selectedPerson,
     required this.relatedness,
     required this.focalPerson,
-    required this.primaryUserId,
+    required this.viewHistory,
     required this.panelPopupState,
     required this.onDismissPanelPopup,
     required this.onAddConnectionPressed,
@@ -82,23 +83,39 @@ class _PanelsState extends ConsumerState<Panels> {
   Widget build(BuildContext context) {
     final selectedPerson = widget.selectedPerson;
     final relatedness = widget.relatedness;
-    final isPrimaryUser = selectedPerson?.id == widget.primaryUserId;
-    final isOwnedByPrimaryUser =
-        isPrimaryUser || selectedPerson?.ownedBy == widget.primaryUserId;
+    final isPrimaryUser =
+        selectedPerson?.id == widget.viewHistory.primaryUserId;
+    final isOwnedByPrimaryUser = isPrimaryUser ||
+        selectedPerson?.ownedBy == widget.viewHistory.primaryUserId;
     final small = _layout == LayoutType.small;
     return Stack(
       children: [
         if (small) ...[
-          const Align(
+          Align(
             alignment: Alignment.topCenter,
-            child: LogoText(
-              width: 250,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const LogoText(width: 250),
+                if (widget.viewHistory.perspectiveUserId != null)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                    child: Text(
+                      '${widget.focalPerson.profile.firstName}\'s perspective',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ),
+              ],
             ),
           ),
-          const Positioned(
+          Positioned(
             left: 16,
             bottom: 16,
-            child: _MenuButtons(),
+            child: _MenuButtons(
+              onHomePressed: _goHome,
+            ),
           ),
           Positioned.fill(
             child: _DismissWhenNull(
@@ -114,7 +131,7 @@ class _PanelsState extends ConsumerState<Panels> {
                   onDismissPanelPopup: widget.onDismissPanelPopup,
                   onViewPerspective: canViewPerspective(
                     id: selectedPerson.id,
-                    primaryUserId: widget.primaryUserId,
+                    primaryUserId: widget.viewHistory.primaryUserId,
                     focalPersonId: widget.focalPerson.id,
                     isSibling: relatedness.isSibling,
                     isOwned: selectedPerson.ownedBy != null,
@@ -130,15 +147,32 @@ class _PanelsState extends ConsumerState<Panels> {
             top: MediaQuery.of(context).padding.top,
             left: 7,
             width: 250,
-            child: const Padding(
-              padding: EdgeInsets.symmetric(vertical: 8.0),
-              child: LogoText(),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const LogoText(),
+                  if (widget.viewHistory.perspectiveUserId != null)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                      child: Text(
+                        '${widget.focalPerson.profile.firstName}\'s perspective',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                    ),
+                ],
+              ),
             ),
           ),
-          const Positioned(
+          Positioned(
             right: 24,
             bottom: 24,
-            child: _MenuButtons(),
+            child: _MenuButtons(
+              onHomePressed: _goHome,
+            ),
           ),
           Positioned(
             top: 100,
@@ -171,7 +205,7 @@ class _PanelsState extends ConsumerState<Panels> {
                             hasDifferentOwner: person.ownedBy != person.id,
                             onViewPerspective: canViewPerspective(
                               id: person.id,
-                              primaryUserId: widget.primaryUserId,
+                              primaryUserId: widget.viewHistory.primaryUserId,
                               focalPersonId: widget.focalPerson.id,
                               isSibling: relatedness.isSibling,
                               isOwned: person.ownedBy != null,
@@ -514,6 +548,17 @@ class _PanelsState extends ConsumerState<Panels> {
       }
     }
   }
+
+  void _goHome() {
+    if (widget.viewHistory.perspectiveUserId != null) {
+      context.goNamed(
+        'view',
+        extra: ViewHistory(primaryUserId: widget.viewHistory.primaryUserId),
+      );
+    } else {
+      context.goNamed('menu');
+    }
+  }
 }
 
 Widget buildAddConnectionButtons({
@@ -801,7 +846,12 @@ class _DragHandle extends StatelessWidget {
 }
 
 class _MenuButtons extends StatelessWidget {
-  const _MenuButtons({super.key});
+  final VoidCallback onHomePressed;
+
+  const _MenuButtons({
+    super.key,
+    required this.onHomePressed,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -823,7 +873,7 @@ class _MenuButtons extends StatelessWidget {
         DecoratedBox(
           decoration: decoration,
           child: FilledButton(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: onHomePressed,
             style: FilledButton.styleFrom(
               minimumSize: const Size.square(48),
               foregroundColor: Colors.black,

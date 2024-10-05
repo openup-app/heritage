@@ -89,7 +89,7 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
           key: _familyTreeViewKey,
           focalPerson: graph.focalPerson,
           people: graph.people.values.toList(),
-          primaryUserId: widget.viewHistory.primaryUserId,
+          viewHistory: widget.viewHistory,
           selectedPerson: _selectedPerson,
           viewRectNotifier: _viewRectNotifier,
           onProfileSelected: _onProfileSelected,
@@ -99,7 +99,7 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
           selectedPerson: _selectedPerson,
           relatedness: _relatedness,
           focalPerson: graph.focalPerson,
-          primaryUserId: widget.viewHistory.primaryUserId,
+          viewHistory: widget.viewHistory,
           panelPopupState: _panelPopupState,
           onDismissPanelPopup: _onDismissSelected,
           onAddConnectionPressed: (relationship) {
@@ -132,6 +132,7 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
             if (selectedPerson == null) {
               return;
             }
+            _onDismissSelected();
             context.pushNamed(
               'view',
               extra: ViewHistory(
@@ -174,7 +175,7 @@ class FamilyTreeView extends ConsumerStatefulWidget {
   final Person focalPerson;
   final List<Person> people;
   final Person? selectedPerson;
-  final String primaryUserId;
+  final ViewHistory viewHistory;
   final ValueNotifier<Rect> viewRectNotifier;
   final void Function(Person person, Relatedness relatedness) onProfileSelected;
   final VoidCallback onDismissSelected;
@@ -184,7 +185,7 @@ class FamilyTreeView extends ConsumerStatefulWidget {
     required this.focalPerson,
     required this.people,
     required this.selectedPerson,
-    required this.primaryUserId,
+    required this.viewHistory,
     required this.viewRectNotifier,
     required this.onProfileSelected,
     required this.onDismissSelected,
@@ -305,7 +306,7 @@ class FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
                         person: data,
                         canViewPerspective: canViewPerspective(
                           id: data.id,
-                          primaryUserId: widget.primaryUserId,
+                          primaryUserId: widget.viewHistory.primaryUserId,
                           focalPersonId: widget.focalPerson.id,
                           isSibling: relatedness.isSibling,
                           isOwned: data.ownedBy != null,
@@ -497,10 +498,11 @@ class _TilePainter extends CustomPainter {
   void paint(ui.Canvas canvas, ui.Size size) {
     final translate = transform.getTranslation();
     final scale = transform.getMaxScaleOnAxis();
-    final scaledTileWidth = tile.width * scale;
-    final scaledTileHeight = tile.height * scale;
+    final scaledTileWidth = (tile.width * scale).floor();
+    final scaledTileHeight = (tile.height * scale).floor();
     final canvasTransform = Matrix4.identity()
-      ..translate(translate.x % scaledTileWidth, translate.y % scaledTileHeight)
+      ..translate((translate.x % scaledTileWidth).floorToDouble(),
+          (translate.y % scaledTileHeight).floorToDouble())
       ..scale(scale);
     canvas.transform(canvasTransform.storage);
     final scaledCanvasSize = size / scale;
@@ -508,11 +510,10 @@ class _TilePainter extends CustomPainter {
     final countHeight = scaledCanvasSize.height ~/ tile.height + 1;
     for (var y = -1; y < countHeight; y++) {
       for (var x = -1; x < countWidth; x++) {
+        final offset =
+            Offset(x * tile.width.toDouble(), y * tile.height.toDouble());
         canvas.drawImage(
-          tile,
-          Offset(x * tile.width.toDouble(), y * tile.height.toDouble()),
-          Paint()..filterQuality = ui.FilterQuality.high,
-        );
+            tile, offset, Paint()..filterQuality = ui.FilterQuality.high);
       }
     }
   }

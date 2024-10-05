@@ -238,10 +238,6 @@ class _RouterBuilderState extends State<_RouterBuilder> {
         GoRoute(
           path: '/view',
           name: 'view',
-          onExit: (context, state) {
-            RestartApp.of(context).restart();
-            return Future.value(true);
-          },
           builder: (context, state) {
             final viewHistory = state.extra as ViewHistory?;
             if (viewHistory == null) {
