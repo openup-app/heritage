@@ -118,20 +118,14 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
           people: graph.people.values.toList(),
           selectedPerson: _selectedPerson,
           onProfileSelected: _onProfileSelected,
-          onFetchConnections: (ids) {},
+          onDismissSelected: _onDismissSelected,
         ),
         Panels(
           selectedPerson: _selectedPerson,
           relatedness: _relatedness,
           focalPerson: graph.focalPerson,
           panelPopupState: _panelPopupState,
-          onDismissPanelPopup: () {
-            setState(() {
-              _panelPopupState = const PanelPopupStateNone();
-              _selectedPerson = null;
-              _relatedness = null;
-            });
-          },
+          onDismissPanelPopup: _onDismissSelected,
           onAddConnectionPressed: (relationship) {
             final person = _selectedPerson;
             if (person != null) {
@@ -169,29 +163,27 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
     );
   }
 
-  void _onProfileSelected(Person? person, Relatedness? relatedness) {
-    setState(() => _relatedness = relatedness);
-    if (person == null || relatedness == null) {
-      setState(() {
-        _selectedPerson = null;
-        _relatedness = null;
-        _panelPopupState = const PanelPopupStateNone();
-      });
-      return;
-    } else {
-      _familyTreeViewKey.currentState?.centerOnPersonWithId(person.id);
-      setState(() {
-        _selectedPerson = person;
-        _relatedness = relatedness;
-        if (person.ownedBy == null) {
-          _panelPopupState = PanelPopupStateWaitingForApproval(
-              person: person, relatedness: relatedness);
-        } else {
-          _panelPopupState =
-              PanelPopupStateProfile(person: person, relatedness: relatedness);
-        }
-      });
-    }
+  void _onProfileSelected(Person person, Relatedness relatedness) {
+    _familyTreeViewKey.currentState?.centerOnPersonWithId(person.id);
+    setState(() {
+      _selectedPerson = person;
+      _relatedness = relatedness;
+      if (person.ownedBy == null) {
+        _panelPopupState = PanelPopupStateWaitingForApproval(
+            person: person, relatedness: relatedness);
+      } else {
+        _panelPopupState =
+            PanelPopupStateProfile(person: person, relatedness: relatedness);
+      }
+    });
+  }
+
+  void _onDismissSelected() {
+    setState(() {
+      _panelPopupState = const PanelPopupStateNone();
+      _selectedPerson = null;
+      _relatedness = null;
+    });
   }
 }
 
@@ -199,9 +191,8 @@ class FamilyTreeView extends ConsumerStatefulWidget {
   final Person focalPerson;
   final List<Person> people;
   final Person? selectedPerson;
-  final void Function(Person? person, Relatedness? relatedness)
-      onProfileSelected;
-  final void Function(List<Id> ids) onFetchConnections;
+  final void Function(Person person, Relatedness relatedness) onProfileSelected;
+  final VoidCallback onDismissSelected;
 
   const FamilyTreeView({
     super.key,
@@ -209,7 +200,7 @@ class FamilyTreeView extends ConsumerStatefulWidget {
     required this.people,
     required this.selectedPerson,
     required this.onProfileSelected,
-    required this.onFetchConnections,
+    required this.onDismissSelected,
   });
 
   @override
@@ -287,7 +278,7 @@ class FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
                       _transformNotifier.value = transform,
                   onStartInteraction: () {
                     if (widget.selectedPerson != null) {
-                      widget.onProfileSelected(null, null);
+                      widget.onDismissSelected();
                     }
                   },
                   child: GraphView<Person>(

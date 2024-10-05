@@ -92,20 +92,23 @@ class _PanelsState extends ConsumerState<Panels> {
             bottom: 16,
             child: _MenuButtons(),
           ),
-          if (selectedPerson != null &&
-              relatedness != null &&
-              selectedPerson.ownedBy != null)
-            Positioned.fill(
-              child: _DraggableSheet(
-                selectedPerson: selectedPerson,
-                relatedness: relatedness,
-                isMe: isMe,
-                isOwnedByMe: isOwnedByMe,
-                onAddConnectionPressed: widget.onAddConnectionPressed,
-                onDismissPanelPopup: widget.onDismissPanelPopup,
-                onViewPerspective: widget.onViewPerspective,
-              ),
-            )
+          Positioned.fill(
+            child: _DismissWhenNull(
+              selectedPerson: selectedPerson,
+              relatedness: relatedness,
+              builder: (context, selectedPerson, relatedness) {
+                return _DraggableSheet(
+                  selectedPerson: selectedPerson,
+                  relatedness: relatedness,
+                  isMe: isMe,
+                  isOwnedByMe: isOwnedByMe,
+                  onAddConnectionPressed: widget.onAddConnectionPressed,
+                  onDismissPanelPopup: widget.onDismissPanelPopup,
+                  onViewPerspective: widget.onViewPerspective,
+                );
+              },
+            ),
+          )
         ] else ...[
           Positioned(
             top: MediaQuery.of(context).padding.top,
@@ -443,6 +446,88 @@ Widget buildAddConnectionButtons({
         relatedness.isAncestor || !relatedness.isGrandparentLevelOrHigher,
     onAddConnectionPressed: onAddConnectionPressed,
   );
+}
+
+class _DismissWhenNull extends StatefulWidget {
+  final Person? selectedPerson;
+  final Relatedness? relatedness;
+  final Widget Function(
+          BuildContext context, Person selectedPerson, Relatedness relatedness)
+      builder;
+
+  const _DismissWhenNull({
+    super.key,
+    required this.selectedPerson,
+    required this.relatedness,
+    required this.builder,
+  });
+
+  @override
+  State<_DismissWhenNull> createState() => _DismissWhenNullState();
+}
+
+class _DismissWhenNullState extends State<_DismissWhenNull>
+    with SingleTickerProviderStateMixin {
+  late final _controller = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 300),
+  );
+
+  Person? _selectedPerson;
+  Relatedness? _relatedness;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedPerson = widget.selectedPerson;
+    _relatedness = widget.relatedness;
+  }
+
+  @override
+  void didUpdateWidget(covariant _DismissWhenNull oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.selectedPerson != widget.selectedPerson ||
+        oldWidget.relatedness != widget.relatedness) {
+      final shouldShow = widget.selectedPerson != null &&
+          widget.relatedness != null &&
+          widget.selectedPerson?.ownedBy != null;
+      _selectedPerson = widget.selectedPerson ?? _selectedPerson;
+      _relatedness = widget.relatedness ?? _relatedness;
+      if (!shouldShow) {
+        _controller.reverse();
+      } else {
+        _controller.forward();
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final selectedPerson = _selectedPerson;
+    final relatedness = _relatedness;
+    return SlideTransition(
+      position: Tween(
+        begin: const Offset(0, 1),
+        end: Offset.zero,
+      ).animate(
+        CurvedAnimation(
+          parent: _controller,
+          curve: Curves.easeOut,
+        ),
+      ),
+      child: FadeTransition(
+        opacity: _controller,
+        child: Builder(
+          builder: (context) {
+            if (selectedPerson == null || relatedness == null) {
+              return const SizedBox.shrink();
+            }
+            return widget.builder(context, selectedPerson, relatedness);
+          },
+        ),
+      ),
+    );
+  }
 }
 
 class _DraggableSheet extends StatefulWidget {
