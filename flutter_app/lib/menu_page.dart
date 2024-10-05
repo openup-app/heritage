@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:heritage/api.dart';
 import 'package:heritage/family_tree_page.dart';
 import 'package:heritage/help.dart';
+import 'package:heritage/heritage_app.dart';
 import 'package:heritage/loading_page.dart';
 
 class MenuPage extends ConsumerStatefulWidget {
@@ -154,9 +155,9 @@ class _MenuPageState extends ConsumerState<MenuPage> {
   void _navigate(String focalPersonId) async {
     context.goNamed(
       'view',
-      pathParameters: {
-        'focalPersonId': focalPersonId,
-      },
+      extra: ViewHistory(
+        primaryUserId: focalPersonId,
+      ),
     );
   }
 }

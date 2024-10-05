@@ -1,18 +1,24 @@
+import 'dart:convert';
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:go_router/go_router.dart';
 import 'package:heritage/api.dart';
 import 'package:heritage/error_page.dart';
 import 'package:heritage/family_tree_page.dart';
+import 'package:heritage/graph_provider.dart';
 import 'package:heritage/graph_view.dart';
 import 'package:heritage/layout.dart';
 import 'package:heritage/menu_page.dart';
 import 'package:heritage/restart_app.dart';
 
 import 'package:sentry_flutter/sentry_flutter.dart';
+
+part 'heritage_app.freezed.dart';
+part 'heritage_app.g.dart';
 
 const primaryColor = Color.fromRGBO(0x2A, 0xBB, 0xFF, 1.0);
 const greyColor = Color.fromRGBO(0xEC, 0xEC, 0xEC, 1.0);
@@ -178,6 +184,7 @@ class _RouterBuilderState extends State<_RouterBuilder> {
       observers: widget.navigatorObservers,
       initialLocation: widget.redirectPath ?? '/',
       overridePlatformDefaultLocation: true,
+      extraCodec: const _ExtraCodec(),
       errorBuilder: (context, state) => const ErrorPage(),
       routes: [
         GoRoute(
@@ -229,41 +236,30 @@ class _RouterBuilderState extends State<_RouterBuilder> {
             },
           ),
         GoRoute(
-          path: '/:focalPersonId',
+          path: '/view',
           name: 'view',
           onExit: (context, state) {
             RestartApp.of(context).restart();
             return Future.value(true);
           },
           builder: (context, state) {
-            final focalPersonId = state.pathParameters['focalPersonId'];
-            if (focalPersonId == null) {
-              throw 'Missing focalPersonId';
+            final viewHistory = state.extra as ViewHistory?;
+            if (viewHistory == null) {
+              return const ErrorPage();
             }
-            return FamilyTreeLoadingPage(
-              focalPersonId: focalPersonId,
-              child: const FamilyTreePage(),
+            final focalPersonId =
+                viewHistory.perspectiveUserId ?? viewHistory.primaryUserId;
+            return ProviderScope(
+              overrides: [
+                focalPersonIdProvider.overrideWith((ref) => focalPersonId),
+              ],
+              child: FamilyTreeLoadingPage(
+                child: FamilyTreePage(
+                  viewHistory: viewHistory,
+                ),
+              ),
             );
           },
-          routes: [
-            GoRoute(
-              path: 'perspective/:perspectivePersonId',
-              name: 'perspective',
-              builder: (context, state) {
-                final focalPersonId =
-                    state.pathParameters['perspectivePersonId'];
-                if (focalPersonId == null) {
-                  throw 'Missing focalPersonId';
-                }
-                return FamilyTreeLoadingPage(
-                  focalPersonId: focalPersonId,
-                  child: const FamilyTreePage(
-                    isPerspectiveMode: true,
-                  ),
-                );
-              },
-            ),
-          ],
         ),
       ],
     );
@@ -306,6 +302,61 @@ class _CacheAssetsState extends State<_CacheAssets> {
   Widget build(BuildContext context) {
     return widget.child;
   }
+}
+
+class _ExtraCodec extends Codec {
+  const _ExtraCodec();
+
+  @override
+  Converter get decoder => const _ExtraDecoder();
+
+  @override
+  Converter get encoder => const _ExtraEncoder();
+}
+
+class _ExtraDecoder extends Converter<Object?, Object?> {
+  const _ExtraDecoder();
+
+  @override
+  Object? convert(Object? input) {
+    if (input == null) {
+      return null;
+    }
+    final inputAsMap = input as Map<String, Object?>;
+    final key = inputAsMap.entries.firstOrNull?.key;
+    final value = inputAsMap.entries.firstOrNull?.value;
+    final json = jsonDecode(value as String);
+    return switch (key) {
+      'ViewHistory' => ViewHistory.fromJson(json),
+      _ => throw 'Unable to decode $key',
+    };
+  }
+}
+
+class _ExtraEncoder extends Converter<Object?, Object?> {
+  const _ExtraEncoder();
+
+  @override
+  Object? convert(Object? input) {
+    if (input == null) {
+      return null;
+    }
+    return switch (input) {
+      ViewHistory() => {'ViewHistory': jsonEncode(input.toJson())},
+      _ => throw 'Cannot encode type ${input.runtimeType}',
+    };
+  }
+}
+
+@freezed
+class ViewHistory with _$ViewHistory {
+  const factory ViewHistory({
+    required String primaryUserId,
+    @Default(null) String? perspectiveUserId,
+  }) = _ViewHistory;
+
+  factory ViewHistory.fromJson(Map<String, Object?> json) =>
+      _$ViewHistoryFromJson(json);
 }
 
 ({Person focalPerson, List<Person> people}) _generateRandomTree(

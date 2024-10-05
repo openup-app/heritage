@@ -21,20 +21,19 @@ import 'package:heritage/zoomable_pannable_viewport.dart';
 import 'package:path_drawing/path_drawing.dart' as path_drawing;
 
 class FamilyTreeLoadingPage extends ConsumerStatefulWidget {
-  final Id focalPersonId;
   final Widget child;
 
   const FamilyTreeLoadingPage({
     super.key,
-    required this.focalPersonId,
     required this.child,
   });
 
   @override
-  ConsumerState<FamilyTreeLoadingPage> createState() => ViewPageState();
+  ConsumerState<FamilyTreeLoadingPage> createState() =>
+      FamilyTreeLoadingPageState();
 }
 
-class ViewPageState extends ConsumerState<FamilyTreeLoadingPage> {
+class FamilyTreeLoadingPageState extends ConsumerState<FamilyTreeLoadingPage> {
   bool _ready = false;
 
   @override
@@ -48,11 +47,6 @@ class ViewPageState extends ConsumerState<FamilyTreeLoadingPage> {
         }
       },
     );
-    WidgetsBinding.instance.endOfFrame.then((_) {
-      if (mounted) {
-        ref.read(focalPersonIdProvider.notifier).state = widget.focalPersonId;
-      }
-    });
   }
 
   @override
@@ -90,10 +84,12 @@ class ViewPageState extends ConsumerState<FamilyTreeLoadingPage> {
 
 class FamilyTreePage extends ConsumerStatefulWidget {
   final bool isPerspectiveMode;
+  final ViewHistory viewHistory;
 
   const FamilyTreePage({
     super.key,
     this.isPerspectiveMode = false,
+    required this.viewHistory,
   });
 
   @override
@@ -158,21 +154,13 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
             if (selectedPerson == null) {
               return;
             }
-            final pathParameters = {
-              'focalPersonId': graph.focalPerson.id,
-              'perspectivePersonId': selectedPerson.id,
-            };
-            if (!widget.isPerspectiveMode) {
-              context.pushNamed(
-                'perspective',
-                pathParameters: pathParameters,
-              );
-            } else {
-              context.pushReplacementNamed(
-                'perspective',
-                pathParameters: pathParameters,
-              );
-            }
+            context.pushNamed(
+              'view',
+              extra: ViewHistory(
+                primaryUserId: widget.viewHistory.primaryUserId,
+                perspectiveUserId: selectedPerson.id,
+              ),
+            );
           },
           onViewRectUpdated: (rect) => _viewRectNotifier.value = rect,
         ),

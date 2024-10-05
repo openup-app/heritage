@@ -3,46 +3,52 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:heritage/api.dart';
 import 'package:heritage/profile_update.dart';
 
-final focalPersonIdProvider = StateProvider<Id?>((ref) => null);
+final focalPersonIdProvider =
+    StateProvider<Id>((ref) => throw 'Uninitialized provider');
 
-final _peopleProvider = FutureProvider<List<Person>>((ref) async {
-  final focalPersonId = ref.watch(focalPersonIdProvider);
-  if (focalPersonId == null) {
-    throw 'No focal person id set';
-  }
-  final api = ref.watch(apiProvider);
-  final result = await api.getLimitedGraph(focalPersonId);
-  return result.fold(
-    (l) => throw l,
-    (r) => r,
-  );
-});
+final _peopleProvider = FutureProvider<List<Person>>(
+  (ref) async {
+    final focalPersonId = ref.watch(focalPersonIdProvider);
+    final api = ref.watch(apiProvider);
+    final result = await api.getLimitedGraph(focalPersonId);
+    return result.fold(
+      (l) => throw l,
+      (r) => r,
+    );
+  },
+  dependencies: [focalPersonIdProvider],
+);
 
 final hasPeopleProvider = Provider<bool>(
-    (ref) => ref.watch(_peopleProvider.select((s) => s.hasValue)));
+  (ref) => ref.watch(_peopleProvider.select((s) => s.hasValue)),
+  dependencies: [_peopleProvider],
+);
 
-final graphProvider = StateNotifierProvider<GraphNotifier, Graph>((ref) {
-  final api = ref.watch(apiProvider);
-  final focalPersonId = ref.watch(focalPersonIdProvider);
-  final value = ref.watch(_peopleProvider);
-  final people = value.valueOrNull;
-  if (people == null) {
-    throw 'Initial people have not yet loaded';
-  }
+final graphProvider = StateNotifierProvider<GraphNotifier, Graph>(
+  (ref) {
+    final api = ref.watch(apiProvider);
+    final focalPersonId = ref.watch(focalPersonIdProvider);
+    final value = ref.watch(_peopleProvider);
+    final people = value.valueOrNull;
+    if (people == null) {
+      throw 'Initial people have not yet loaded';
+    }
 
-  final peopleMap = Map.fromEntries(people.map((e) => MapEntry(e.id, e)));
-  final focalPerson = peopleMap[focalPersonId];
-  if (focalPerson == null) {
-    throw 'Missing focal person';
-  }
-  return GraphNotifier(
-    api: api,
-    initialGraph: Graph(
-      focalPerson: focalPerson,
-      people: peopleMap,
-    ),
-  );
-});
+    final peopleMap = Map.fromEntries(people.map((e) => MapEntry(e.id, e)));
+    final focalPerson = peopleMap[focalPersonId];
+    if (focalPerson == null) {
+      throw 'Missing focal person';
+    }
+    return GraphNotifier(
+      api: api,
+      initialGraph: Graph(
+        focalPerson: focalPerson,
+        people: peopleMap,
+      ),
+    );
+  },
+  dependencies: [_peopleProvider],
+);
 
 class GraphNotifier extends StateNotifier<Graph> {
   final Api api;
