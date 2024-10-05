@@ -29,98 +29,82 @@ class _MenuPageState extends ConsumerState<MenuPage> {
   Widget build(BuildContext context) {
     final roots = _roots;
     return Scaffold(
-      body: AnimatedCrossFade(
-        duration: const Duration(milliseconds: 500),
-        crossFadeState: _roots == null
-            ? CrossFadeState.showFirst
-            : CrossFadeState.showSecond,
-        layoutBuilder: (topChild, topChildKey, bottomChild, bottomChildKey) {
-          return Stack(
-            clipBehavior: Clip.none,
-            alignment: Alignment.center,
-            children: <Widget>[
-              KeyedSubtree(
-                key: bottomChildKey,
-                child: bottomChild,
-              ),
-              KeyedSubtree(
-                key: topChildKey,
-                child: topChild,
-              ),
-            ],
-          );
-        },
-        firstChild: const LoadingPage(),
-        secondChild: Column(
-          children: [
-            SizedBox(
-              height: MediaQuery.of(context).padding.top,
-            ),
-            const SizedBox(height: 16),
-            const AppVersion(),
-            const SizedBox(height: 16),
-            Center(
-              child: ElevatedButton(
-                onPressed: _loading
-                    ? null
-                    : () async {
-                        final result = await showDialog<
-                            (String firstName, String lastName, Gender gender)>(
-                          context: context,
-                          builder: (context) {
-                            return AlertDialog(
-                              title: const Text('Start a family tree'),
-                              content: Consumer(builder: (context, ref, child) {
-                                return CreateRootDisplay(
-                                  padding: const EdgeInsets.all(16),
-                                  onDone: (firstName, lastName, gender) {
-                                    Navigator.of(context)
-                                        .pop((firstName, lastName, gender));
-                                  },
-                                );
-                              }),
-                            );
-                          },
-                        );
-                        if (!mounted || result == null) {
-                          return;
-                        }
-                        _start(result.$1, result.$2, result.$3);
-                      },
-                child: _loading
-                    ? const CircularProgressIndicator.adaptive()
-                    : const Text('Start a family tree'),
-              ),
-            ),
-            const SizedBox(height: 16),
-            const Divider(),
-            const Text(
-              'Open an existing tree (Debug)',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            if (roots == null)
-              const SizedBox.shrink()
-            else
-              Expanded(
-                child: ListView.builder(
-                  itemCount: roots.length,
-                  itemBuilder: (context, index) {
-                    final person = roots[index];
-                    return ListTile(
-                      onTap: () => _navigate(person.id),
-                      title: Text(
-                          '${person.profile.fullName} (${person.profile.gender.name})'),
-                      subtitle: Text(person.id),
-                    );
-                  },
+      body: _roots == null
+          ? const LoadingPage()
+          : Column(
+              children: [
+                SizedBox(
+                  height: MediaQuery.of(context).padding.top,
                 ),
-              ),
-          ],
-        ),
-      ),
+                const SizedBox(height: 16),
+                const AppVersion(),
+                const SizedBox(height: 16),
+                Center(
+                  child: ElevatedButton(
+                    onPressed: _loading
+                        ? null
+                        : () async {
+                            final result = await showDialog<
+                                (
+                                  String firstName,
+                                  String lastName,
+                                  Gender gender
+                                )>(
+                              context: context,
+                              builder: (context) {
+                                return AlertDialog(
+                                  title: const Text('Start a family tree'),
+                                  content:
+                                      Consumer(builder: (context, ref, child) {
+                                    return CreateRootDisplay(
+                                      padding: const EdgeInsets.all(16),
+                                      onDone: (firstName, lastName, gender) {
+                                        Navigator.of(context)
+                                            .pop((firstName, lastName, gender));
+                                      },
+                                    );
+                                  }),
+                                );
+                              },
+                            );
+                            if (!mounted || result == null) {
+                              return;
+                            }
+                            _start(result.$1, result.$2, result.$3);
+                          },
+                    child: _loading
+                        ? const CircularProgressIndicator.adaptive()
+                        : const Text('Start a family tree'),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Divider(),
+                const Text(
+                  'Open an existing tree (Debug)',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                if (roots == null)
+                  const SizedBox.shrink()
+                else
+                  Expanded(
+                    child: ListView.builder(
+                      itemCount: roots.length,
+                      itemBuilder: (context, index) {
+                        final person = roots[index];
+                        return ListTile(
+                          onTap: () => _navigate(person.id),
+                          title: Text(
+                              '${person.profile.fullName} (${person.profile.gender.name})'),
+                          subtitle: Text(person.id),
+                        );
+                      },
+                    ),
+                  ),
+              ],
+            ),
     );
   }
 

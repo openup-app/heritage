@@ -54,29 +54,7 @@ class FamilyTreeLoadingPageState extends ConsumerState<FamilyTreeLoadingPage> {
     return Scaffold(
       resizeToAvoidBottomInset: false,
       body: SafeArea(
-        child: AnimatedCrossFade(
-          duration: const Duration(milliseconds: 500),
-          layoutBuilder: (topChild, topChildKey, bottomChild, bottomChildKey) {
-            return Stack(
-              clipBehavior: Clip.none,
-              alignment: Alignment.center,
-              children: <Widget>[
-                KeyedSubtree(
-                  key: bottomChildKey,
-                  child: bottomChild,
-                ),
-                KeyedSubtree(
-                  key: topChildKey,
-                  child: topChild,
-                ),
-              ],
-            );
-          },
-          crossFadeState:
-              !_ready ? CrossFadeState.showFirst : CrossFadeState.showSecond,
-          firstChild: const LoadingPage(),
-          secondChild: !_ready ? const SizedBox.shrink() : widget.child,
-        ),
+        child: !_ready ? const LoadingPage() : widget.child,
       ),
     );
   }
