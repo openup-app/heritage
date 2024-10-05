@@ -131,7 +131,10 @@ class _PanelsState extends ConsumerState<Panels> {
             bottom: 144,
             child: Align(
               alignment: Alignment.centerLeft,
-              child: AnimatedSidePanel(
+              child: AnimatedSlideIn(
+                duration: const Duration(milliseconds: 300),
+                beginOffset: const Offset(-1, 0),
+                alignment: Alignment.centerLeft,
                 child: switch (widget.panelPopupState) {
                   PanelPopupStateNone() => null,
                   PanelPopupStateProfile(:final person, :final relatedness) =>
@@ -213,36 +216,43 @@ class _PanelsState extends ConsumerState<Panels> {
               ),
             ),
           ),
-          if (selectedPerson != null && relatedness != null)
-            Align(
-              alignment: Alignment.bottomCenter,
-              child: Padding(
-                padding: const EdgeInsets.only(bottom: 24),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.all(Radius.circular(20)),
-                    boxShadow: [
-                      BoxShadow(
-                        offset: Offset(0, 4),
-                        blurRadius: 16,
-                        color: Color.fromRGBO(0x00, 0x00, 0x00, 0.25),
+          AnimatedSlideIn(
+            duration: const Duration(milliseconds: 300),
+            beginOffset: const Offset(0, 0.1),
+            alignment: Alignment.bottomCenter,
+            child: selectedPerson == null || relatedness == null
+                ? null
+                : Align(
+                    alignment: Alignment.bottomCenter,
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: 24),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.all(Radius.circular(20)),
+                          boxShadow: [
+                            BoxShadow(
+                              offset: Offset(0, 4),
+                              blurRadius: 16,
+                              color: Color.fromRGBO(0x00, 0x00, 0x00, 0.25),
+                            ),
+                          ],
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                          child: buildAddConnectionButtons(
+                            person: selectedPerson,
+                            relatedness: relatedness,
+                            paddingWidth: 20,
+                            onAddConnectionPressed:
+                                widget.onAddConnectionPressed,
+                          ),
+                        ),
                       ),
-                    ],
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                    child: buildAddConnectionButtons(
-                      person: selectedPerson,
-                      relatedness: relatedness,
-                      paddingWidth: 20,
-                      onAddConnectionPressed: widget.onAddConnectionPressed,
                     ),
                   ),
-                ),
-              ),
-            ),
+          ),
         ],
       ],
     );
@@ -770,19 +780,25 @@ class _MenuButtons extends StatelessWidget {
   }
 }
 
-class AnimatedSidePanel extends StatefulWidget {
+class AnimatedSlideIn extends StatefulWidget {
+  final Duration duration;
+  final Offset beginOffset;
+  final Alignment alignment;
   final Widget? child;
 
-  const AnimatedSidePanel({
+  const AnimatedSlideIn({
     super.key,
+    required this.duration,
+    required this.beginOffset,
+    this.alignment = Alignment.center,
     required this.child,
   });
 
   @override
-  State<AnimatedSidePanel> createState() => _AnimatedSidePanelState();
+  State<AnimatedSlideIn> createState() => _AnimatedSlideInState();
 }
 
-class _AnimatedSidePanelState extends State<AnimatedSidePanel> {
+class _AnimatedSlideInState extends State<AnimatedSlideIn> {
   Widget? _child;
 
   @override
@@ -792,7 +808,7 @@ class _AnimatedSidePanelState extends State<AnimatedSidePanel> {
   }
 
   @override
-  void didUpdateWidget(covariant AnimatedSidePanel oldWidget) {
+  void didUpdateWidget(covariant AnimatedSlideIn oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.child != widget.child) {
       _child = widget.child;
@@ -804,13 +820,13 @@ class _AnimatedSidePanelState extends State<AnimatedSidePanel> {
     return AnimatedSwitcher(
       switchInCurve: Curves.easeOut,
       switchOutCurve: Curves.easeIn,
-      duration: const Duration(milliseconds: 400),
+      duration: widget.duration,
       transitionBuilder: (child, animation) {
         return FadeTransition(
           opacity: animation,
           child: SlideTransition(
             position: Tween<Offset>(
-              begin: const Offset(-1, 0),
+              begin: widget.beginOffset,
               end: Offset.zero,
             ).animate(animation),
             child: child,
@@ -819,7 +835,7 @@ class _AnimatedSidePanelState extends State<AnimatedSidePanel> {
       },
       layoutBuilder: (currentChild, previousChildren) {
         return Stack(
-          alignment: Alignment.topCenter,
+          alignment: widget.alignment,
           children: <Widget>[
             ...previousChildren,
             if (currentChild != null) currentChild,
