@@ -83,12 +83,10 @@ class FamilyTreeLoadingPageState extends ConsumerState<FamilyTreeLoadingPage> {
 }
 
 class FamilyTreePage extends ConsumerStatefulWidget {
-  final bool isPerspectiveMode;
   final ViewHistory viewHistory;
 
   const FamilyTreePage({
     super.key,
-    this.isPerspectiveMode = false,
     required this.viewHistory,
   });
 
@@ -113,6 +111,7 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
           key: _familyTreeViewKey,
           focalPerson: graph.focalPerson,
           people: graph.people.values.toList(),
+          primaryUserId: widget.viewHistory.primaryUserId,
           selectedPerson: _selectedPerson,
           viewRectNotifier: _viewRectNotifier,
           onProfileSelected: _onProfileSelected,
@@ -122,6 +121,7 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
           selectedPerson: _selectedPerson,
           relatedness: _relatedness,
           focalPerson: graph.focalPerson,
+          primaryUserId: widget.viewHistory.primaryUserId,
           panelPopupState: _panelPopupState,
           onDismissPanelPopup: _onDismissSelected,
           onAddConnectionPressed: (relationship) {
@@ -196,6 +196,7 @@ class FamilyTreeView extends ConsumerStatefulWidget {
   final Person focalPerson;
   final List<Person> people;
   final Person? selectedPerson;
+  final String primaryUserId;
   final ValueNotifier<Rect> viewRectNotifier;
   final void Function(Person person, Relatedness relatedness) onProfileSelected;
   final VoidCallback onDismissSelected;
@@ -205,6 +206,7 @@ class FamilyTreeView extends ConsumerStatefulWidget {
     required this.focalPerson,
     required this.people,
     required this.selectedPerson,
+    required this.primaryUserId,
     required this.viewRectNotifier,
     required this.onProfileSelected,
     required this.onDismissSelected,
@@ -323,9 +325,13 @@ class FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
                       return HoverableNodeProfile(
                         key: key,
                         person: data,
-                        hasAdditionalRelatives: !relatedness.isSibling &&
-                            data.id != widget.focalPerson.id &&
-                            data.ownedBy != null,
+                        canViewPerspective: canViewPerspective(
+                          id: data.id,
+                          primaryUserId: widget.primaryUserId,
+                          focalPersonId: widget.focalPerson.id,
+                          isSibling: relatedness.isSibling,
+                          isOwned: data.ownedBy != null,
+                        ),
                         enabled: enabled,
                         forceHover: widget.selectedPerson?.id == data.id,
                         onTap: !enabled
@@ -404,7 +410,7 @@ class FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
 
 class HoverableNodeProfile extends StatelessWidget {
   final Person person;
-  final bool hasAdditionalRelatives;
+  final bool canViewPerspective;
   final bool enabled;
   final bool forceHover;
   final VoidCallback? onTap;
@@ -412,7 +418,7 @@ class HoverableNodeProfile extends StatelessWidget {
   const HoverableNodeProfile({
     super.key,
     required this.person,
-    required this.hasAdditionalRelatives,
+    required this.canViewPerspective,
     this.enabled = true,
     this.forceHover = false,
     this.onTap,
@@ -429,7 +435,7 @@ class HoverableNodeProfile extends StatelessWidget {
           onTap: onTap,
           child: NodeProfile(
             person: person,
-            hasAdditionalRelatives: hasAdditionalRelatives,
+            canViewPerspective: canViewPerspective,
           ),
         ),
       ),

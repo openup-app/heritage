@@ -368,12 +368,12 @@ class _HoverPersonDisplayState extends State<HoverPersonDisplay> {
 
 class NodeProfile extends StatelessWidget {
   final Person person;
-  final bool hasAdditionalRelatives;
+  final bool canViewPerspective;
 
   const NodeProfile({
     super.key,
     required this.person,
-    required this.hasAdditionalRelatives,
+    required this.canViewPerspective,
   });
 
   @override
@@ -420,7 +420,7 @@ class NodeProfile extends StatelessWidget {
                         child: ProfileImage(person.profile.imageUrl),
                       ),
                     ),
-                    if (hasAdditionalRelatives)
+                    if (canViewPerspective)
                       Positioned(
                         right: 0,
                         top: 4,

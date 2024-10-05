@@ -21,6 +21,7 @@ class Panels extends ConsumerStatefulWidget {
   final Person? selectedPerson;
   final Relatedness? relatedness;
   final Person focalPerson;
+  final String primaryUserId;
   final PanelPopupState panelPopupState;
   final VoidCallback onDismissPanelPopup;
   final void Function(Relationship relationship) onAddConnectionPressed;
@@ -33,6 +34,7 @@ class Panels extends ConsumerStatefulWidget {
     required this.selectedPerson,
     required this.relatedness,
     required this.focalPerson,
+    required this.primaryUserId,
     required this.panelPopupState,
     required this.onDismissPanelPopup,
     required this.onAddConnectionPressed,
@@ -80,10 +82,9 @@ class _PanelsState extends ConsumerState<Panels> {
   Widget build(BuildContext context) {
     final selectedPerson = widget.selectedPerson;
     final relatedness = widget.relatedness;
-    final isMe = selectedPerson?.id == null ||
-        selectedPerson?.id == widget.focalPerson.id;
-    final isOwnedByMe =
-        isMe || selectedPerson?.ownedBy == widget.focalPerson.id;
+    final isPrimaryUser = selectedPerson?.id == widget.primaryUserId;
+    final isOwnedByPrimaryUser =
+        isPrimaryUser || selectedPerson?.ownedBy == widget.primaryUserId;
     final small = _layout == LayoutType.small;
     return Stack(
       children: [
@@ -107,11 +108,19 @@ class _PanelsState extends ConsumerState<Panels> {
                 return _DraggableSheet(
                   selectedPerson: selectedPerson,
                   relatedness: relatedness,
-                  isMe: isMe,
-                  isOwnedByMe: isOwnedByMe,
+                  isPrimaryUser: isPrimaryUser,
+                  isOwnedByMe: isOwnedByPrimaryUser,
                   onAddConnectionPressed: widget.onAddConnectionPressed,
                   onDismissPanelPopup: widget.onDismissPanelPopup,
-                  onViewPerspective: widget.onViewPerspective,
+                  onViewPerspective: canViewPerspective(
+                    id: selectedPerson.id,
+                    primaryUserId: widget.primaryUserId,
+                    focalPersonId: widget.focalPerson.id,
+                    isSibling: relatedness.isSibling,
+                    isOwned: selectedPerson.ownedBy != null,
+                  )
+                      ? widget.onViewPerspective
+                      : null,
                 );
               },
             ),
@@ -153,14 +162,22 @@ class _PanelsState extends ConsumerState<Panels> {
                           ProfileNameSection(
                             person: person,
                             relatedness: relatedness,
-                            isMe: isMe,
+                            isPrimaryUser: isPrimaryUser,
                           ),
                           ProfileDisplay(
                             initialProfile: person.profile,
-                            isMe: isMe,
-                            isEditable: isOwnedByMe,
+                            isPrimaryUser: isPrimaryUser,
+                            isEditable: isOwnedByPrimaryUser,
                             hasDifferentOwner: person.ownedBy != person.id,
-                            onViewPerspective: widget.onViewPerspective,
+                            onViewPerspective: canViewPerspective(
+                              id: person.id,
+                              primaryUserId: widget.primaryUserId,
+                              focalPersonId: widget.focalPerson.id,
+                              isSibling: relatedness.isSibling,
+                              isOwned: person.ownedBy != null,
+                            )
+                                ? widget.onViewPerspective
+                                : null,
                             onSave: (update) {
                               showProfileUpdateSuccess(context: context);
                               widget.onDismissPanelPopup();
@@ -600,17 +617,17 @@ class _DismissWhenNullState extends State<_DismissWhenNull>
 class _DraggableSheet extends StatefulWidget {
   final Person selectedPerson;
   final Relatedness relatedness;
-  final bool isMe;
+  final bool isPrimaryUser;
   final bool isOwnedByMe;
   final void Function(Relationship relationship) onAddConnectionPressed;
   final VoidCallback onDismissPanelPopup;
-  final VoidCallback onViewPerspective;
+  final VoidCallback? onViewPerspective;
 
   const _DraggableSheet({
     super.key,
     required this.selectedPerson,
     required this.relatedness,
-    required this.isMe,
+    required this.isPrimaryUser,
     required this.isOwnedByMe,
     required this.onAddConnectionPressed,
     required this.onDismissPanelPopup,
@@ -687,7 +704,7 @@ class _DraggableSheetState extends State<_DraggableSheet> {
                                 ),
                               ),
                               Text(
-                                widget.isMe
+                                widget.isPrimaryUser
                                     ? 'I need to add a...'
                                     : 'Missing a...',
                                 style: Theme.of(context).textTheme.titleLarge,
@@ -721,7 +738,7 @@ class _DraggableSheetState extends State<_DraggableSheet> {
                     child: ProfileNameSection(
                       person: widget.selectedPerson,
                       relatedness: widget.relatedness,
-                      isMe: widget.isMe,
+                      isPrimaryUser: widget.isPrimaryUser,
                     ),
                   ),
                 ),
@@ -731,7 +748,7 @@ class _DraggableSheetState extends State<_DraggableSheet> {
                     child: Consumer(builder: (context, ref, child) {
                       return ProfileDisplay(
                         initialProfile: widget.selectedPerson.profile,
-                        isMe: widget.isMe,
+                        isPrimaryUser: widget.isPrimaryUser,
                         isEditable: widget.isOwnedByMe,
                         hasDifferentOwner: widget.selectedPerson.ownedBy !=
                             widget.selectedPerson.id,
@@ -958,13 +975,13 @@ class LogoText extends StatelessWidget {
 class ProfileNameSection extends StatelessWidget {
   final Person person;
   final Relatedness relatedness;
-  final bool isMe;
+  final bool isPrimaryUser;
 
   const ProfileNameSection({
     super.key,
     required this.person,
     required this.relatedness,
-    required this.isMe,
+    required this.isPrimaryUser,
   });
 
   @override
@@ -979,7 +996,7 @@ class ProfileNameSection extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              if (isMe) ...[
+              if (isPrimaryUser) ...[
                 Text(
                   person.profile.fullName,
                   style: Theme.of(context).textTheme.titleLarge,
@@ -1033,16 +1050,16 @@ class ProfileNameSection extends StatelessWidget {
 
 class ProfileDisplay extends StatelessWidget {
   final Profile initialProfile;
-  final bool isMe;
+  final bool isPrimaryUser;
   final bool isEditable;
   final bool hasDifferentOwner;
-  final VoidCallback onViewPerspective;
+  final VoidCallback? onViewPerspective;
   final void Function(ProfileUpdate update) onSave;
 
   const ProfileDisplay({
     super.key,
     required this.initialProfile,
-    required this.isMe,
+    required this.isPrimaryUser,
     required this.isEditable,
     required this.hasDifferentOwner,
     required this.onViewPerspective,
@@ -1057,7 +1074,7 @@ class ProfileDisplay extends StatelessWidget {
             (ref) => ProfileUpdateNotifier(initialProfile: initialProfile)),
       ],
       child: _ProfileDisplay(
-        isMe: isMe,
+        isPrimaryUser: isPrimaryUser,
         isEditable: isEditable,
         hasDifferentOwner: hasDifferentOwner,
         onViewPerspective: onViewPerspective,
@@ -1068,15 +1085,15 @@ class ProfileDisplay extends StatelessWidget {
 }
 
 class _ProfileDisplay extends ConsumerStatefulWidget {
-  final bool isMe;
+  final bool isPrimaryUser;
   final bool isEditable;
   final bool hasDifferentOwner;
-  final VoidCallback onViewPerspective;
+  final VoidCallback? onViewPerspective;
   final void Function(ProfileUpdate update) onSave;
 
   const _ProfileDisplay({
     super.key,
-    required this.isMe,
+    required this.isPrimaryUser,
     required this.isEditable,
     required this.hasDifferentOwner,
     required this.onViewPerspective,
@@ -1084,10 +1101,10 @@ class _ProfileDisplay extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<_ProfileDisplay> createState() => _ProfileEditorState();
+  ConsumerState<_ProfileDisplay> createState() => _ProfileDisplayState();
 }
 
-class _ProfileEditorState extends ConsumerState<_ProfileDisplay> {
+class _ProfileDisplayState extends ConsumerState<_ProfileDisplay> {
   late final TextEditingController _firstNameController;
   late final TextEditingController _lastNameController;
   late final TextEditingController _birthdayController;
@@ -1147,7 +1164,7 @@ class _ProfileEditorState extends ConsumerState<_ProfileDisplay> {
           ),
         ),
         const SizedBox(height: 24),
-        if (!widget.isMe) ...[
+        if (widget.onViewPerspective != null) ...[
           FilledButton(
             onPressed: widget.onViewPerspective,
             style: FilledButton.styleFrom(

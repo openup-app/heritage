@@ -121,6 +121,15 @@ Future<T> showBlockingModal<T>(BuildContext context, Future<T> future) async {
   }
 }
 
+bool canViewPerspective({
+  required Id id,
+  required Id primaryUserId,
+  required Id focalPersonId,
+  required bool isSibling,
+  required bool isOwned,
+}) =>
+    id != primaryUserId && id != focalPersonId && !isSibling && isOwned;
+
 class _AnimatedSuccessPopup extends StatefulWidget {
   final VoidCallback onDone;
 
