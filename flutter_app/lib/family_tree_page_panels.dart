@@ -1042,55 +1042,61 @@ class ProfileNameSection extends StatelessWidget {
       children: [
         SizedBox(
           height: nameSectionHeight,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              if (isPrimaryUser) ...[
-                Text(
-                  person.profile.fullName,
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-                const Text('My profile'),
-              ] else ...[
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        person.profile.fullName,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.titleLarge,
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (isPrimaryUser) ...[
+                  Text(
+                    person.profile.fullName,
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  const Text('My profile'),
+                ] else ...[
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          person.profile.fullName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.titleLarge,
+                        ),
                       ),
-                    ),
-                    const VerifiedBadge(
-                      width: 24,
-                    ),
-                  ],
-                ),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        'Tarlok\'s Sister\'s Husband',
+                      const VerifiedBadge(
+                        width: 24,
+                      ),
+                    ],
+                  ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Tarlok\'s Sister\'s Husband',
+                          style: Theme.of(context)
+                              .textTheme
+                              .titleMedium
+                              ?.copyWith(
+                                  color: const Color.fromRGBO(
+                                      0x7A, 0x7A, 0x7A, 1.0)),
+                        ),
+                      ),
+                      Text(
+                        'Verified by Parteek',
                         style: Theme.of(context)
                             .textTheme
                             .titleMedium
                             ?.copyWith(
                                 color: const Color.fromRGBO(
-                                    0x7A, 0x7A, 0x7A, 1.0)),
-                      ),
-                    ),
-                    Text(
-                      'Verified by Parteek',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: const Color.fromRGBO(0x3F, 0x71, 0xFF, 1.0)),
-                    )
-                  ],
-                ),
-                const SizedBox(height: 12),
+                                    0x3F, 0x71, 0xFF, 1.0)),
+                      )
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ],
