@@ -1,3 +1,5 @@
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -708,126 +710,201 @@ class _DraggableSheetState extends State<_DraggableSheet> {
       minChildSize: minPanelRatio,
       maxChildSize: maxPanelRatio,
       builder: (context, controller) {
-        return Container(
-          clipBehavior: Clip.hardEdge,
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(24),
-              topRight: Radius.circular(24),
-            ),
-            boxShadow: [
-              BoxShadow(
-                offset: Offset(0, 4),
-                blurRadius: 16,
-                color: Color.fromRGBO(0x00, 0x00, 0x00, 0.25),
+        final showKeyboardAccessory =
+            defaultTargetPlatform == TargetPlatform.iOS &&
+                MediaQuery.of(context).viewInsets.bottom != 0;
+        return Stack(
+          children: [
+            Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom +
+                    (showKeyboardAccessory ? 40 : 0),
               ),
-            ],
-          ),
-          child: GestureDetector(
-            onTap: () {
-              _draggableScrollableController.animateTo(
-                maxPanelRatio,
-                duration: const Duration(milliseconds: 300),
-                curve: Curves.easeOut,
-              );
-            },
-            child: CustomScrollView(
-              key: Key(widget.selectedPerson.id),
-              controller: controller,
-              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-              slivers: [
-                PinnedHeaderSliver(
-                  child: ColoredBox(
-                    color: Colors.white,
-                    child: Column(
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Container(
+                clipBehavior: Clip.hardEdge,
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(24),
+                    topRight: Radius.circular(24),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      offset: Offset(0, 4),
+                      blurRadius: 16,
+                      color: Color.fromRGBO(0x00, 0x00, 0x00, 0.25),
+                    ),
+                  ],
+                ),
+                child: GestureDetector(
+                  onTap: () {
+                    _draggableScrollableController.animateTo(
+                      maxPanelRatio,
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeOut,
+                    );
+                  },
+                  child: CustomScrollView(
+                    key: Key(widget.selectedPerson.id),
+                    controller: controller,
+                    keyboardDismissBehavior:
+                        ScrollViewKeyboardDismissBehavior.onDrag,
+                    slivers: [
+                      PinnedHeaderSliver(
+                        child: ColoredBox(
+                          color: Colors.white,
                           child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Center(
-                                child: Padding(
-                                  padding: EdgeInsets.symmetric(vertical: 12.0),
-                                  child: _DragHandle(),
+                              Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 16),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Center(
+                                      child: Padding(
+                                        padding: EdgeInsets.symmetric(
+                                            vertical: 12.0),
+                                        child: _DragHandle(),
+                                      ),
+                                    ),
+                                    Text(
+                                      widget.isPrimaryUser
+                                          ? 'I need to add a...'
+                                          : 'Missing a...',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleLarge,
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Align(
+                                      alignment: Alignment.centerLeft,
+                                      child: buildAddConnectionButtons(
+                                        person: widget.selectedPerson,
+                                        relatedness: widget.relatedness,
+                                        paddingWidth: 12,
+                                        onAddConnectionPressed:
+                                            widget.onAddConnectionPressed,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                              Text(
-                                widget.isPrimaryUser
-                                    ? 'I need to add a...'
-                                    : 'Missing a...',
-                                style: Theme.of(context).textTheme.titleLarge,
-                              ),
-                              const SizedBox(height: 4),
-                              Align(
-                                alignment: Alignment.centerLeft,
-                                child: buildAddConnectionButtons(
-                                  person: widget.selectedPerson,
-                                  relatedness: widget.relatedness,
-                                  paddingWidth: 12,
-                                  onAddConnectionPressed:
-                                      widget.onAddConnectionPressed,
-                                ),
+                              const SizedBox(height: 16),
+                              const Divider(
+                                height: 1,
+                                color: Color.fromRGBO(0xEB, 0xEB, 0xEB, 1.0),
                               ),
                             ],
                           ),
                         ),
-                        const SizedBox(height: 16),
-                        const Divider(
-                          height: 1,
-                          color: Color.fromRGBO(0xEB, 0xEB, 0xEB, 1.0),
+                      ),
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: ProfileNameSection(
+                            person: widget.selectedPerson,
+                            relatedness: widget.relatedness,
+                            isPrimaryUser: widget.isPrimaryUser,
+                          ),
                         ),
-                      ],
-                    ),
+                      ),
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: Consumer(
+                            builder: (context, ref, child) {
+                              return ProfileDisplay(
+                                initialProfile: widget.selectedPerson.profile,
+                                isPrimaryUser: widget.isPrimaryUser,
+                                isEditable: widget.isOwnedByMe,
+                                hasDifferentOwner:
+                                    widget.selectedPerson.ownedBy !=
+                                        widget.selectedPerson.id,
+                                onViewPerspective: widget.onViewPerspective,
+                                onSave: (update) async {
+                                  final notifier =
+                                      ref.read(graphProvider.notifier);
+                                  await showBlockingModal(
+                                      context,
+                                      notifier.updateProfile(
+                                          widget.selectedPerson.id, update));
+                                  if (context.mounted) {
+                                    showProfileUpdateSuccess(context: context);
+                                    _draggableScrollableController.animateTo(
+                                      minPanelRatio,
+                                      duration:
+                                          const Duration(milliseconds: 300),
+                                      curve: Curves.easeOut,
+                                    );
+                                    widget.onDismissPanelPopup();
+                                  }
+                                },
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: ProfileNameSection(
-                      person: widget.selectedPerson,
-                      relatedness: widget.relatedness,
-                      isPrimaryUser: widget.isPrimaryUser,
-                    ),
-                  ),
-                ),
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Consumer(builder: (context, ref, child) {
-                      return ProfileDisplay(
-                        initialProfile: widget.selectedPerson.profile,
-                        isPrimaryUser: widget.isPrimaryUser,
-                        isEditable: widget.isOwnedByMe,
-                        hasDifferentOwner: widget.selectedPerson.ownedBy !=
-                            widget.selectedPerson.id,
-                        onViewPerspective: widget.onViewPerspective,
-                        onSave: (update) async {
-                          final notifier = ref.read(graphProvider.notifier);
-                          await showBlockingModal(
-                              context,
-                              notifier.updateProfile(
-                                  widget.selectedPerson.id, update));
-                          if (context.mounted) {
-                            showProfileUpdateSuccess(context: context);
-                            _draggableScrollableController.animateTo(
-                              minPanelRatio,
-                              duration: const Duration(milliseconds: 300),
-                              curve: Curves.easeOut,
-                            );
-                            widget.onDismissPanelPopup();
-                          }
-                        },
-                      );
-                    }),
-                  ),
-                ),
-              ],
+              ),
             ),
-          ),
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: MediaQuery.of(context).viewInsets.bottom,
+              child: Visibility(
+                visible: showKeyboardAccessory,
+                maintainSize: true,
+                maintainAnimation: true,
+                maintainState: true,
+                maintainSemantics: true,
+                child: const KeyboardAccessoryView(),
+              ),
+            ),
+          ],
         );
       },
+    );
+  }
+}
+
+class KeyboardAccessoryView extends StatelessWidget {
+  const KeyboardAccessoryView({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 40,
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(
+          top: BorderSide(
+            color: Color.fromRGBO(0xD8, 0xD8, 0xD8, 1.0),
+          ),
+        ),
+      ),
+      child: Row(
+        children: [
+          IconButton(
+            icon: const Icon(CupertinoIcons.chevron_up),
+            onPressed: FocusScope.of(context).previousFocus,
+          ),
+          IconButton(
+            icon: const Icon(CupertinoIcons.chevron_down),
+            onPressed: FocusScope.of(context).nextFocus,
+          ),
+          const Spacer(),
+          TextButton(
+            onPressed: FocusScope.of(context).unfocus,
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.black,
+            ),
+            child: const Text('Done'),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -1171,6 +1248,12 @@ class _ProfileDisplayState extends ConsumerState<_ProfileDisplay> {
   late final TextEditingController _deathdayController;
   late final TextEditingController _birthplaceController;
 
+  final _firstNameFocusNode = FocusNode();
+  final _lastNameFocusNode = FocusNode();
+  final _birthdayNameFocusNode = FocusNode();
+  final _deathdayFocusNode = FocusNode();
+  final _birthplaceFocusNode = FocusNode();
+
   @override
   void initState() {
     super.initState();
@@ -1199,12 +1282,22 @@ class _ProfileDisplayState extends ConsumerState<_ProfileDisplay> {
     _firstNameController.dispose();
     _lastNameController.dispose();
     _birthdayController.dispose();
+    _deathdayController.dispose();
     _birthplaceController.dispose();
+
+    _firstNameFocusNode.dispose();
+    _lastNameFocusNode.dispose();
+    _birthdayController.dispose();
+    _deathdayFocusNode.dispose();
+    _birthplaceFocusNode.dispose();
+
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final hasDateOfPassing = widget.hasDifferentOwner ||
+        ref.watch(profileUpdateProvider.select((s) => s.deathday != null));
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1240,102 +1333,140 @@ class _ProfileDisplayState extends ConsumerState<_ProfileDisplay> {
           style: Theme.of(context).textTheme.titleLarge,
         ),
         const SizedBox(height: 8),
-        InputForm(
-          children: [
-            InputLabel(
-              label: 'First name',
-              child: TextFormField(
-                controller: _firstNameController,
-                enabled: widget.isEditable,
-                onChanged: ref.read(profileUpdateProvider.notifier).firstName,
-                textCapitalization: TextCapitalization.words,
-                textInputAction: TextInputAction.next,
-              ),
-            ),
-            InputLabel(
-              label: 'Last name',
-              child: TextFormField(
-                controller: _lastNameController,
-                enabled: widget.isEditable,
-                onChanged: ref.read(profileUpdateProvider.notifier).lastName,
-                textCapitalization: TextCapitalization.words,
-                textInputAction: TextInputAction.next,
-              ),
-            ),
-            InputLabel(
-              label: 'Date of birth',
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Expanded(
-                    child: TextFormField(
-                      controller: _birthdayController,
-                      enabled: widget.isEditable,
-                      keyboardType: TextInputType.number,
-                      textInputAction: TextInputAction.next,
-                      inputFormatters: [DateTextFormatter()],
-                      onChanged:
-                          ref.read(profileUpdateProvider.notifier).birthday,
-                      decoration: InputDecoration(
-                        //   label: const Text('Date of birth'),
-                        hintText: getFormattedDatePattern().formatted,
-                      ),
-                    ),
-                  ),
-                  if (widget.isEditable)
-                    IconButton(
-                      onPressed: () async {
-                        final date = await showDatePicker(
-                          context: context,
-                          firstDate: DateTime(1500),
-                          lastDate: DateTime.now(),
-                          initialDate: ref.watch(profileUpdateProvider
-                              .select((p) => p.birthday ?? DateTime.now())),
-                        );
-                        if (!mounted || date == null) {
-                          return;
-                        }
-                        ref
-                            .read(profileUpdateProvider.notifier)
-                            .birthdayObject(date);
-                      },
-                      icon: const Icon(
-                        Icons.calendar_month,
-                        color: Color.fromRGBO(138, 138, 138, 1),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-            if (widget.hasDifferentOwner ||
-                ref.watch(
-                    profileUpdateProvider.select((s) => s.deathday != null)))
+        FocusTraversalGroup(
+          child: InputForm(
+            children: [
               InputLabel(
-                label: 'Date of passing',
+                label: 'First name',
                 child: TextFormField(
-                  controller: _deathdayController,
+                  controller: _firstNameController,
+                  focusNode: _firstNameFocusNode,
                   enabled: widget.isEditable,
-                  keyboardType: TextInputType.number,
+                  onChanged: ref.read(profileUpdateProvider.notifier).firstName,
+                  textCapitalization: TextCapitalization.words,
                   textInputAction: TextInputAction.next,
-                  inputFormatters: [DateTextFormatter()],
-                  onChanged: ref.read(profileUpdateProvider.notifier).deathday,
-                  decoration: InputDecoration(
-                    hintText: getFormattedDatePattern().formatted,
-                  ),
                 ),
               ),
-            InputLabel(
-              label: 'Place of birth',
-              child: TextFormField(
-                controller: _birthplaceController,
-                enabled: widget.isEditable,
-                textCapitalization: TextCapitalization.words,
-                textInputAction: TextInputAction.next,
-                onChanged: ref.read(profileUpdateProvider.notifier).birthplace,
-                onFieldSubmitted: (_) {},
+              InputLabel(
+                label: 'Last name',
+                child: TextFormField(
+                  controller: _lastNameController,
+                  focusNode: _lastNameFocusNode,
+                  enabled: widget.isEditable,
+                  onChanged: ref.read(profileUpdateProvider.notifier).lastName,
+                  textCapitalization: TextCapitalization.words,
+                  textInputAction: TextInputAction.next,
+                ),
               ),
-            ),
-          ],
+              InputLabel(
+                label: 'Date of birth',
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextFormField(
+                        controller: _birthdayController,
+                        focusNode: _birthdayNameFocusNode,
+                        enabled: widget.isEditable,
+                        keyboardType: TextInputType.number,
+                        textInputAction: TextInputAction.next,
+                        inputFormatters: [DateTextFormatter()],
+                        onChanged:
+                            ref.read(profileUpdateProvider.notifier).birthday,
+                        decoration: InputDecoration(
+                          hintText: getFormattedDatePattern().formatted,
+                        ),
+                      ),
+                    ),
+                    if (widget.isEditable)
+                      ExcludeFocus(
+                        child: IconButton(
+                          onPressed: () async {
+                            final date = await showDatePicker(
+                              context: context,
+                              firstDate: DateTime(1500),
+                              lastDate: DateTime.now(),
+                              initialDate: ref.watch(profileUpdateProvider
+                                  .select((p) => p.birthday ?? DateTime.now())),
+                            );
+                            if (!mounted || date == null) {
+                              return;
+                            }
+                            ref
+                                .read(profileUpdateProvider.notifier)
+                                .birthdayObject(date);
+                          },
+                          icon: const Icon(
+                            Icons.calendar_month,
+                            color: Color.fromRGBO(138, 138, 138, 1),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              if (hasDateOfPassing)
+                InputLabel(
+                  label: 'Date of passing',
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          controller: _deathdayController,
+                          focusNode: _deathdayFocusNode,
+                          enabled: widget.isEditable,
+                          keyboardType: TextInputType.number,
+                          textInputAction: TextInputAction.next,
+                          inputFormatters: [DateTextFormatter()],
+                          onChanged:
+                              ref.read(profileUpdateProvider.notifier).deathday,
+                          decoration: InputDecoration(
+                            hintText: getFormattedDatePattern().formatted,
+                          ),
+                        ),
+                      ),
+                      if (widget.isEditable)
+                        ExcludeFocus(
+                          child: IconButton(
+                            onPressed: () async {
+                              final date = await showDatePicker(
+                                context: context,
+                                firstDate: DateTime(1500),
+                                lastDate: DateTime.now(),
+                                initialDate: ref.watch(
+                                    profileUpdateProvider.select(
+                                        (p) => p.deathday ?? DateTime.now())),
+                              );
+                              if (!mounted || date == null) {
+                                return;
+                              }
+                              ref
+                                  .read(profileUpdateProvider.notifier)
+                                  .deathdayObject(date);
+                            },
+                            icon: const Icon(
+                              Icons.calendar_month,
+                              color: Color.fromRGBO(138, 138, 138, 1),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              InputLabel(
+                label: 'Place of birth',
+                child: TextFormField(
+                  controller: _birthplaceController,
+                  focusNode: _birthplaceFocusNode,
+                  enabled: widget.isEditable,
+                  textCapitalization: TextCapitalization.words,
+                  textInputAction: TextInputAction.next,
+                  onChanged:
+                      ref.read(profileUpdateProvider.notifier).birthplace,
+                  onFieldSubmitted: (_) {},
+                ),
+              ),
+            ],
+          ),
         ),
         if (widget.isEditable) ...[
           const SizedBox(height: 24),

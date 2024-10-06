@@ -733,7 +733,7 @@ class _MinimalProfileEditorState extends State<MinimalProfileEditor> {
           child: TextFormField(
             controller: _lastNameController,
             textCapitalization: TextCapitalization.words,
-            textInputAction: TextInputAction.next,
+            textInputAction: TextInputAction.done,
             onChanged: (text) =>
                 widget.onUpdate(_firstNameController.text, text, _gender),
           ),
