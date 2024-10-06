@@ -271,6 +271,8 @@ class Profile with _$Profile {
     required DateTime? birthday,
     @DateTimeConverter() required DateTime? deathday,
     required final String birthplace,
+    required final String occupation,
+    required final String hobbies,
   }) = _Profile;
 
   factory Profile.fromJson(Map<String, Object?> json) =>

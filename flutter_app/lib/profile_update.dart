@@ -60,6 +60,11 @@ class ProfileUpdateNotifier extends StateNotifier<ProfileUpdate> {
   void birthplace(String value) =>
       state = state.copyWith.profile(birthplace: value);
 
+  void occupation(String value) =>
+      state = state.copyWith.profile(occupation: value);
+
+  void hobbies(String value) => state = state.copyWith.profile(hobbies: value);
+
   Future<void> image(Uint8List value) async {
     final downscaled = await downscaleImage(value, size: 300);
     if (!mounted) {
@@ -89,4 +94,6 @@ class ProfileUpdate with _$ProfileUpdate {
   DateTime? get birthday => profile.birthday;
   DateTime? get deathday => profile.deathday;
   String get birthplace => profile.birthplace;
+  String get occupation => profile.occupation;
+  String get hobbies => profile.hobbies;
 }

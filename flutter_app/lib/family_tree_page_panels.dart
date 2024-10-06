@@ -214,9 +214,16 @@ class _PanelsState extends ConsumerState<Panels> {
                             )
                                 ? widget.onViewPerspective
                                 : null,
-                            onSave: (update) {
-                              showProfileUpdateSuccess(context: context);
-                              widget.onDismissPanelPopup();
+                            onSave: (update) async {
+                              final notifier = ref.read(graphProvider.notifier);
+                              await showBlockingModal(
+                                context,
+                                notifier.updateProfile(person.id, update),
+                              );
+                              if (context.mounted) {
+                                showProfileUpdateSuccess(context: context);
+                                widget.onDismissPanelPopup();
+                              }
                             },
                           ),
                         ],
@@ -815,9 +822,10 @@ class _DraggableSheetState extends State<_DraggableSheet> {
                             onSave: (update) async {
                               final notifier = ref.read(graphProvider.notifier);
                               await showBlockingModal(
-                                  context,
-                                  notifier.updateProfile(
-                                      widget.selectedPerson.id, update));
+                                context,
+                                notifier.updateProfile(
+                                    widget.selectedPerson.id, update),
+                              );
                               if (context.mounted) {
                                 showProfileUpdateSuccess(context: context);
                                 _draggableScrollableController.animateTo(
@@ -1181,12 +1189,8 @@ class _ProfileDisplayState extends ConsumerState<_ProfileDisplay> {
   late final TextEditingController _birthdayController;
   late final TextEditingController _deathdayController;
   late final TextEditingController _birthplaceController;
-
-  final _firstNameFocusNode = FocusNode();
-  final _lastNameFocusNode = FocusNode();
-  final _birthdayNameFocusNode = FocusNode();
-  final _deathdayFocusNode = FocusNode();
-  final _birthplaceFocusNode = FocusNode();
+  late final TextEditingController _occupationController;
+  late final TextEditingController _hobbiesController;
 
   @override
   void initState() {
@@ -1199,6 +1203,9 @@ class _ProfileDisplayState extends ConsumerState<_ProfileDisplay> {
     _deathdayController = TextEditingController(
         text: deathday == null ? '' : formatDate(deathday));
     _birthplaceController = TextEditingController(text: profile.birthplace);
+    _occupationController = TextEditingController(text: profile.occupation);
+    _hobbiesController = TextEditingController(text: profile.hobbies);
+
     ref.listenManual(
       profileUpdateProvider,
       fireImmediately: true,
@@ -1218,12 +1225,8 @@ class _ProfileDisplayState extends ConsumerState<_ProfileDisplay> {
     _birthdayController.dispose();
     _deathdayController.dispose();
     _birthplaceController.dispose();
-
-    _firstNameFocusNode.dispose();
-    _lastNameFocusNode.dispose();
-    _birthdayController.dispose();
-    _deathdayFocusNode.dispose();
-    _birthplaceFocusNode.dispose();
+    _occupationController.dispose();
+    _hobbiesController.dispose();
 
     super.dispose();
   }
@@ -1274,7 +1277,6 @@ class _ProfileDisplayState extends ConsumerState<_ProfileDisplay> {
                 label: 'First name',
                 child: TextFormField(
                   controller: _firstNameController,
-                  focusNode: _firstNameFocusNode,
                   enabled: widget.isEditable,
                   onChanged: ref.read(profileUpdateProvider.notifier).firstName,
                   textCapitalization: TextCapitalization.words,
@@ -1285,7 +1287,6 @@ class _ProfileDisplayState extends ConsumerState<_ProfileDisplay> {
                 label: 'Last name',
                 child: TextFormField(
                   controller: _lastNameController,
-                  focusNode: _lastNameFocusNode,
                   enabled: widget.isEditable,
                   onChanged: ref.read(profileUpdateProvider.notifier).lastName,
                   textCapitalization: TextCapitalization.words,
@@ -1299,7 +1300,6 @@ class _ProfileDisplayState extends ConsumerState<_ProfileDisplay> {
                     Expanded(
                       child: TextFormField(
                         controller: _birthdayController,
-                        focusNode: _birthdayNameFocusNode,
                         enabled: widget.isEditable,
                         keyboardType: TextInputType.number,
                         textInputAction: TextInputAction.next,
@@ -1346,7 +1346,6 @@ class _ProfileDisplayState extends ConsumerState<_ProfileDisplay> {
                       Expanded(
                         child: TextFormField(
                           controller: _deathdayController,
-                          focusNode: _deathdayFocusNode,
                           enabled: widget.isEditable,
                           keyboardType: TextInputType.number,
                           textInputAction: TextInputAction.next,
@@ -1390,12 +1389,34 @@ class _ProfileDisplayState extends ConsumerState<_ProfileDisplay> {
                 label: 'Place of birth',
                 child: TextFormField(
                   controller: _birthplaceController,
-                  focusNode: _birthplaceFocusNode,
                   enabled: widget.isEditable,
                   textCapitalization: TextCapitalization.words,
                   textInputAction: TextInputAction.next,
                   onChanged:
                       ref.read(profileUpdateProvider.notifier).birthplace,
+                  onFieldSubmitted: (_) {},
+                ),
+              ),
+              InputLabel(
+                label: 'Occupation',
+                child: TextFormField(
+                  controller: _occupationController,
+                  enabled: widget.isEditable,
+                  textCapitalization: TextCapitalization.words,
+                  textInputAction: TextInputAction.next,
+                  onChanged:
+                      ref.read(profileUpdateProvider.notifier).occupation,
+                  onFieldSubmitted: (_) {},
+                ),
+              ),
+              InputLabel(
+                label: 'Hobbies',
+                child: TextFormField(
+                  controller: _hobbiesController,
+                  enabled: widget.isEditable,
+                  textCapitalization: TextCapitalization.words,
+                  textInputAction: TextInputAction.next,
+                  onChanged: ref.read(profileUpdateProvider.notifier).hobbies,
                   onFieldSubmitted: (_) {},
                 ),
               ),

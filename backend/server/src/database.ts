@@ -293,6 +293,8 @@ export class Database {
         "birthday": null,
         "deathday": null,
         "birthplace": "",
+        "occupation": "",
+        "hobbies": "",
       }
     }
   }
@@ -316,6 +318,8 @@ export const profileSchema = z.object({
   birthday: z.string().nullable(),
   deathday: z.string().nullable(),
   birthplace: z.string(),
+  occupation: z.string(),
+  hobbies: z.string(),
 });
 
 const personSchema = z.object({

@@ -484,6 +484,8 @@ Person _createPerson(String id) {
       birthday: null,
       deathday: null,
       birthplace: '',
+      occupation: '',
+      hobbies: '',
     ),
   );
 }
