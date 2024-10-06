@@ -6,6 +6,7 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fpdart/fpdart.dart';
+import 'package:heritage/file_picker.dart';
 import 'package:heritage/graph.dart';
 import 'package:http/http.dart' as http;
 
@@ -136,26 +137,27 @@ class Api {
   }
 
   Future<Either<Error, Person>> updateProfile(
-    String id, {
-    Profile? profile,
-    Uint8List? image,
-  }) async {
-    if (profile == null && image == null) {
-      return left('No data');
-    }
-
+      String id, Profile profile) async {
     final uri = Uri.parse('$_baseUrl/v1/people/$id/profile');
     final request = http.MultipartRequest('PUT', uri);
-    if (profile != null) {
-      request.fields['profile'] = jsonEncode(profile.toJson());
+    request.fields['profile'] = jsonEncode(profile.toJson());
+
+    switch (profile.photo) {
+      case NetworkPhoto():
+        break;
+      case MemoryPhoto(:final Uint8List bytes):
+        await _addDownscaledPhoto(request, 'photo', 'photo', bytes);
+        break;
     }
 
-    if (image != null) {
-      request.files.add(http.MultipartFile.fromBytes(
-        'image',
-        image,
-        filename: 'image.jpg',
-      ));
+    for (final (index, photo) in profile.gallery.indexed) {
+      switch (photo) {
+        case NetworkPhoto():
+          break;
+        case MemoryPhoto(:final Uint8List bytes):
+          await _addDownscaledPhoto(request, 'gallery', '$index', bytes);
+          break;
+      }
     }
 
     request.headers.addAll(_headers);
@@ -193,6 +195,23 @@ class Api {
         return right(Person.fromJson(json['person']));
       },
     );
+  }
+
+  Future<void> _addDownscaledPhoto(
+    http.MultipartRequest request,
+    String key,
+    String basename,
+    Uint8List bytes,
+  ) async {
+    final downscaled = await downscaleImage(bytes, size: 400);
+    if (downscaled == null) {
+      return;
+    }
+    request.files.add(http.MultipartFile.fromBytes(
+      key,
+      bytes,
+      filename: '$basename.jpg',
+    ));
   }
 
   Future<Either<Error, R>> _makeRequest<R>({
@@ -262,12 +281,29 @@ class Person with _$Person implements GraphNode {
 }
 
 @freezed
+class Photo with _$Photo {
+  const factory Photo.network({
+    required String key,
+    required String url,
+  }) = NetworkPhoto;
+
+  const factory Photo.memory({
+    required String key,
+    // ignore: invalid_annotation_target
+    @JsonKey(includeToJson: false, includeFromJson: false) Uint8List? bytes,
+  }) = MemoryPhoto;
+
+  factory Photo.fromJson(Map<String, Object?> json) => _$PhotoFromJson(json);
+}
+
+@freezed
 class Profile with _$Profile {
   const factory Profile({
     required String firstName,
     required String lastName,
     required Gender gender,
-    required String imageUrl,
+    required Photo photo,
+    required List<Photo> gallery,
     required DateTime? birthday,
     @DateTimeConverter() required DateTime? deathday,
     required final String birthplace,

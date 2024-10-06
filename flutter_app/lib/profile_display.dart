@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -419,7 +420,7 @@ class NodeProfile extends StatelessWidget {
                             ),
                           ],
                         ),
-                        child: ProfileImage(person.profile.imageUrl),
+                        child: ProfileImage(person.profile.photo),
                       ),
                     ),
                     if (canViewPerspective)
@@ -455,46 +456,54 @@ class NodeProfile extends StatelessWidget {
 }
 
 class ProfileImage extends StatelessWidget {
-  final String src;
+  final Photo photo;
 
-  const ProfileImage(this.src, {super.key});
+  const ProfileImage(this.photo, {super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Image.network(
-      src,
-      fit: BoxFit.cover,
-      frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
-        if (wasSynchronouslyLoaded) {
-          return child;
-        }
-        return AnimatedCrossFade(
-          duration: const Duration(milliseconds: 300),
-          crossFadeState: frame == null
-              ? CrossFadeState.showFirst
-              : CrossFadeState.showSecond,
-          layoutBuilder: (topChild, topChildKey, bottomChild, bottomChildKey) {
-            return Stack(
-              clipBehavior: Clip.none,
-              children: <Widget>[
-                Positioned.fill(
-                  key: bottomChildKey,
-                  child: bottomChild,
-                ),
-                Positioned.fill(
-                  key: topChildKey,
-                  child: topChild,
-                ),
-              ],
+    return switch (photo) {
+      NetworkPhoto(:final url) => Image.network(
+          url,
+          fit: BoxFit.cover,
+          frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+            if (wasSynchronouslyLoaded) {
+              return child;
+            }
+            return AnimatedCrossFade(
+              duration: const Duration(milliseconds: 300),
+              crossFadeState: frame == null
+                  ? CrossFadeState.showFirst
+                  : CrossFadeState.showSecond,
+              layoutBuilder:
+                  (topChild, topChildKey, bottomChild, bottomChildKey) {
+                return Stack(
+                  clipBehavior: Clip.none,
+                  children: <Widget>[
+                    Positioned.fill(
+                      key: bottomChildKey,
+                      child: bottomChild,
+                    ),
+                    Positioned.fill(
+                      key: topChildKey,
+                      child: topChild,
+                    ),
+                  ],
+                );
+              },
+              firstChild: const ColoredBox(
+                color: Colors.grey,
+              ),
+              secondChild: child,
             );
           },
-          firstChild: const ColoredBox(
-            color: Colors.grey,
-          ),
-          secondChild: child,
-        );
-      },
-    );
+        ),
+      MemoryPhoto(:final Uint8List bytes) => Image.memory(
+          bytes,
+          fit: BoxFit.cover,
+        ),
+      _ => const SizedBox.shrink(),
+    };
   }
 }
 

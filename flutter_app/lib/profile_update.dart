@@ -1,99 +1,61 @@
-import 'dart:typed_data';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:heritage/api.dart';
 import 'package:heritage/date.dart';
-import 'package:heritage/file_picker.dart';
-
-part 'profile_update.freezed.dart';
 
 final profileUpdateProvider =
-    StateNotifierProvider<ProfileUpdateNotifier, ProfileUpdate>(
+    StateNotifierProvider<ProfileUpdateNotifier, Profile>(
         (ref) => throw 'Uninitialized provider');
 
-class ProfileUpdateNotifier extends StateNotifier<ProfileUpdate> {
+class ProfileUpdateNotifier extends StateNotifier<Profile> {
   final Profile initialProfile;
 
   ProfileUpdateNotifier({
     required this.initialProfile,
-  }) : super(ProfileUpdate(profile: initialProfile));
+  }) : super(initialProfile);
 
-  void firstName(String value) =>
-      state = state.copyWith.profile(firstName: value);
+  void firstName(String value) => state = state.copyWith(firstName: value);
 
-  void lastName(String value) =>
-      state = state.copyWith.profile(lastName: value);
+  void lastName(String value) => state = state.copyWith(lastName: value);
 
-  void gender(Gender gender) => state = state.copyWith.profile(gender: gender);
+  void gender(Gender gender) => state = state.copyWith(gender: gender);
+
+  void photo(Photo value) => state = state.copyWith(photo: value);
+
+  void gallery(List<Photo> value) => state = state.copyWith(gallery: value);
 
   void birthday(String value) {
     if (value.isEmpty) {
-      state = state.copyWith.profile(birthday: null);
+      state = state.copyWith(birthday: null);
     } else {
       final birthday = tryParseSeparatedDate(value);
       if (birthday != null) {
-        state = state.copyWith.profile(
+        state = state.copyWith(
             birthday: DateTime(birthday.year, birthday.month, birthday.day));
       }
     }
   }
 
   void birthdayObject(DateTime value) =>
-      state = state.copyWith.profile(birthday: value);
+      state = state.copyWith(birthday: value);
 
   void deathday(String value) {
     if (value.isEmpty) {
-      state = state.copyWith.profile(deathday: null);
+      state = state.copyWith(deathday: null);
     } else {
       final deathday = tryParseSeparatedDate(value);
       if (deathday != null) {
-        state = state.copyWith.profile(
+        state = state.copyWith(
             deathday: DateTime(deathday.year, deathday.month, deathday.day));
       }
     }
   }
 
   void deathdayObject(DateTime value) =>
-      state = state.copyWith.profile(deathday: value);
+      state = state.copyWith(deathday: value);
 
-  void birthplace(String value) =>
-      state = state.copyWith.profile(birthplace: value);
+  void birthplace(String value) => state = state.copyWith(birthplace: value);
 
-  void occupation(String value) =>
-      state = state.copyWith.profile(occupation: value);
+  void occupation(String value) => state = state.copyWith(occupation: value);
 
-  void hobbies(String value) => state = state.copyWith.profile(hobbies: value);
-
-  Future<void> image(Uint8List value) async {
-    final downscaled = await downscaleImage(value, size: 300);
-    if (!mounted) {
-      return Future.value();
-    }
-    if (downscaled == null) {
-      return;
-    }
-    state = state.copyWith(image: downscaled);
-  }
-}
-
-@freezed
-class ProfileUpdate with _$ProfileUpdate {
-  const factory ProfileUpdate({
-    required Profile profile,
-    @Default(null) Uint8List? image,
-  }) = _ProfileUpdate;
-
-  const ProfileUpdate._();
-
-  String get firstName => profile.firstName;
-  String get lastName => profile.lastName;
-  String get fullName => profile.fullName;
-  Gender get gender => profile.gender;
-  String? get imageUrl => profile.imageUrl;
-  DateTime? get birthday => profile.birthday;
-  DateTime? get deathday => profile.deathday;
-  String get birthplace => profile.birthplace;
-  String get occupation => profile.occupation;
-  String get hobbies => profile.hobbies;
+  void hobbies(String value) => state = state.copyWith(hobbies: value);
 }

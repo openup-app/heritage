@@ -479,8 +479,12 @@ Person _createPerson(String id) {
       firstName: id,
       lastName: '',
       gender: Gender.male,
-      imageUrl:
-          'https://d2xzkuyodufiic.cloudfront.net/avatars/${int.parse(id) + 1 % 70}.jpg',
+      photo: Photo.network(
+        key: '',
+        url:
+            'https://d2xzkuyodufiic.cloudfront.net/avatars/${int.parse(id) + 1 % 70}.jpg',
+      ),
+      gallery: [],
       birthday: null,
       deathday: null,
       birthplace: '',

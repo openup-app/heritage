@@ -32,7 +32,7 @@ export function router(auth: Auth, database: Database, storage: Storage): Router
       }
       return res.json({
         'id': result.id,
-        'people': result.people.map(e => constructURLs(e, storage)),
+        'people': result.people.map(e => constructPerson(e, storage)),
       });
     } catch (e) {
       console.log(e);
@@ -51,7 +51,7 @@ export function router(auth: Auth, database: Database, storage: Storage): Router
     try {
       const person = await database.createRootPerson(body.firstName, body.lastName, body.gender);
       return res.json({
-        'person': constructURLs(person, storage),
+        'person': constructPerson(person, storage),
       })
     } catch (e) {
       console.log(e);
@@ -64,7 +64,7 @@ export function router(auth: Auth, database: Database, storage: Storage): Router
     try {
       const people = await database.getLimitedGraph(id);
       return res.json({
-        'people': people.map(e => constructURLs(e, storage)),
+        'people': people.map(e => constructPerson(e, storage)),
       })
     } catch (e) {
       console.log(e);
@@ -75,36 +75,47 @@ export function router(auth: Auth, database: Database, storage: Storage): Router
   router.put('/people/:id/profile', async (req: Request, res: Response) => {
     const id = req.params.id;
 
-    let profile: Profile;
-    let imageFile: formidable.File | undefined;
     try {
       const { fields, files } = await parseForm(req);
       const normalized = normalizeFields(fields);
-      profile = profileSchema.parse(normalized.profile);
-      const file = files.image;
-      if (file) {
-        imageFile = Array.isArray(file) ? file[0] : file;
-      }
-    } catch (e) {
-      return res.sendStatus(400);
-    }
+      const profileUpdate = profileUpdateSchema.parse(normalized.profile);
+      const photoUpdate = profileUpdate.photo;
+      const galleryUpdates = profileUpdate.gallery;
+      const currentProfile = (await database.getPerson(id)).profile;
 
-    try {
-      if (imageFile) {
-        const buffer = await fs.readFile(imageFile.filepath);
-        const oldProfile = await database.getPerson(id);
-        const oldImageKey = oldProfile.profile.imageKey;
-        const imageKey = `images/${shortUUID.generate()}.jpg`;
-        await storage.upload(imageKey, buffer);
-        if (oldImageKey) {
-          await storage.delete(oldImageKey);
+      let updatedPhotoKey: string | null | undefined;
+      if (photoUpdate) {
+        if (photoUpdate.type === "memory") {
+          const photoFiles = files.photo;
+          const photoFile = photoFiles && photoFiles.length !== 0 ? photoFiles[0] : undefined;
+          if (photoFile) {
+            updatedPhotoKey = await uploadImage(photoFile, storage);
+            const currentPhotoKey = currentProfile.photoKey;
+            if (currentPhotoKey) {
+              await storage.delete(currentPhotoKey);
+            }
+          }
+        } else if (photoUpdate.type === "network" && photoUpdate.key === "public/no_image.png") {
+          updatedPhotoKey = null;
+          const currentPhotoKey = currentProfile.photoKey;
+          if (currentPhotoKey) {
+            await storage.delete(currentPhotoKey);
+          }
         }
-        profile.imageKey = imageKey;
       }
 
-      const person = await database.updateProfile(id, profile);
+      let updatedGalleryKeys: string[] | undefined;
+      if (galleryUpdates) {
+        const galleryFiles = files.gallery;
+        if (Array.isArray(galleryFiles)) {
+          updatedGalleryKeys = await updateGallery(currentProfile.galleryKeys, galleryUpdates, galleryFiles, storage);
+        }
+      }
+
+      const updatedProfile = applyProfileUpdates(currentProfile, profileUpdate, updatedPhotoKey, updatedGalleryKeys);
+      const person = await database.updateProfile(id, updatedProfile);
       return res.json({
-        'person': constructURLs(person, storage),
+        'person': constructPerson(person, storage),
       })
     } catch (e) {
       console.log(e);
@@ -118,7 +129,7 @@ export function router(auth: Auth, database: Database, storage: Storage): Router
     try {
       const person = await database.updateOwnership(id, id);
       return res.json({
-        'person': constructURLs(person, storage),
+        'person': constructPerson(person, storage),
       })
     } catch (e) {
       console.log(e);
@@ -130,7 +141,7 @@ export function router(auth: Auth, database: Database, storage: Storage): Router
     try {
       const people = await database.getRoots();
       return res.json({
-        'people': people.map(e => constructURLs(e, storage)),
+        'people': people.map(e => constructPerson(e, storage)),
       })
     } catch (e) {
       console.log(e);
@@ -141,15 +152,85 @@ export function router(auth: Auth, database: Database, storage: Storage): Router
   return router;
 }
 
-function constructURLs(person: Person, storage: Storage) {
+function applyProfileUpdates(currentProfile: Profile, profileUpdate: ProfileUpdate, photoKey: string | null | undefined, galleryKeys: string[] | undefined): Profile {
+  return {
+    firstName: profileUpdate.firstName ?? currentProfile.firstName,
+    lastName: profileUpdate.lastName ?? currentProfile.lastName,
+    gender: profileUpdate.gender ?? currentProfile.gender,
+    photoKey: photoKey ?? (photoKey === null ? null : currentProfile.photoKey),
+    galleryKeys: galleryKeys ?? currentProfile.galleryKeys,
+    birthday: profileUpdate.birthday ?? currentProfile.birthday,
+    deathday: profileUpdate.deathday ?? currentProfile.deathday,
+    birthplace: profileUpdate.birthplace ?? currentProfile.birthplace,
+    occupation: profileUpdate.occupation ?? currentProfile.occupation,
+    hobbies: profileUpdate.hobbies ?? currentProfile.hobbies,
+  }
+}
+
+async function updateGallery(currentKeys: string[], updates: GalleryUpdate[], files: formidable.File[], storage: Storage): Promise<string[]> {
+  const updatedKeys: string[] = [];
+
+  for (const update of updates) {
+    if (update.type === 'network') {
+      if (currentKeys.includes(update.key)) {
+        updatedKeys.push(update.key);
+      }
+    } else if (update.type === 'memory') {
+      const matchingFiles = files.filter(f => f.originalFilename === update.key);
+      const file = matchingFiles.length === 0 ? undefined : matchingFiles[0];
+      if (file) {
+        const newKey = await uploadImage(file, storage);
+        updatedKeys.push(newKey);
+      }
+    }
+  }
+
+  for (const oldKey of currentKeys) {
+    if (!updatedKeys.includes(oldKey)) {
+      await storage.delete(oldKey);
+    }
+  }
+
+  return updatedKeys;
+}
+
+async function uploadImage(file: formidable.File, storage: Storage): Promise<string> {
+  const buffer = await fs.readFile(file.filepath);
+  const key = `images/${shortUUID.generate()}.jpg`;
+  await storage.upload(key, buffer);
+  return key;
+}
+
+function constructPerson(person: Person, storage: Storage) {
+  const profile: any = {
+    ...person.profile
+  }
   const object: any = {
     ...person,
-
+    profile: profile
   }
-  const imageKey = object.profile.imageKey ?? "public/no_image.png";
-  object.profile.imageUrl = storage.urlForKey(imageKey);
+
+  const photoKey = profile.photoKey ?? "public/no_image.png";
+  profile.photo = {
+    "type": "network",
+    "key": photoKey,
+    "url": storage.urlForKey(photoKey),
+  };
+  delete profile.photoKey;
+
+  const gallery: { type: "network", "key": string, "url": string }[] = [];
+  for (const key of profile.galleryKeys) {
+    gallery.push({
+      "type": "network",
+      "key": key,
+      "url": storage.urlForKey(key),
+    });
+  }
+  profile.gallery = gallery;
+  delete profile.galleryKey;
   return object;
 }
+
 
 
 function parseForm(req: Request): Promise<{ fields: formidable.Fields; files: formidable.Files }> {
@@ -198,13 +279,28 @@ const createRootSchema = z.object({
   gender: genderSchema,
 });
 
+const photoUpdateSchema = z.object({
+  type: z.enum(["network", "memory"]),
+  key: z.string(),
+})
 
-const updateProfileSchema = z.object({
-  profile: profileSchema,
+const profileUpdateSchema = z.object({
+  firstName: z.string().optional(),
+  lastName: z.string().optional(),
+  gender: genderSchema.optional(),
+  photo: photoUpdateSchema.optional(),
+  gallery: z.array(photoUpdateSchema).optional(),
+  birthday: z.string().nullable().optional(),
+  deathday: z.string().nullable().optional(),
+  birthplace: z.string().optional(),
+  occupation: z.string().optional(),
+  hobbies: z.string().optional(),
 });
 
 type AddConnectionBody = z.infer<typeof addConnectionSchema>;
 
 type CreateRootBody = z.infer<typeof createRootSchema>;
 
-type UpdateProfileBody = z.infer<typeof updateProfileSchema>;
+type GalleryUpdate = z.infer<typeof photoUpdateSchema>;
+
+type ProfileUpdate = z.infer<typeof profileUpdateSchema>;

@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -496,12 +498,10 @@ class _PanelsState extends ConsumerState<Panels> {
       final graphNotifier = ref.read(graphProvider.notifier);
       final updateFuture = graphNotifier.updateProfile(
         id,
-        ProfileUpdate(
-          profile: person.profile.copyWith(
-            firstName: firstName,
-            lastName: lastName,
-            gender: gender,
-          ),
+        person.profile.copyWith(
+          firstName: firstName,
+          lastName: lastName,
+          gender: gender,
         ),
       );
       await showBlockingModal(context, updateFuture);
@@ -1131,7 +1131,7 @@ class ProfileDisplay extends StatelessWidget {
   final bool isEditable;
   final bool hasDifferentOwner;
   final VoidCallback? onViewPerspective;
-  final void Function(ProfileUpdate update) onSave;
+  final void Function(Profile profile) onSave;
 
   const ProfileDisplay({
     super.key,
@@ -1166,7 +1166,7 @@ class _ProfileDisplay extends ConsumerStatefulWidget {
   final bool isEditable;
   final bool hasDifferentOwner;
   final VoidCallback? onViewPerspective;
-  final void Function(ProfileUpdate update) onSave;
+  final void Function(Profile profile) onSave;
 
   const _ProfileDisplay({
     super.key,
@@ -1243,10 +1243,34 @@ class _ProfileDisplayState extends ConsumerState<_ProfileDisplay> {
             onTap: () => _pickPhotoWithSource(context),
             child: ClipRRect(
               borderRadius: const BorderRadius.all(Radius.circular(10)),
-              child: ProfileImage(
-                imageUrl:
-                    ref.watch(profileUpdateProvider.select((p) => p.imageUrl)),
-                image: ref.watch(profileUpdateProvider.select((p) => p.image)),
+              child: Stack(
+                children: [
+                  ProfileImage(
+                    photo:
+                        ref.watch(profileUpdateProvider.select((p) => p.photo)),
+                  ),
+                  Positioned(
+                    right: 0,
+                    top: 8,
+                    child: FilledButton(
+                      onPressed: () {
+                        final notifier =
+                            ref.read(profileUpdateProvider.notifier);
+                        notifier.photo(
+                          const NetworkPhoto(
+                            key: "public/no_image.png",
+                            url:
+                                "https://d2xzkuyodufiic.cloudfront.net/public/no_image.png",
+                          ),
+                        );
+                      },
+                      style: FilledButton.styleFrom(
+                        shape: const CircleBorder(),
+                      ),
+                      child: const Icon(Icons.close),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -1528,7 +1552,8 @@ class _ProfileDisplayState extends ConsumerState<_ProfileDisplay> {
     }
     final cropped = await showCropDialog(context, frame, size);
     if (cropped != null) {
-      ref.read(profileUpdateProvider.notifier).image(cropped);
+      ref.read(profileUpdateProvider.notifier).photo(
+          MemoryPhoto(key: '${Random().nextInt(1000000000)}', bytes: cropped));
     }
   }
 }
@@ -1767,42 +1792,30 @@ class _WaitingForApprovalDisplayState extends State<WaitingForApprovalDisplay> {
 }
 
 class ProfileImage extends StatelessWidget {
-  final String? imageUrl;
-  final Uint8List? image;
+  final Photo photo;
 
   const ProfileImage({
     super.key,
-    required this.imageUrl,
-    required this.image,
+    required this.photo,
   });
 
   @override
   Widget build(BuildContext context) {
-    final image = this.image;
-    final imageUrl = this.imageUrl;
-    if (image != null) {
-      return ImageAspect(
-        child: Image.memory(
-          image,
-          fit: BoxFit.cover,
+    return switch (photo) {
+      MemoryPhoto(:final Uint8List bytes) => ImageAspect(
+          child: Image.memory(
+            bytes,
+            fit: BoxFit.cover,
+          ),
         ),
-      );
-    } else if (imageUrl != null) {
-      return ImageAspect(
-        child: Image.network(
-          imageUrl,
-          fit: BoxFit.cover,
+      NetworkPhoto(:final url) => ImageAspect(
+          child: Image.network(
+            url,
+            fit: BoxFit.cover,
+          ),
         ),
-      );
-    }
-    return const ImageAspect(
-      child: FittedBox(
-        fit: BoxFit.cover,
-        child: Icon(
-          Icons.person,
-        ),
-      ),
-    );
+      _ => const SizedBox.shrink(),
+    };
   }
 }
 
