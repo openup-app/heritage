@@ -1,6 +1,3 @@
-import 'dart:math';
-
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -9,13 +6,12 @@ import 'package:go_router/go_router.dart';
 import 'package:heritage/api.dart';
 import 'package:heritage/date.dart';
 import 'package:heritage/family_tree_page.dart';
-import 'package:heritage/file_picker.dart';
 import 'package:heritage/graph_provider.dart';
 import 'package:heritage/graph_view.dart';
 import 'package:heritage/help.dart';
 import 'package:heritage/heritage_app.dart';
-import 'package:heritage/image_croper.dart';
 import 'package:heritage/layout.dart';
+import 'package:heritage/photo_management.dart';
 import 'package:heritage/profile_display.dart';
 import 'package:heritage/profile_update.dart';
 import 'package:heritage/util.dart';
@@ -1237,11 +1233,9 @@ class _ProfileDisplayState extends ConsumerState<_ProfileDisplay> {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        MouseRegion(
-          cursor: SystemMouseCursors.click,
-          child: GestureDetector(
-            onTap: () => _pickPhotoWithSource(context),
-            child: ClipRRect(
+        Column(
+          children: [
+            ClipRRect(
               borderRadius: const BorderRadius.all(Radius.circular(10)),
               child: Stack(
                 children: [
@@ -1273,7 +1267,18 @@ class _ProfileDisplayState extends ConsumerState<_ProfileDisplay> {
                 ],
               ),
             ),
-          ),
+            if (widget.isEditable) ...[
+              const SizedBox(height: 24),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: PhotoManagement(
+                  gallery:
+                      ref.watch(profileUpdateProvider.select((p) => p.gallery)),
+                  onChanged: ref.read(profileUpdateProvider.notifier).gallery,
+                ),
+              ),
+            ],
+          ],
         ),
         const SizedBox(height: 24),
         if (widget.onViewPerspective != null) ...[
@@ -1534,27 +1539,6 @@ class _ProfileDisplayState extends ConsumerState<_ProfileDisplay> {
         ],
       ],
     );
-  }
-
-  Future<void> _pickPhotoWithSource(BuildContext context) async {
-    await showBlockingModal(context, _pickPhoto(source: PhotoSource.gallery));
-  }
-
-  Future<void> _pickPhoto({required PhotoSource source}) async {
-    final file = await pickPhoto(source: source);
-    final image = await file?.readAsBytes();
-    if (!mounted || image == null) {
-      return;
-    }
-    final (frame, size) = await getFirstFrameAndSize(image);
-    if (!mounted || frame == null) {
-      return;
-    }
-    final cropped = await showCropDialog(context, frame, size);
-    if (cropped != null) {
-      ref.read(profileUpdateProvider.notifier).photo(
-          MemoryPhoto(key: '${Random().nextInt(1000000000)}', bytes: cropped));
-    }
   }
 }
 

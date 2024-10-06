@@ -150,12 +150,12 @@ class Api {
         break;
     }
 
-    for (final (index, photo) in profile.gallery.indexed) {
+    for (final photo in profile.gallery) {
       switch (photo) {
         case NetworkPhoto():
           break;
-        case MemoryPhoto(:final Uint8List bytes):
-          await _addDownscaledPhoto(request, 'gallery', '$index', bytes);
+        case MemoryPhoto(:final key, :final Uint8List bytes):
+          await _addDownscaledPhoto(request, 'gallery', key, bytes);
           break;
       }
     }
