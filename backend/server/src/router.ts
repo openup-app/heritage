@@ -6,6 +6,8 @@ import { z } from "zod";
 import formidable, { IncomingForm } from "formidable";
 import fs from "fs/promises";
 import shortUUID from "short-uuid";
+import { parse } from "path";
+
 
 export function router(auth: Auth, database: Database, storage: Storage): Router {
   const router = Router();
@@ -79,38 +81,30 @@ export function router(auth: Auth, database: Database, storage: Storage): Router
       const { fields, files } = await parseForm(req);
       const normalized = normalizeFields(fields);
       const profileUpdate = profileUpdateSchema.parse(normalized.profile);
-      const photoUpdate = profileUpdate.photo;
-      const galleryUpdates = profileUpdate.gallery;
       const currentProfile = (await database.getPerson(id)).profile;
 
       let updatedPhotoKey: string | null | undefined;
-      if (photoUpdate) {
-        if (photoUpdate.type === "memory") {
-          const photoFiles = files.photo;
-          const photoFile = photoFiles && photoFiles.length !== 0 ? photoFiles[0] : undefined;
-          if (photoFile) {
-            updatedPhotoKey = await uploadImage(photoFile, storage);
-            const currentPhotoKey = currentProfile.photoKey;
-            if (currentPhotoKey) {
-              await storage.delete(currentPhotoKey);
-            }
-          }
-        } else if (photoUpdate.type === "network" && photoUpdate.key === "public/no_image.png") {
-          updatedPhotoKey = null;
+      if (profileUpdate.photo.type === "memory") {
+        const photoFiles = files.photo;
+        const photoFile = photoFiles && photoFiles.length !== 0 ? photoFiles[0] : undefined;
+        if (photoFile) {
+          updatedPhotoKey = await uploadImage(photoFile, storage);
           const currentPhotoKey = currentProfile.photoKey;
           if (currentPhotoKey) {
             await storage.delete(currentPhotoKey);
           }
         }
-      }
-
-      let updatedGalleryKeys: string[] | undefined;
-      if (galleryUpdates) {
-        const galleryFiles = files.gallery;
-        if (Array.isArray(galleryFiles)) {
-          updatedGalleryKeys = await updateGallery(currentProfile.galleryKeys, galleryUpdates, galleryFiles, storage);
+      } else if (profileUpdate.photo.type === "network" && profileUpdate.photo.key === "public/no_image.png") {
+        updatedPhotoKey = null;
+        const currentPhotoKey = currentProfile.photoKey;
+        if (currentPhotoKey) {
+          await storage.delete(currentPhotoKey);
         }
       }
+
+      let updatedGalleryKeys = profileUpdate.gallery.map(e => e.key);
+      const galleryFiles = Array.isArray(files.gallery) ? files.gallery : [];
+      updatedGalleryKeys = await updateGallery(currentProfile.galleryKeys, profileUpdate.gallery, galleryFiles, storage);
 
       const updatedProfile = applyProfileUpdates(currentProfile, profileUpdate, updatedPhotoKey, updatedGalleryKeys);
       const person = await database.updateProfile(id, updatedProfile);
@@ -152,7 +146,7 @@ export function router(auth: Auth, database: Database, storage: Storage): Router
   return router;
 }
 
-function applyProfileUpdates(currentProfile: Profile, profileUpdate: ProfileUpdate, photoKey: string | null | undefined, galleryKeys: string[] | undefined): Profile {
+function applyProfileUpdates(currentProfile: Profile, profileUpdate: ProfileUpdate, photoKey: string | null | undefined, galleryKeys: string[]): Profile {
   return {
     firstName: profileUpdate.firstName ?? currentProfile.firstName,
     lastName: profileUpdate.lastName ?? currentProfile.lastName,
@@ -167,16 +161,16 @@ function applyProfileUpdates(currentProfile: Profile, profileUpdate: ProfileUpda
   }
 }
 
-async function updateGallery(currentKeys: string[], updates: GalleryUpdate[], files: formidable.File[], storage: Storage): Promise<string[]> {
+async function updateGallery(oldKeys: string[], updates: GalleryUpdate[], files: formidable.File[], storage: Storage): Promise<string[]> {
   const updatedKeys: string[] = [];
 
   for (const update of updates) {
     if (update.type === 'network') {
-      if (currentKeys.includes(update.key)) {
+      if (oldKeys.includes(update.key)) {
         updatedKeys.push(update.key);
       }
     } else if (update.type === 'memory') {
-      const matchingFiles = files.filter(f => f.originalFilename === update.key);
+      const matchingFiles = files.filter(f => parse(f.originalFilename ?? "").name === update.key);
       const file = matchingFiles.length === 0 ? undefined : matchingFiles[0];
       if (file) {
         const newKey = await uploadImage(file, storage);
@@ -185,7 +179,7 @@ async function updateGallery(currentKeys: string[], updates: GalleryUpdate[], fi
     }
   }
 
-  for (const oldKey of currentKeys) {
+  for (const oldKey of oldKeys) {
     if (!updatedKeys.includes(oldKey)) {
       await storage.delete(oldKey);
     }
@@ -285,16 +279,16 @@ const photoUpdateSchema = z.object({
 })
 
 const profileUpdateSchema = z.object({
-  firstName: z.string().optional(),
-  lastName: z.string().optional(),
-  gender: genderSchema.optional(),
-  photo: photoUpdateSchema.optional(),
-  gallery: z.array(photoUpdateSchema).optional(),
-  birthday: z.string().nullable().optional(),
-  deathday: z.string().nullable().optional(),
-  birthplace: z.string().optional(),
-  occupation: z.string().optional(),
-  hobbies: z.string().optional(),
+  firstName: z.string(),
+  lastName: z.string(),
+  gender: genderSchema,
+  photo: photoUpdateSchema,
+  gallery: z.array(photoUpdateSchema),
+  birthday: z.string().nullable(),
+  deathday: z.string().nullable(),
+  birthplace: z.string(),
+  occupation: z.string(),
+  hobbies: z.string(),
 });
 
 type AddConnectionBody = z.infer<typeof addConnectionSchema>;
