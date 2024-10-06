@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:heritage/api.dart';
@@ -550,42 +552,6 @@ class _DashedPainter extends CustomPainter {
   }
 }
 
-class MouseEnterBuilder extends StatefulWidget {
-  final VoidCallback onMouseEnter;
-  final VoidCallback onMouseExit;
-  final Widget Function(BuildContext context, bool entered) builder;
-
-  const MouseEnterBuilder({
-    super.key,
-    required this.onMouseEnter,
-    required this.onMouseExit,
-    required this.builder,
-  });
-
-  @override
-  State<MouseEnterBuilder> createState() => _MouseEnterBuilderState();
-}
-
-class _MouseEnterBuilderState extends State<MouseEnterBuilder> {
-  bool _entered = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return MouseRegion(
-      opaque: false,
-      onEnter: (_) {
-        setState(() => _entered = true);
-        widget.onMouseEnter();
-      },
-      onExit: (_) {
-        setState(() => _entered = false);
-        widget.onMouseExit();
-      },
-      child: widget.builder(context, _entered),
-    );
-  }
-}
-
 class Scaler extends StatefulWidget {
   final Duration duration;
   final bool shouldScale;
@@ -742,7 +708,8 @@ class _MouseOverlayState extends State<MouseOverlay> {
   }
 }
 
-/// MouseRegion that handles the edge case where cursor starts inside widget
+/// MouseRegion that handles the edge case where cursor starts inside widget.
+/// Additionally ignores touch events causing mouse enter/exit events.
 class _MouseRegionWithWorkaround extends StatefulWidget {
   final bool enabled;
   final VoidCallback? onEnter;
@@ -770,20 +737,20 @@ class _MouseRegionWithWorkaroundState
   Widget build(BuildContext context) {
     return MouseRegion(
       opaque: false,
-      onEnter: (_) {
-        if (widget.enabled && !_entered) {
+      onEnter: (p) {
+        if (widget.enabled && !_entered && p.kind == PointerDeviceKind.mouse) {
           setState(() => _entered = true);
           widget.onEnter?.call();
         }
       },
-      onHover: (_) {
-        if (widget.enabled && !_entered) {
+      onHover: (p) {
+        if (widget.enabled && !_entered && p.kind == PointerDeviceKind.mouse) {
           setState(() => _entered = true);
           widget.onEnter?.call();
         }
       },
-      onExit: (_) {
-        if (widget.enabled && _entered) {
+      onExit: (p) {
+        if (widget.enabled && _entered && p.kind == PointerDeviceKind.mouse) {
           setState(() => _entered = false);
           widget.onExit?.call();
         }
