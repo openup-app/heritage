@@ -769,9 +769,7 @@ class _DraggableSheetState extends State<_DraggableSheet> {
                                   ),
                                 ),
                                 Text(
-                                  widget.isPrimaryUser
-                                      ? 'I need to add a...'
-                                      : 'Missing a...',
+                                  'Invite a...',
                                   style: Theme.of(context).textTheme.titleLarge,
                                 ),
                                 const SizedBox(height: 4),

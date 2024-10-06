@@ -66,7 +66,7 @@ class HeritageApp extends StatelessWidget {
               builder: (context, router) {
                 return MaterialApp.router(
                   routerConfig: router,
-                  title: 'Family Tree',
+                  title: 'Stitchfam',
                   supportedLocales: const [
                     Locale('en'),
                     Locale('en', 'AU'),
