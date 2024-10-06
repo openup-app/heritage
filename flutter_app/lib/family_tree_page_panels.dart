@@ -402,64 +402,26 @@ class _PanelsState extends ConsumerState<Panels> {
     required Person person,
     required VoidCallback onAddConnectionPressed,
   }) async {
-    final shouldDismiss = await showModalBottomSheet<bool>(
+    final shouldDismiss = await showScrollableModalBottomSheet<bool>(
       context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(10),
-          topRight: Radius.circular(10),
-        ),
-      ),
       builder: (context) {
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Center(
-              child: Padding(
-                padding: EdgeInsets.symmetric(vertical: 8.0),
-                child: _DragHandle(),
-              ),
-            ),
-            SingleChildScrollView(
-              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Column(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 16.0) +
-                        EdgeInsets.only(
-                            bottom: MediaQuery.of(context).viewInsets.bottom),
-                    child: WaitingForApprovalDisplay(
-                      key: _modalKey,
-                      person: person,
-                      onAddConnectionPressed: () {
-                        Navigator.of(context).pop(true);
-                        onAddConnectionPressed();
-                      },
-                      onSaveAndShare: (firstName, lastName, gender) async {
-                        await _onSaveAndShare(
-                            person.id, firstName, lastName, gender);
-                        if (context.mounted) {
-                          Navigator.of(context).pop(true);
-                        }
-                      },
-                      onTakeOwnership: () {
-                        Navigator.of(context).pop();
-                        _takeOwnership();
-                      },
-                    ),
-                  ),
-                  // Container(
-                  //   width: 400,
-                  //   height: MediaQuery.of(context).viewInsets.bottom + 100,
-                  //   color: Colors.blue,
-                  // ),
-                ],
-              ),
-            ),
-          ],
+        return WaitingForApprovalDisplay(
+          key: _modalKey,
+          person: person,
+          onAddConnectionPressed: () {
+            Navigator.of(context).pop(true);
+            onAddConnectionPressed();
+          },
+          onSaveAndShare: (firstName, lastName, gender) async {
+            await _onSaveAndShare(person.id, firstName, lastName, gender);
+            if (context.mounted) {
+              Navigator.of(context).pop(true);
+            }
+          },
+          onTakeOwnership: () {
+            Navigator.of(context).pop();
+            _takeOwnership();
+          },
         );
       },
     );
@@ -469,43 +431,18 @@ class _PanelsState extends ConsumerState<Panels> {
   }
 
   void _showAddConnectionModal(Person person, Relationship relationship) async {
-    final shouldDismiss = await showModalBottomSheet<bool>(
+    final shouldDismiss = await showScrollableModalBottomSheet<bool>(
       context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(10),
-          topRight: Radius.circular(10),
-        ),
-      ),
       builder: (context) {
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Center(
-              child: Padding(
-                padding: EdgeInsets.symmetric(vertical: 8.0),
-                child: _DragHandle(),
-              ),
-            ),
-            SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Padding(
-                padding: const EdgeInsets.only(bottom: 16.0),
-                child: AddConnectionDisplay(
-                  relationship: relationship,
-                  onSave: (firstName, lastName, gender, takeOwnership) async {
-                    await _saveNewConnection(
-                        firstName, lastName, gender, person, relationship);
-                    if (context.mounted) {
-                      Navigator.of(context).pop(true);
-                    }
-                  },
-                ),
-              ),
-            ),
-          ],
+        return AddConnectionDisplay(
+          relationship: relationship,
+          onSave: (firstName, lastName, gender, takeOwnership) async {
+            await _saveNewConnection(
+                firstName, lastName, gender, person, relationship);
+            if (context.mounted) {
+              Navigator.of(context).pop(true);
+            }
+          },
         );
       },
     );
@@ -596,6 +533,37 @@ class _PanelsState extends ConsumerState<Panels> {
       context.goNamed('menu');
     }
   }
+}
+
+Future<T?> showScrollableModalBottomSheet<T>({
+  required BuildContext context,
+  required WidgetBuilder builder,
+}) {
+  return showModalBottomSheet<T>(
+    context: context,
+    useSafeArea: true,
+    isScrollControlled: true,
+    showDragHandle: true,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.only(
+        topLeft: Radius.circular(10),
+        topRight: Radius.circular(10),
+      ),
+    ),
+    builder: (context) {
+      return Padding(
+        padding:
+            EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: 16.0),
+            child: builder(context),
+          ),
+        ),
+      );
+    },
+  );
 }
 
 Widget buildAddConnectionButtons({
@@ -1648,7 +1616,33 @@ class _WaitingForApprovalDisplayState extends State<WaitingForApprovalDisplay> {
           child: TextButton(
             onPressed: (_firstName.isEmpty || _lastName.isEmpty)
                 ? null
-                : widget.onTakeOwnership,
+                : () async {
+                    final takeOwnership = await showDialog(
+                      context: context,
+                      builder: (context) {
+                        return AlertDialog(
+                          title: const Text('Take ownership?'),
+                          content: const Text(
+                              '\nCompleting someone else\'s profile should only be done if they can\'t do it themself.\n\nExample: child or deceased'),
+                          actions: [
+                            TextButton(
+                              onPressed: Navigator.of(context).pop,
+                              style: TextButton.styleFrom(
+                                  foregroundColor: Colors.black),
+                              child: const Text('Cancel'),
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.of(context).pop(true),
+                              child: const Text('Proceed'),
+                            ),
+                          ],
+                        );
+                      },
+                    );
+                    if (takeOwnership == true) {
+                      widget.onTakeOwnership();
+                    }
+                  },
             style: TextButton.styleFrom(
               foregroundColor: const Color.fromRGBO(0xB9, 0xB9, 0xB9, 1.0),
             ),
