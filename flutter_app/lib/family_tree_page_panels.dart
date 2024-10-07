@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:ui';
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -32,6 +33,7 @@ class Panels extends ConsumerStatefulWidget {
   final void Function(Id id) onSelectPerson;
   final VoidCallback onViewPerspective;
   final void Function(Rect rect) onViewRectUpdated;
+  final VoidCallback onRecenter;
 
   const Panels({
     super.key,
@@ -45,6 +47,7 @@ class Panels extends ConsumerStatefulWidget {
     required this.onSelectPerson,
     required this.onViewPerspective,
     required this.onViewRectUpdated,
+    required this.onRecenter,
   });
 
   @override
@@ -91,6 +94,7 @@ class _PanelsState extends ConsumerState<Panels> {
     final isOwnedByPrimaryUser = isPrimaryUser ||
         selectedPerson?.ownedBy == widget.viewHistory.primaryUserId;
     final small = _layout == LayoutType.small;
+    const darkColor = Color.fromRGBO(0x3B, 0x3B, 0x3B, 1.0);
     return Stack(
       children: [
         if (small) ...[
@@ -101,25 +105,79 @@ class _PanelsState extends ConsumerState<Panels> {
               children: [
                 const LogoText(width: 250),
                 if (widget.viewHistory.perspectiveUserId != null)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                    child: Text(
-                      '${widget.focalPerson.profile.firstName}\'s perspective',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.bodyMedium,
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8.0,
+                      vertical: 6.0,
+                    ),
+                    decoration: const BoxDecoration(
+                      borderRadius: BorderRadius.all(
+                        Radius.circular(10),
+                      ),
+                      color: Colors.white,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const ColorFiltered(
+                          colorFilter: ColorFilter.mode(
+                            darkColor,
+                            BlendMode.srcIn,
+                          ),
+                          child: Binoculars(
+                            size: 16,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          '${widget.focalPerson.profile.firstName}\'s Tree',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style:
+                              Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: darkColor,
+                            shadows: const [
+                              Shadow(
+                                color: Color.fromRGBO(0x00, 0x00, 0x00, 0.25),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   ),
               ],
             ),
           ),
           Positioned(
-            left: 16,
+            right: 16,
             bottom: 16,
             child: _MenuButtons(
-              onHomePressed: _goHome,
+              onRecenterPressed: widget.onRecenter,
             ),
           ),
+          if (widget.viewHistory.perspectiveUserId != null)
+            Positioned(
+              left: 16,
+              bottom: 16,
+              child: DecoratedBox(
+                decoration: _bottomButtonDecoration,
+                child: FilledButton(
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size.square(48),
+                    foregroundColor: Colors.black,
+                    backgroundColor: Colors.white,
+                  ),
+                  onPressed: _goHome,
+                  child: const RotatedBox(
+                    quarterTurns: 2,
+                    child: Icon(Icons.logout),
+                  ),
+                ),
+              ),
+            ),
           Positioned.fill(
             child: _DismissWhenNull(
               selectedPerson: selectedPerson,
@@ -165,7 +223,7 @@ class _PanelsState extends ConsumerState<Panels> {
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 8.0),
                       child: Text(
-                        '${widget.focalPerson.profile.firstName}\'s perspective',
+                        '${widget.focalPerson.profile.firstName}\'s tree',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.bodyMedium,
@@ -179,7 +237,7 @@ class _PanelsState extends ConsumerState<Panels> {
             right: 24,
             bottom: 24,
             child: _MenuButtons(
-              onHomePressed: _goHome,
+              onRecenterPressed: widget.onRecenter,
             ),
           ),
           Positioned(
@@ -967,47 +1025,36 @@ class _DragHandle extends StatelessWidget {
 }
 
 class _MenuButtons extends StatelessWidget {
-  final VoidCallback onHomePressed;
+  final VoidCallback onRecenterPressed;
 
   const _MenuButtons({
     super.key,
-    required this.onHomePressed,
+    required this.onRecenterPressed,
   });
 
   @override
   Widget build(BuildContext context) {
-    const decoration = BoxDecoration(
-      borderRadius: BorderRadius.all(
-        Radius.circular(13),
-      ),
-      boxShadow: [
-        BoxShadow(
-          offset: Offset(0, 1),
-          blurRadius: 10,
-          color: Color.fromRGBO(0x00, 0x00, 0x00, 0.2),
-        ),
-      ],
-    );
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         DecoratedBox(
-          decoration: decoration,
+          decoration: _bottomButtonDecoration,
           child: FilledButton(
-            onPressed: onHomePressed,
+            onPressed: onRecenterPressed,
             style: FilledButton.styleFrom(
               minimumSize: const Size.square(48),
               foregroundColor: Colors.black,
               backgroundColor: Colors.white,
             ),
             child: const Icon(
-              Icons.home_filled,
+              CupertinoIcons.location_fill,
+              size: 20,
             ),
           ),
         ),
         const SizedBox(width: 16),
         DecoratedBox(
-          decoration: decoration,
+          decoration: _bottomButtonDecoration,
           child: FilledButton(
             onPressed: () => showHelpDialog(context: context),
             style: FilledButton.styleFrom(
@@ -1024,6 +1071,19 @@ class _MenuButtons extends StatelessWidget {
     );
   }
 }
+
+BoxDecoration get _bottomButtonDecoration => const BoxDecoration(
+      borderRadius: BorderRadius.all(
+        Radius.circular(13),
+      ),
+      boxShadow: [
+        BoxShadow(
+          offset: Offset(0, 1),
+          blurRadius: 10,
+          color: Color.fromRGBO(0x00, 0x00, 0x00, 0.2),
+        ),
+      ],
+    );
 
 class AnimatedSlideIn extends StatefulWidget {
   final Duration duration;

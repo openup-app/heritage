@@ -144,6 +144,8 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
             );
           },
           onViewRectUpdated: (rect) => _viewRectNotifier.value = rect,
+          onRecenter: () => _familyTreeViewKey.currentState
+              ?.centerOnPersonWithId(graph.focalPerson.id),
         ),
       ],
     );
@@ -268,6 +270,9 @@ class FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
             children: [
               _TiledBackground(
                 transformNotifier: _transformNotifier,
+                tint: widget.viewHistory.perspectiveUserId != null
+                    ? const Color.fromRGBO(0xFF, 0x00, 0x00, 0.05)
+                    : null,
                 child: ZoomablePannableViewport(
                   key: _viewportKey,
                   onTransformed: (transform) =>
@@ -469,11 +474,13 @@ class HoverableNodeProfile extends StatelessWidget {
 
 class _TiledBackground extends StatefulWidget {
   final ValueNotifier<Matrix4> transformNotifier;
+  final Color? tint;
   final Widget child;
 
   const _TiledBackground({
     super.key,
     required this.transformNotifier,
+    required this.tint,
     required this.child,
   });
 
@@ -508,6 +515,7 @@ class _TiledBackgroundState extends State<_TiledBackground> {
         return CustomPaint(
           painter: _TilePainter(
             tile: image,
+            tint: widget.tint,
             transform: widget.transformNotifier.value,
           ),
           isComplex: true,
@@ -532,10 +540,12 @@ class _TiledBackgroundState extends State<_TiledBackground> {
 
 class _TilePainter extends CustomPainter {
   final ui.Image tile;
+  final Color? tint;
   final Matrix4 transform;
 
   _TilePainter({
     required this.tile,
+    required this.tint,
     required this.transform,
   });
 
@@ -558,14 +568,23 @@ class _TilePainter extends CustomPainter {
         final offset =
             Offset(x * tile.width.toDouble(), y * tile.height.toDouble());
         canvas.drawImage(
-            tile, offset, Paint()..filterQuality = ui.FilterQuality.high);
+          tile,
+          offset,
+          Paint()
+            ..filterQuality = ui.FilterQuality.high
+            ..colorFilter = tint == null
+                ? null
+                : ColorFilter.mode(tint!, BlendMode.srcOver),
+        );
       }
     }
   }
 
   @override
   bool shouldRepaint(covariant _TilePainter oldDelegate) =>
-      !tile.isCloneOf(oldDelegate.tile) || transform != oldDelegate.transform;
+      !tile.isCloneOf(oldDelegate.tile) ||
+      transform != oldDelegate.transform ||
+      oldDelegate.tint != tint;
 }
 
 class AddConnectionDisplay extends ConsumerStatefulWidget {

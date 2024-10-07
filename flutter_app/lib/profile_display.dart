@@ -455,7 +455,7 @@ class NodeProfile extends StatelessWidget {
                                   Icons.camera_alt,
                                   color: Colors.white,
                                 ),
-                              BadgeType.viewPerspective => const _Binoculars(),
+                              BadgeType.viewPerspective => const Binoculars(),
                               BadgeType.none => const SizedBox.shrink(),
                             },
                           ),
@@ -792,14 +792,19 @@ class _MouseRegionWithWorkaroundState
   }
 }
 
-class _Binoculars extends StatelessWidget {
-  const _Binoculars({super.key});
+class Binoculars extends StatelessWidget {
+  final double size;
+
+  const Binoculars({
+    super.key,
+    this.size = 24,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Image.asset(
       'assets/images/binoculars.png',
-      width: 24,
+      width: size,
       fit: BoxFit.cover,
     );
   }
