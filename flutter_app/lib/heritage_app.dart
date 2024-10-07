@@ -301,6 +301,7 @@ class _CacheAssetsState extends State<_CacheAssets> {
       const assets = [
         'assets/images/binoculars.png',
         'assets/images/logo_text.png',
+        'assets/images/perspective_portal.png',
         'assets/images/tagline.png',
         'assets/images/tree_background.png',
       ];

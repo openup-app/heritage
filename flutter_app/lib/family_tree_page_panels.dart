@@ -207,7 +207,39 @@ class _PanelsState extends ConsumerState<Panels> {
                 );
               },
             ),
-          )
+          ),
+          Positioned(
+            left: 16,
+            bottom: 236,
+            width: 48,
+            height: 48,
+            child: AnimatedOpacity(
+              duration: const Duration(milliseconds: 150),
+              opacity: selectedPerson != null &&
+                      relatedness != null &&
+                      canViewPerspective(
+                        id: selectedPerson.id,
+                        primaryUserId: widget.viewHistory.primaryUserId,
+                        focalPersonId: widget.focalPerson.id,
+                        isSibling: relatedness.isSibling,
+                        isOwned: selectedPerson.ownedBy != null,
+                      )
+                  ? 1.0
+                  : 0.0,
+              child: FilledButton(
+                onPressed: widget.onViewPerspective,
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size.square(48),
+                  backgroundColor: Colors.transparent,
+                ),
+                child: Image.asset(
+                  'assets/images/perspective_portal.png',
+                  fit: BoxFit.cover,
+                ),
+                // child: FlutterLogo(),
+              ),
+            ),
+          ),
         ] else ...[
           Positioned(
             top: MediaQuery.of(context).padding.top,

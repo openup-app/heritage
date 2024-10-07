@@ -57,6 +57,7 @@ flutter:
     - assets/images/connection_spouse.svg
     - assets/images/logo_text.png
     - assets/images/logo.json
+    - assets/images/perspective_portal.png
     - assets/images/tagline.png
     - assets/images/tree_background.png
 
