@@ -140,7 +140,7 @@ export class Database {
   }
 
   public async getLimitedGraph(id: Id): Promise<Person[]> {
-    return this.fetchUpToDistance(id, { maxDistance: 3, traverseSilbingsChildrenAfterRelativeLevel: -2 });
+    return this.fetchUpToDistance(id, { maxDistance: 6, traverseSilbingsChildrenAfterRelativeLevel: -2 });
   }
 
   public async getPerson(id: Id): Promise<Person> {
