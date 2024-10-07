@@ -100,14 +100,10 @@ class ZoomablePannableViewportState extends State<ZoomablePannableViewport>
     final viewport = viewRect ?? Offset.zero & MediaQuery.of(context).size;
     final localOffset = targetRect.shift(-childRect.topLeft);
 
-    final currentScale = _transformationController.value.getMaxScaleOnAxis();
-    const minScale = 0.3;
     const maxScale = 0.6;
-    final shouldChangeScale =
-        currentScale < minScale || currentScale > maxScale;
     _targetMatrix = Matrix4.identity()
       ..translate(viewport.center.dx, viewport.center.dy)
-      ..scale(shouldChangeScale ? maxScale : currentScale)
+      ..scale(maxScale)
       ..translate(
         localOffset.left - targetRect.width / 2,
         localOffset.top - targetRect.height / 2,
