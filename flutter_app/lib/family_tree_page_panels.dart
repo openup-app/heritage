@@ -262,6 +262,12 @@ class _PanelsState extends ConsumerState<Panels> {
                           }
                         },
                         onTakeOwnership: _takeOwnership,
+                        onDeletePressed: !canDeletePerson(person)
+                            ? null
+                            : () {
+                                widget.onDismissPanelPopup();
+                                _onDelete(person);
+                              },
                       ),
                     ),
                 },
@@ -373,27 +379,29 @@ class _PanelsState extends ConsumerState<Panels> {
             WidgetsBinding.instance.endOfFrame.then((_) {
               if (mounted) {
                 _showOwnershipModal(
-                  person: person,
-                  onAddConnectionPressed: () {
-                    showModalBottomSheet(
-                      context: context,
-                      builder: (context) {
-                        return Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: buildAddConnectionButtons(
-                            person: person,
-                            relatedness: relatedness,
-                            paddingWidth: 16,
-                            onAddConnectionPressed: (relationship) {
-                              Navigator.of(context).pop();
-                              widget.onAddConnectionPressed(relationship);
-                            },
-                          ),
-                        );
-                      },
-                    );
-                  },
-                );
+                    person: person,
+                    onAddConnectionPressed: () {
+                      showModalBottomSheet(
+                        context: context,
+                        builder: (context) {
+                          return Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: buildAddConnectionButtons(
+                              person: person,
+                              relatedness: relatedness,
+                              paddingWidth: 16,
+                              onAddConnectionPressed: (relationship) {
+                                Navigator.of(context).pop();
+                                widget.onAddConnectionPressed(relationship);
+                              },
+                            ),
+                          );
+                        },
+                      );
+                    },
+                    onDeletePressed: !canDeletePerson(person)
+                        ? null
+                        : () => _onDelete(person));
               }
             });
         }
@@ -411,6 +419,7 @@ class _PanelsState extends ConsumerState<Panels> {
   void _showOwnershipModal({
     required Person person,
     required VoidCallback onAddConnectionPressed,
+    required VoidCallback? onDeletePressed,
   }) async {
     final shouldDismiss = await showScrollableModalBottomSheet<bool>(
       context: context,
@@ -432,6 +441,12 @@ class _PanelsState extends ConsumerState<Panels> {
             Navigator.of(context).pop();
             _takeOwnership();
           },
+          onDeletePressed: onDeletePressed == null
+              ? null
+              : () {
+                  Navigator.of(context).pop();
+                  onDeletePressed();
+                },
         );
       },
     );
@@ -529,6 +544,12 @@ class _PanelsState extends ConsumerState<Panels> {
         widget.onSelectPerson(selectedPerson.id);
       }
     }
+  }
+
+  void _onDelete(Person person) {
+    final notifier = ref.read(graphProvider.notifier);
+    final deleteFuture = notifier.deletePerson(person.id);
+    showBlockingModal(context, deleteFuture);
   }
 
   void _goHome() {
@@ -1620,6 +1641,7 @@ class WaitingForApprovalDisplay extends StatefulWidget {
   final void Function(String firstName, String lastName, Gender gender)
       onSaveAndShare;
   final VoidCallback onTakeOwnership;
+  final VoidCallback? onDeletePressed;
 
   const WaitingForApprovalDisplay({
     super.key,
@@ -1627,6 +1649,7 @@ class WaitingForApprovalDisplay extends StatefulWidget {
     required this.onAddConnectionPressed,
     required this.onSaveAndShare,
     required this.onTakeOwnership,
+    required this.onDeletePressed,
   });
 
   @override
@@ -1728,7 +1751,9 @@ class _WaitingForApprovalDisplayState extends State<WaitingForApprovalDisplay> {
         if (widget.onAddConnectionPressed == null)
           Center(
             child: TextButton(
-              onPressed: () {},
+              onPressed: widget.onDeletePressed == null
+                  ? null
+                  : () => _onDeletePressed(),
               style: TextButton.styleFrom(
                 foregroundColor: const Color.fromRGBO(0xFF, 0x00, 0x00, 1.0),
               ),
@@ -1739,7 +1764,9 @@ class _WaitingForApprovalDisplayState extends State<WaitingForApprovalDisplay> {
           Row(
             children: [
               TextButton(
-                onPressed: () {},
+                onPressed: widget.onDeletePressed == null
+                    ? null
+                    : () => _onDeletePressed(),
                 style: TextButton.styleFrom(
                   foregroundColor: const Color.fromRGBO(0xFF, 0x00, 0x00, 1.0),
                 ),
@@ -1754,6 +1781,36 @@ class _WaitingForApprovalDisplayState extends State<WaitingForApprovalDisplay> {
           ),
       ],
     );
+  }
+
+  void _onDeletePressed() async {
+    final delete = await showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Delete profile?'),
+          actions: [
+            TextButton(
+              onPressed: Navigator.of(context).pop,
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.black,
+              ),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.red,
+              ),
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
+    if (mounted && delete == true) {
+      widget.onDeletePressed?.call();
+    }
   }
 }
 

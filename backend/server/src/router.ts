@@ -117,6 +117,26 @@ export function router(auth: Auth, database: Database, storage: Storage): Router
     }
   });
 
+  router.delete('/people/:id', async (req: Request, res: Response) => {
+    const id = req.params.id;
+    try {
+      const tempPerson = await database.getPerson(id);
+      const updatedPeople = await database.deletePerson(id);
+      const imageKeysToDelete = [tempPerson.profile.photoKey, ...tempPerson.profile.galleryKeys];
+      for (const key of imageKeysToDelete) {
+        if (key) {
+          await storage.delete(key);
+        }
+      }
+      return res.json({
+        'people': updatedPeople.map(p => constructPerson(p, storage)),
+      })
+    } catch (e) {
+      console.log(e);
+      return res.sendStatus(500);
+    }
+  });
+
   router.put('/people/:id/take_ownership', async (req: Request, res: Response) => {
     const id = req.params.id;
 

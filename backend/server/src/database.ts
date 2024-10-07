@@ -2,6 +2,7 @@ import { getFirestore, Firestore, DocumentReference, Transaction } from "firebas
 import shortUUID from "short-uuid";
 import { z } from "zod";
 import logger from "./log.js";
+import { storage } from "firebase-admin";
 
 export class Database {
   private firestore: Firestore;
@@ -178,6 +179,50 @@ export class Database {
     return people;
   }
 
+  public async deletePerson(id: Id): Promise<Person[]> {
+    return this.firestore.runTransaction(async (t: Transaction) => {
+      const personSnapshot = await t.get(this.personRef(id));
+      const person = personSchema.parse(personSnapshot.data());
+      if (person.ownedBy) {
+        throw "Unable to delete an owned person";
+      }
+
+      if (person.children.length > 0) {
+        throw "Unable to delete a person with children";
+      }
+
+      const hasParents = person.parents.length > 0;
+      const hasSpouses = person.spouses.length > 0;
+      if (hasParents && hasSpouses) {
+        throw "Unable to delete person with more than one link";
+      }
+
+      const updatedPeople: Person[] = []
+      if (hasParents) {
+        const parentRefs = person.parents.map(id => this.personRef(id));
+        const parentSnapshots = await t.getAll(...parentRefs);
+        const parents = parentSnapshots.map(s => personSchema.parse(s.data()));
+        for (const parent of parents) {
+          arrayRemove(parent.children, id);
+          updatedPeople.push(parent);
+        }
+      } else if (hasSpouses) {
+        const spouseRefs = person.spouses.map(id => this.personRef(id));
+        const spouseSnapshots = await t.getAll(...spouseRefs);
+        const spouses = spouseSnapshots.map(s => personSchema.parse(s.data()));
+        for (const spouse of spouses) {
+          arrayRemove(spouse.spouses, id);
+          updatedPeople.push(spouse);
+        }
+      }
+      for (const person of updatedPeople) {
+        t.update(this.personRef(person.id), person);
+      }
+      t.delete(this.personRef(id));
+      return updatedPeople;
+    });
+  }
+
   public async fetchUpToDistance(id: Id, options: { maxDistance: number, traverseSilbingsChildrenAfterRelativeLevel: number }): Promise<Person[]> {
     const visited = new Set<Id>();
     const spouses = new Set<Id>();
@@ -289,7 +334,7 @@ export class Database {
         "firstName": "Unknown",
         "lastName": "",
         "gender": gender,
-        "photoKey": "",
+        "photoKey": null,
         "galleryKeys": [],
         "birthday": null,
         "deathday": null,
@@ -303,6 +348,15 @@ export class Database {
   private personRef(id: Id): DocumentReference {
     return this.firestore.collection("people").doc(id);
   }
+}
+
+function arrayRemove<T>(array: T[], key: T): boolean {
+  const index = array.indexOf(key, 0);
+  if (index < 0) {
+    return false;
+  }
+  array.splice(index, 1);
+  return true;
 }
 
 const idSchema = z.string();

@@ -184,7 +184,21 @@ class Api {
     }
   }
 
-  Future<Either<Error, Person>> takeOwnership(String id) {
+  Future<Either<Error, List<Person>>> deletePerson(Id id) {
+    return _makeRequest(
+      request: () => http.delete(
+        Uri.parse('$_baseUrl/v1/people/$id'),
+        headers: _headers,
+      ),
+      handleResponse: (response) {
+        final json = jsonDecode(response.body);
+        final people = json['people'] as List;
+        return right(people.map((e) => Person.fromJson(e)).toList());
+      },
+    );
+  }
+
+  Future<Either<Error, Person>> takeOwnership(Id id) {
     return _makeRequest(
       request: () => http.put(
         Uri.parse('$_baseUrl/v1/people/$id/take_ownership'),

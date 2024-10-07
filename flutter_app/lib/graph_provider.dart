@@ -85,7 +85,7 @@ class GraphNotifier extends StateNotifier<Graph> {
     });
   }
 
-  Future<void> updateProfile(String id, Profile profile) async {
+  Future<void> updateProfile(Id id, Profile profile) async {
     final result = await api.updateProfile(id, profile);
     if (!mounted) {
       return;
@@ -93,6 +93,17 @@ class GraphNotifier extends StateNotifier<Graph> {
     return result.fold(
       debugPrint,
       (r) => _updatePeople([r]),
+    );
+  }
+
+  Future<void> deletePerson(Id id) async {
+    final result = await api.deletePerson(id);
+    if (!mounted) {
+      return;
+    }
+    return result.fold(
+      debugPrint,
+      (r) => _updatePeople(r, deletedId: id),
     );
   }
 
@@ -107,11 +118,14 @@ class GraphNotifier extends StateNotifier<Graph> {
     );
   }
 
-  void _updatePeople(List<Person> updates) {
+  void _updatePeople(List<Person> updates, {Id? deletedId}) {
     final people =
         Map.fromEntries(state.people.values.map((e) => MapEntry(e.id, e)));
     // Overwrite previous people with any updates
     people.addEntries(updates.map((e) => MapEntry(e.id, e)));
+    if (deletedId != null) {
+      people.removeWhere((key, value) => key == deletedId);
+    }
     final focalPerson = people[_focalPersonId];
     if (focalPerson == null) {
       throw 'Missing focal person after update';

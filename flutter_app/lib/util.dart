@@ -177,6 +177,19 @@ bool canViewPerspective({
 }) =>
     id != primaryUserId && id != focalPersonId && !isSibling && isOwned;
 
+bool canDeletePerson(Person person) {
+  if (person.ownedBy != null) {
+    return false;
+  }
+  if (person.children.isNotEmpty) {
+    return false;
+  }
+
+  final hasParents = person.parents.isNotEmpty;
+  final hasSpouses = person.spouses.isNotEmpty;
+  return !(hasParents && hasSpouses);
+}
+
 class _AnimatedSuccessPopup extends StatefulWidget {
   final VoidCallback onDone;
 

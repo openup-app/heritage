@@ -586,10 +586,10 @@ class _BasicProfileDisplayState extends ConsumerState<AddConnectionDisplay> {
   String _firstName = '';
   String _lastName = '';
   Gender _gender = Gender.male;
-  final _shareButtonKey = GlobalKey();
 
   @override
   Widget build(BuildContext context) {
+    final canSubmit = _firstName.isNotEmpty && _lastName.isNotEmpty;
     return Column(
       mainAxisSize: MainAxisSize.min,
       mainAxisAlignment: MainAxisAlignment.center,
@@ -626,14 +626,12 @@ class _BasicProfileDisplayState extends ConsumerState<AddConnectionDisplay> {
         const SizedBox(height: 8),
         ShareLinkButton(
           firstName: _firstName,
-          onPressed: () => _done(takeOwnership: false),
+          onPressed: !canSubmit ? null : () => _done(takeOwnership: false),
         ),
         const SizedBox(height: 16),
         Center(
           child: TextButton(
-            onPressed: (_firstName.isEmpty || _lastName.isEmpty)
-                ? null
-                : () => _done(takeOwnership: true),
+            onPressed: !canSubmit ? null : () => _done(takeOwnership: true),
             style: TextButton.styleFrom(
               foregroundColor: const Color.fromRGBO(0xB9, 0xB9, 0xB9, 1.0),
             ),
