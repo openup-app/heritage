@@ -178,36 +178,6 @@ class _PanelsState extends ConsumerState<Panels> {
                 ),
               ),
             ),
-          Positioned.fill(
-            child: _DismissWhenNull(
-              selectedPerson: selectedPerson,
-              relatedness: relatedness,
-              builder: (context, selectedPerson, relatedness) {
-                return _DraggableSheet(
-                  selectedPerson: selectedPerson,
-                  relatedness: relatedness,
-                  isFocalUser: selectedPerson.id == widget.focalPerson.id,
-                  isPrimaryUser: isPrimaryUser,
-                  isOwnedByMe: isOwnedByPrimaryUser,
-                  onAddConnectionPressed: widget.onAddConnectionPressed,
-                  onDismissPanelPopup: widget.onDismissPanelPopup,
-                  onViewPerspective: canViewPerspective(
-                    id: selectedPerson.id,
-                    primaryUserId: widget.viewHistory.primaryUserId,
-                    focalPersonId: widget.focalPerson.id,
-                    isSibling: relatedness.isSibling,
-                    isOwned: selectedPerson.ownedBy != null,
-                  )
-                      ? widget.onViewPerspective
-                      : null,
-                  onShareLoginLink: !relatedness.isDirectRelativeOrSpouse
-                      ? null
-                      : () => _onShareLoginLink(selectedPerson),
-                  onClearProfile: () => _onClearProfile(selectedPerson.id),
-                );
-              },
-            ),
-          ),
           Positioned(
             left: 16,
             bottom: 236,
@@ -238,6 +208,36 @@ class _PanelsState extends ConsumerState<Panels> {
                 ),
                 // child: FlutterLogo(),
               ),
+            ),
+          ),
+          Positioned.fill(
+            child: _DismissWhenNull(
+              selectedPerson: selectedPerson,
+              relatedness: relatedness,
+              builder: (context, selectedPerson, relatedness) {
+                return _DraggableSheet(
+                  selectedPerson: selectedPerson,
+                  relatedness: relatedness,
+                  isFocalUser: selectedPerson.id == widget.focalPerson.id,
+                  isPrimaryUser: isPrimaryUser,
+                  isOwnedByMe: isOwnedByPrimaryUser,
+                  onAddConnectionPressed: widget.onAddConnectionPressed,
+                  onDismissPanelPopup: widget.onDismissPanelPopup,
+                  onViewPerspective: canViewPerspective(
+                    id: selectedPerson.id,
+                    primaryUserId: widget.viewHistory.primaryUserId,
+                    focalPersonId: widget.focalPerson.id,
+                    isSibling: relatedness.isSibling,
+                    isOwned: selectedPerson.ownedBy != null,
+                  )
+                      ? widget.onViewPerspective
+                      : null,
+                  onShareLoginLink: !relatedness.isDirectRelativeOrSpouse
+                      ? null
+                      : () => _onShareLoginLink(selectedPerson),
+                  onClearProfile: () => _onClearProfile(selectedPerson.id),
+                );
+              },
             ),
           ),
         ] else ...[
