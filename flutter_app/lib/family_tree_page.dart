@@ -115,9 +115,11 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
             }
           },
           onSelectPerson: (id) {
+            final focalNode = _familyTreeViewKey.currentState
+                ?.linkedNodeForId(graph.focalPerson.id);
             final linkedNode =
                 _familyTreeViewKey.currentState?.linkedNodeForId(id);
-            if (linkedNode != null) {
+            if (focalNode != null && linkedNode != null) {
               final person = linkedNode.data;
               final relatedness = Relatedness(
                 isBloodRelative: linkedNode.isBloodRelative,
@@ -125,6 +127,7 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
                 isAncestor: linkedNode.isAncestor,
                 isSibling: linkedNode.isSibling,
                 relativeLevel: linkedNode.relativeLevel,
+                description: relatednessDescription(focalNode, linkedNode),
               );
               _onProfileSelected(person, relatedness);
             }

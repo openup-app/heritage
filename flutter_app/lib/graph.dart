@@ -25,6 +25,7 @@ class LinkedNode<T extends GraphNode> {
   bool isAncestor;
   bool isSibling;
   int relativeLevel;
+  LinkedNode<T>? ancestorOnLevel;
   bool shouldBeRightChild;
 
   LinkedNode({
@@ -38,6 +39,7 @@ class LinkedNode<T extends GraphNode> {
     this.isAncestor = false,
     this.isSibling = false,
     this.relativeLevel = 0,
+    this.ancestorOnLevel,
     this.shouldBeRightChild = true,
   });
 
@@ -144,9 +146,35 @@ void markLevelsAndAncestors<T extends GraphNode>(LinkedNode<T> focalNode) {
     visited.add(node.id);
 
     final parentIsAncestor = node.id == focalNode.id ? true : isAncestor;
-    fringe.addAll(
-        node.parents.map((e) => (e, relativeLevel - 1, parentIsAncestor)));
-    fringe.addAll(node.children.map((e) => (e, relativeLevel + 1, false)));
+    for (final parent in node.parents) {
+      fringe.add((parent, relativeLevel - 1, parentIsAncestor));
+    }
+    for (final spouse in node.spouses) {
+      fringe.add((spouse, relativeLevel, false));
+    }
+    for (final child in node.children) {
+      fringe.add((child, relativeLevel + 1, false));
+    }
+  }
+}
+
+void markClosetAncestors<T extends GraphNode>(LinkedNode<T> focalNode) {
+  final fringe = Queue<LinkedNode<T>>();
+  final grandparents = focalNode.parents.map((e) => e.parents).expand((e) => e);
+  for (final node in grandparents) {
+    fringe.add(node);
+  }
+  while (fringe.isNotEmpty) {
+    final node = fringe.removeFirst();
+    final ancestorChild = node.children.firstWhere((e) => e.isAncestor);
+    for (final child in node.children) {
+      child.ancestorOnLevel = ancestorChild;
+      child.spouse?.ancestorOnLevel = ancestorChild;
+    }
+    fringe.addAll(node.parents);
+    if (node.parents.isEmpty) {
+      node.ancestorOnLevel = node;
+    }
   }
 }
 
@@ -172,7 +200,6 @@ void markRelatives<T extends GraphNode>(LinkedNode<T> focalNode) {
         }
       }
     }
-    ;
     fringe.addAll(node.children);
   }
 }

@@ -511,7 +511,6 @@ class _PanelsState extends ConsumerState<Panels> {
           key: _modalKey,
           person: person,
           onAddConnectionPressed: () {
-            // Navigator.of(context).pop(true);
             onAddConnectionPressed();
           },
           onSaveAndShare: (firstName, lastName, gender) async {
@@ -1267,7 +1266,7 @@ class ProfileNameSection extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          'Tarlok\'s Sister\'s Husband',
+                          relatedness.description,
                           style: Theme.of(context)
                               .textTheme
                               .titleMedium
@@ -1481,7 +1480,7 @@ class _ProfileDisplayState extends ConsumerState<_ProfileDisplay> {
         if (widget.isEditable) ...[
           const SizedBox(height: 4),
           Text(
-            'Add some informatino about yourself so your family can see',
+            'Add some information about yourself so your family can see',
             style: Theme.of(context).textTheme.labelLarge,
           ),
           const SizedBox(height: 8),

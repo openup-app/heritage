@@ -1,11 +1,13 @@
 import 'dart:async';
 import 'dart:math';
 
+import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:heritage/api.dart';
 import 'package:heritage/file_picker.dart';
+import 'package:heritage/graph.dart';
 import 'package:heritage/image_croper.dart';
 import 'package:heritage/share.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -188,6 +190,162 @@ bool canDeletePerson(Person person) {
   final hasParents = person.parents.isNotEmpty;
   final hasSpouses = person.spouses.isNotEmpty;
   return !(hasParents && hasSpouses);
+}
+
+String _genderedParent(Gender? gender) => gender == null
+    ? 'Parent'
+    : gender == Gender.male
+        ? 'Father'
+        : 'Mother';
+
+String _genderedSibling(Gender? gender) => gender == null
+    ? 'Sibling'
+    : gender == Gender.male
+        ? 'Brother'
+        : 'Sister';
+
+String _genderedChild(Gender? gender) => gender == null
+    ? 'Child'
+    : gender == Gender.male
+        ? 'Son'
+        : 'Daughter';
+
+String _genderedParentSibling(Gender? gender) => gender == null
+    ? 'Sibling'
+    : gender == Gender.male
+        ? 'Uncle'
+        : 'Aunt';
+
+String _genderedGrandparent(Gender? gender) => gender == null
+    ? 'Grandparent'
+    : gender == Gender.male
+        ? 'Grandfather'
+        : 'Grandmother';
+
+String _genderedGrandchild(Gender? gender) => gender == null
+    ? 'Grandchild'
+    : gender == Gender.male
+        ? 'Grandson'
+        : 'Granddaughter';
+
+String relatednessDescription(
+    LinkedNode<Person> focal, LinkedNode<Person> target) {
+  if (focal.id == target.id) {
+    return focal.data.profile.firstName;
+  } else if (target.id == focal.spouse?.id) {
+    return '${focal.data.profile.firstName}\'s Partner';
+  }
+
+  final isSibling = target.isSibling;
+  final relativeLevel = target.relativeLevel;
+  final isBloodRelative = target.isBloodRelative;
+  final isAncestor = target.isAncestor;
+
+  final targetGenderedRelationship =
+      _genderedSibling(target.data.profile.gender);
+
+  if (isSibling) {
+    return '${focal.data.profile.firstName}\'s $targetGenderedRelationship';
+  } else if (relativeLevel == 0) {
+    if (isBloodRelative) {
+      return '${focal.data.profile.firstName}\'s Cousin';
+    } else {
+      return '${target.spouses.firstOrNull?.data.profile.firstName}\'s Partner';
+    }
+  }
+
+  if (relativeLevel <= 0) {
+    final rootName = focal.data.profile.firstName;
+    if (relativeLevel == -1) {
+      if (isAncestor) {
+        return '$rootName\'s ${_genderedParent(target.data.profile.gender)}';
+      } else {
+        if (isBloodRelative) {
+          return '$rootName\'s ${_genderedParentSibling(target.data.profile.gender)}';
+        } else {
+          return '$rootName\'s ${_genderedParentSibling(target.data.profile.gender)}\'s Partner';
+        }
+      }
+    } else if (relativeLevel == -2) {
+      final ancestorAtLevel = target.ancestorOnLevel;
+      final lineageString =
+          '$rootName\'s ${_genderedGrandparent(ancestorAtLevel?.data.profile.gender)}';
+      if (isAncestor) {
+        return lineageString;
+      } else {
+        if (isBloodRelative) {
+          return '$lineageString\'s ${_genderedSibling(target.data.profile.gender)}';
+        } else {
+          final spouse = target.spouse;
+          return '$lineageString\'s ${_genderedSibling(spouse?.data.profile.gender)}\'s Partner';
+        }
+      }
+    } else {
+      final greatCount = relativeLevel.abs() - 2;
+      final greatString = List.generate(greatCount, (_) => 'Great').join(' ');
+      final ancestorAtLevel = target.ancestorOnLevel;
+      final lineageString =
+          '$rootName\'s $greatString ${_genderedGrandparent(ancestorAtLevel?.data.profile.gender)}';
+      if (isAncestor) {
+        return lineageString;
+      } else {
+        if (isBloodRelative) {
+          return '$lineageString\'s ${_genderedSibling(target.data.profile.gender)}';
+        } else {
+          final spouse = target.spouse;
+          return '$lineageString\'s ${_genderedSibling(spouse?.data.profile.gender)}\'s Partner';
+        }
+      }
+    }
+  } else {
+    var rootNode = target;
+    if (!target.isBloodRelative) {
+      final spouse = target.spouses.firstWhereOrNull((e) => e.isBloodRelative);
+      if (spouse == null) {
+        return 'Unknown';
+      }
+      rootNode = spouse;
+    }
+    while (rootNode.relativeLevel > 0) {
+      final parent = rootNode.parents.firstOrNull;
+      if (parent == null) {
+        return 'Unknown';
+      }
+      rootNode = parent;
+    }
+
+    // Prefer root node being focal node
+    if (rootNode.spouse?.id == focal.id) {
+      rootNode = focal;
+    }
+
+    final rootName = rootNode.data.profile.firstName;
+    if (target.relativeLevel == 1) {
+      if (isBloodRelative) {
+        return '$rootName\'s ${_genderedChild(target.data.profile.gender)}';
+      } else {
+        final spouse = target.spouse;
+        return '$rootName\'s ${_genderedChild(spouse?.data.profile.gender)}\'s Partner';
+      }
+    } else if (target.relativeLevel == 2) {
+      if (isBloodRelative) {
+        return '$rootName\'s ${_genderedGrandchild(target.data.profile.gender)}';
+      } else {
+        final spouse = target.spouse;
+        return '$rootName\'s ${_genderedGrandchild(spouse?.data.profile.gender)}\'s Partner';
+      }
+    } else {
+      final greatCount = relativeLevel - 2;
+      final greatString = List.generate(greatCount, (_) => 'Great').join(' ');
+      final lineageString = '$rootName\'s $greatString';
+      if (isBloodRelative) {
+        return '$lineageString ${_genderedGrandchild(target.data.profile.gender)}';
+      } else {
+        final spouse = target.spouse;
+        return '$lineageString\'s ${_genderedGrandchild(spouse?.data.profile.gender)}\'s Partner';
+      }
+    }
+  }
 }
 
 class _AnimatedSuccessPopup extends StatefulWidget {

@@ -6,6 +6,7 @@ import 'package:flutter/rendering.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:heritage/api.dart';
 import 'package:heritage/graph.dart';
+import 'package:heritage/util.dart';
 
 part 'graph_view.freezed.dart';
 
@@ -109,6 +110,10 @@ class GraphViewState<T extends GraphNode> extends State<GraphView<T>> {
                             isAncestor: node.isAncestor,
                             isSibling: node.isSibling,
                             relativeLevel: node.relativeLevel,
+                            // TODO: Caller should construct relatedness
+                            description: relatednessDescription(
+                                _focalCouple.node as LinkedNode<Person>,
+                                node as LinkedNode<Person>),
                           ),
                         ),
                       );
@@ -143,6 +148,10 @@ class GraphViewState<T extends GraphNode> extends State<GraphView<T>> {
                           isAncestor: node.isAncestor,
                           isSibling: node.isSibling,
                           relativeLevel: node.relativeLevel,
+                          // TODO: Caller should construct relatedness
+                          description: relatednessDescription(
+                              _focalCouple.node as LinkedNode<Person>,
+                              node as LinkedNode<Person>),
                         ),
                       ),
                     );
@@ -168,6 +177,7 @@ class GraphViewState<T extends GraphNode> extends State<GraphView<T>> {
     markRelatives(focalNode);
     markDirectRelativesAndSpouses(focalNode);
     markLevelsAndAncestors(focalNode);
+    markClosetAncestors(focalNode);
 
     // Maintains the child ordering from `_organizeSides`,
     final downRoots = focalCouple.parents
@@ -708,6 +718,7 @@ class Relatedness with _$Relatedness {
     required bool isAncestor,
     required bool isSibling,
     required int relativeLevel,
+    required String description,
   }) = _Relatedness;
 
   const Relatedness._();
