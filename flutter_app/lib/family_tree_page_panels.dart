@@ -398,22 +398,46 @@ class _PanelsState extends ConsumerState<Panels> {
                 _showOwnershipModal(
                     person: person,
                     onAddConnectionPressed: () {
+                      Navigator.of(context).pop();
                       showModalBottomSheet(
                         context: context,
+                        shape: const RoundedRectangleBorder(
+                          borderRadius: BorderRadius.only(
+                            topLeft: Radius.circular(10),
+                            topRight: Radius.circular(10),
+                          ),
+                        ),
                         builder: (context) {
-                          return Padding(
-                            padding: const EdgeInsets.all(16.0),
-                            child: buildAddConnectionButtons(
-                              person: person,
-                              relatedness: relatedness,
-                              isPerspectiveMode:
-                                  widget.viewHistory.perspectiveUserId != null,
-                              paddingWidth: 16,
-                              onAddConnectionPressed: (relationship) {
-                                Navigator.of(context).pop();
-                                widget.onAddConnectionPressed(relationship);
-                              },
-                            ),
+                          return Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Align(
+                                alignment: Alignment.centerLeft,
+                                child: Padding(
+                                  padding: const EdgeInsets.all(16.0),
+                                  child: Text(
+                                    person.profile.fullName,
+                                    style:
+                                        Theme.of(context).textTheme.titleLarge,
+                                  ),
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.all(16.0),
+                                child: buildAddConnectionButtons(
+                                  person: person,
+                                  relatedness: relatedness,
+                                  isPerspectiveMode:
+                                      widget.viewHistory.perspectiveUserId !=
+                                          null,
+                                  paddingWidth: 16,
+                                  onAddConnectionPressed: (relationship) {
+                                    Navigator.of(context).pop();
+                                    widget.onAddConnectionPressed(relationship);
+                                  },
+                                ),
+                              ),
+                            ],
                           );
                         },
                       );
@@ -447,7 +471,7 @@ class _PanelsState extends ConsumerState<Panels> {
           key: _modalKey,
           person: person,
           onAddConnectionPressed: () {
-            Navigator.of(context).pop(true);
+            // Navigator.of(context).pop(true);
             onAddConnectionPressed();
           },
           onSaveAndShare: (firstName, lastName, gender) async {
