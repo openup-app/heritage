@@ -1,12 +1,10 @@
 import 'dart:collection';
-import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:heritage/api.dart';
-import 'package:heritage/file_picker.dart';
-import 'package:heritage/image_croper.dart';
 import 'package:heritage/profile_display.dart';
+import 'package:heritage/util.dart';
 
 const height = 80.0;
 
@@ -51,7 +49,7 @@ class PhotoManagement extends StatelessWidget {
               final child = _Thumbnail(
                 photo: photo,
                 onReplace: () async {
-                  final photo = await _pickPhoto(context);
+                  final photo = await pickPhotoWithCropper(context);
                   if (photo != null && context.mounted) {
                     final newGallery = List.of(gallery);
                     newGallery.replaceRange(index, index + 1, [photo]);
@@ -77,7 +75,7 @@ class PhotoManagement extends StatelessWidget {
           if (gallery.length < 4)
             _AddImage(
               onPressed: () async {
-                final photo = await _pickPhoto(context);
+                final photo = await pickPhotoWithCropper(context);
                 if (photo != null && context.mounted) {
                   final newGallery = List.of(gallery);
                   newGallery.add(photo);
@@ -88,14 +86,6 @@ class PhotoManagement extends StatelessWidget {
         ],
       ),
     );
-  }
-
-  Future<Photo?> _pickPhoto(BuildContext context) async {
-    final image = await _pickImage(context: context);
-    if (image == null) {
-      return null;
-    }
-    return MemoryPhoto(key: '${Random().nextInt(1000000000)}', bytes: image);
   }
 }
 
@@ -248,19 +238,4 @@ class _Container extends StatelessWidget {
       ),
     );
   }
-}
-
-Future<Uint8List?> _pickImage({
-  required BuildContext context,
-}) async {
-  final file = await pickPhoto(source: PhotoSource.gallery);
-  final image = await file?.readAsBytes();
-  if (!context.mounted || image == null) {
-    return null;
-  }
-  final (frame, size) = await getFirstFrameAndSize(image);
-  if (!context.mounted || frame == null) {
-    return null;
-  }
-  return await showCropDialog(context, frame, size);
 }

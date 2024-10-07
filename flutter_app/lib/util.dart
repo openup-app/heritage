@@ -1,9 +1,12 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:heritage/api.dart';
+import 'package:heritage/file_picker.dart';
+import 'package:heritage/image_croper.dart';
 import 'package:heritage/share.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -25,6 +28,36 @@ Rect? locateWidgetLocal(GlobalKey key) {
   final offset = renderBox.globalToLocal(Offset.zero);
   final size = renderBox.size;
   return offset & size;
+}
+
+Future<Photo?> pickPhotoWithCropper(
+  BuildContext context, {
+  bool faceMask = false,
+}) async {
+  final image = await _pickImageWithCropper(
+    context: context,
+    faceMask: faceMask,
+  );
+  if (image == null) {
+    return null;
+  }
+  return MemoryPhoto(key: '${Random().nextInt(1000000000)}', bytes: image);
+}
+
+Future<Uint8List?> _pickImageWithCropper({
+  required BuildContext context,
+  required bool faceMask,
+}) async {
+  final file = await pickPhoto(source: PhotoSource.gallery);
+  final image = await file?.readAsBytes();
+  if (!context.mounted || image == null) {
+    return null;
+  }
+  final (frame, size) = await getFirstFrameAndSize(image);
+  if (!context.mounted || frame == null) {
+    return null;
+  }
+  return await showCropDialog(context, frame, size, faceMask: faceMask);
 }
 
 String genderedRelationship(Relationship relationship, Gender gender) {

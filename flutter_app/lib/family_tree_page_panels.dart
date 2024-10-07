@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:ui';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -1237,34 +1240,9 @@ class _ProfileDisplayState extends ConsumerState<_ProfileDisplay> {
           children: [
             ClipRRect(
               borderRadius: const BorderRadius.all(Radius.circular(10)),
-              child: Stack(
-                children: [
-                  ProfileImage(
-                    photo:
-                        ref.watch(profileUpdateProvider.select((p) => p.photo)),
-                  ),
-                  Positioned(
-                    right: 0,
-                    top: 8,
-                    child: FilledButton(
-                      onPressed: () {
-                        final notifier =
-                            ref.read(profileUpdateProvider.notifier);
-                        notifier.photo(
-                          const NetworkPhoto(
-                            key: "public/no_image.png",
-                            url:
-                                "https://d2xzkuyodufiic.cloudfront.net/public/no_image.png",
-                          ),
-                        );
-                      },
-                      style: FilledButton.styleFrom(
-                        shape: const CircleBorder(),
-                      ),
-                      child: const Icon(Icons.close),
-                    ),
-                  ),
-                ],
+              child: GalleryView(
+                photos:
+                    ref.watch(profileUpdateProvider.select((p) => p.gallery)),
               ),
             ),
             if (widget.isEditable) ...[
@@ -1775,10 +1753,10 @@ class _WaitingForApprovalDisplayState extends State<WaitingForApprovalDisplay> {
   }
 }
 
-class ProfileImage extends StatelessWidget {
+class _Photo extends StatelessWidget {
   final Photo photo;
 
-  const ProfileImage({
+  const _Photo({
     super.key,
     required this.photo,
   });
@@ -1786,17 +1764,13 @@ class ProfileImage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return switch (photo) {
-      MemoryPhoto(:final Uint8List bytes) => ImageAspect(
-          child: Image.memory(
-            bytes,
-            fit: BoxFit.cover,
-          ),
+      MemoryPhoto(:final Uint8List bytes) => Image.memory(
+          bytes,
+          fit: BoxFit.cover,
         ),
-      NetworkPhoto(:final url) => ImageAspect(
-          child: Image.network(
-            url,
-            fit: BoxFit.cover,
-          ),
+      NetworkPhoto(:final url) => Image.network(
+          url,
+          fit: BoxFit.cover,
         ),
       _ => const SizedBox.shrink(),
     };
@@ -1867,4 +1841,95 @@ class PanelPopupStateWaitingForApproval implements PanelPopupState {
         other.person == person &&
         other.relatedness == relatedness;
   }
+}
+
+class GalleryView extends StatefulWidget {
+  final List<Photo> photos;
+  const GalleryView({
+    super.key,
+    required this.photos,
+  });
+
+  @override
+  State<GalleryView> createState() => _GalleryViewState();
+}
+
+class _GalleryViewState extends State<GalleryView> {
+  static const _largeNumber = 1000000000;
+
+  late final PageController _controller;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    const center = _largeNumber ~/ 2;
+    final int initialIndex;
+    if (widget.photos.isEmpty) {
+      initialIndex = center;
+    } else {
+      initialIndex = center ~/ widget.photos.length * widget.photos.length;
+    }
+    _controller = PageController(
+      initialPage: initialIndex,
+    );
+    _controller.addListener(_restartTimer);
+    _restartTimer();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.photos.isEmpty) {
+      return const ImageAspect(
+        child: ColoredBox(
+          color: Colors.grey,
+        ),
+      );
+    }
+    return ScrollbarTheme(
+      data: const ScrollbarThemeData(
+        thumbVisibility: WidgetStatePropertyAll(false),
+      ),
+      child: ImageAspect(
+        child: PageView.builder(
+          controller: _controller,
+          scrollBehavior: const _AllDevicesScrollBehavior(),
+          itemCount: _largeNumber,
+          itemBuilder: (context, index) {
+            final photo = widget.photos[index % widget.photos.length];
+            return _Photo(
+              photo: photo,
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  void _restartTimer() {
+    _timer?.cancel();
+    _timer = Timer.periodic(const Duration(seconds: 5), (_) => _onNext());
+  }
+
+  void _onNext() {
+    _controller.nextPage(
+      duration: const Duration(milliseconds: 600),
+      curve: Curves.easeOut,
+    );
+  }
+}
+
+/// Allows all device kinds to scroll the scroll view
+class _AllDevicesScrollBehavior extends ScrollBehavior {
+  const _AllDevicesScrollBehavior();
+
+  @override
+  Set<PointerDeviceKind> get dragDevices => PointerDeviceKind.values.toSet();
 }

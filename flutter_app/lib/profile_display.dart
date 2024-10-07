@@ -369,14 +369,20 @@ class _HoverPersonDisplayState extends State<HoverPersonDisplay> {
   }
 }
 
+enum BadgeType { viewPerspective, editPhoto, none }
+
 class NodeProfile extends StatelessWidget {
   final Person person;
-  final bool canViewPerspective;
+  final BadgeType badgeType;
+  final bool showBadge;
+  final VoidCallback? onBadgePressed;
 
   const NodeProfile({
     super.key,
     required this.person,
-    required this.canViewPerspective,
+    required this.badgeType,
+    required this.showBadge,
+    required this.onBadgePressed,
   });
 
   @override
@@ -423,19 +429,30 @@ class NodeProfile extends StatelessWidget {
                         child: ProfileImage(person.profile.photo),
                       ),
                     ),
-                    if (canViewPerspective)
+                    if (badgeType != BadgeType.none)
                       Positioned(
                         right: 0,
                         top: 4,
-                        child: FilledButton(
-                          onPressed: () {},
-                          style: FilledButton.styleFrom(
-                            fixedSize: const Size.square(44),
-                            backgroundColor:
-                                const Color.fromRGBO(0x00, 0x00, 0x00, 0.6),
-                            shape: const CircleBorder(),
+                        child: AnimatedOpacity(
+                          duration: const Duration(milliseconds: 200),
+                          opacity: showBadge ? 1.0 : 0.0,
+                          child: FilledButton(
+                            onPressed: onBadgePressed,
+                            style: FilledButton.styleFrom(
+                              fixedSize: const Size.square(44),
+                              backgroundColor:
+                                  const Color.fromRGBO(0x00, 0x00, 0x00, 0.6),
+                              shape: const CircleBorder(),
+                            ),
+                            child: switch (badgeType) {
+                              BadgeType.editPhoto => const Icon(
+                                  Icons.camera_alt,
+                                  color: Colors.white,
+                                ),
+                              BadgeType.viewPerspective => const _Binoculars(),
+                              BadgeType.none => const SizedBox.shrink(),
+                            },
                           ),
-                          child: const _Binoculars(),
                         ),
                       ),
                     if (person.ownedBy != null)
@@ -623,13 +640,13 @@ class _HoverState extends State<Scaler> {
 class MouseOverlay extends StatefulWidget {
   final bool enabled;
   final bool forceOverlay;
-  final Widget child;
+  final Widget Function(BuildContext context, bool overlay) builder;
 
   const MouseOverlay({
     super.key,
     this.enabled = true,
     this.forceOverlay = false,
-    required this.child,
+    required this.builder,
   });
 
   @override
@@ -686,7 +703,7 @@ class _MouseOverlayState extends State<MouseOverlay> {
                   enabled: widget.enabled,
                   onEnter: () => setState(() => _entered = true),
                   onExit: () => setState(() => _entered = false),
-                  child: widget.child,
+                  child: widget.builder(context, _controller.isShowing),
                 ),
               ),
             ),
@@ -708,7 +725,7 @@ class _MouseOverlayState extends State<MouseOverlay> {
             maintainSemantics: true,
             child: IgnorePointer(
               ignoring: _controller.isShowing,
-              child: widget.child,
+              child: widget.builder(context, _controller.isShowing),
             ),
           ),
         ),

@@ -7,13 +7,18 @@ import 'package:heritage/util.dart';
 import 'package:vector_math/vector_math_64.dart' hide Colors;
 
 Future<Uint8List?> showCropDialog(
-    BuildContext context, Uint8List image, Size imageSize) async {
+  BuildContext context,
+  Uint8List image,
+  Size imageSize, {
+  required bool faceMask,
+}) async {
   final rect = await showDialog<Rect>(
     context: context,
     builder: (context) {
       return _CropDialog(
         image: image,
         size: imageSize,
+        faceMask: faceMask,
       );
     },
   );
@@ -26,11 +31,13 @@ Future<Uint8List?> showCropDialog(
 class _CropDialog extends StatefulWidget {
   final Uint8List image;
   final Size size;
+  final bool faceMask;
 
   const _CropDialog({
     super.key,
     required this.image,
     required this.size,
+    required this.faceMask,
   });
 
   @override
@@ -52,6 +59,7 @@ class _CropDialogState extends State<_CropDialog> {
             child: ImageCropper(
               image: widget.image,
               imageSize: widget.size,
+              faceMask: widget.faceMask,
               onRect: (rect) => setState(() => _rect = rect),
             ),
           ),
@@ -72,12 +80,14 @@ class _CropDialogState extends State<_CropDialog> {
 class ImageCropper extends StatefulWidget {
   final Uint8List image;
   final Size imageSize;
+  final bool faceMask;
   final void Function(Rect rect) onRect;
 
   const ImageCropper({
     super.key,
     required this.image,
     required this.imageSize,
+    required this.faceMask,
     required this.onRect,
   });
 
@@ -206,6 +216,7 @@ class _ImageCropperState extends State<ImageCropper> {
               constraints: const BoxConstraints(maxWidth: 600, maxHeight: 800),
               child: ImageAspect(
                 child: _BorderOverlay(
+                  faceMask: widget.faceMask,
                   child: MouseRegion(
                     cursor: SystemMouseCursors.move,
                     child: InteractiveViewer(
@@ -260,9 +271,12 @@ class _ImageCropperState extends State<ImageCropper> {
 }
 
 class _BorderOverlay extends StatelessWidget {
+  final bool faceMask;
   final Widget child;
+
   const _BorderOverlay({
     super.key,
+    this.faceMask = false,
     required this.child,
   });
 
@@ -278,66 +292,111 @@ class _BorderOverlay extends StatelessWidget {
             padding: const EdgeInsets.all(borderSize),
             child: child,
           ),
-          Positioned.fill(
-            child: IgnorePointer(
-              child: Padding(
-                padding: const EdgeInsets.all(borderSize),
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    border: Border.all(width: 4, color: Colors.blue),
+          if (faceMask)
+            const Positioned.fill(
+              child: IgnorePointer(
+                child: CustomPaint(
+                  painter: _FaceShapePainter(
+                    color: borderColor,
+                  ),
+                ),
+              ),
+            )
+          else ...[
+            Positioned.fill(
+              child: IgnorePointer(
+                child: Padding(
+                  padding: const EdgeInsets.all(borderSize),
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      border: Border.all(width: 4, color: Colors.blue),
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
-          const Positioned(
-            left: 0,
-            right: 0,
-            top: 0,
-            height: borderSize,
-            child: IgnorePointer(
-              child: ColoredBox(
-                color: borderColor,
+            const Positioned(
+              left: 0,
+              right: 0,
+              top: 0,
+              height: borderSize,
+              child: IgnorePointer(
+                child: ColoredBox(
+                  color: borderColor,
+                ),
               ),
             ),
-          ),
-          const Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            height: borderSize,
-            child: IgnorePointer(
-              child: ColoredBox(
-                color: borderColor,
+            const Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              height: borderSize,
+              child: IgnorePointer(
+                child: ColoredBox(
+                  color: borderColor,
+                ),
               ),
             ),
-          ),
-          const Positioned(
-            left: 0,
-            top: borderSize,
-            bottom: borderSize,
-            width: borderSize,
-            child: IgnorePointer(
-              child: ColoredBox(
-                color: borderColor,
+            const Positioned(
+              left: 0,
+              top: borderSize,
+              bottom: borderSize,
+              width: borderSize,
+              child: IgnorePointer(
+                child: ColoredBox(
+                  color: borderColor,
+                ),
               ),
             ),
-          ),
-          const Positioned(
-            right: 0,
-            top: borderSize,
-            bottom: borderSize,
-            width: borderSize,
-            child: IgnorePointer(
-              child: ColoredBox(
-                color: borderColor,
+            const Positioned(
+              right: 0,
+              top: borderSize,
+              bottom: borderSize,
+              width: borderSize,
+              child: IgnorePointer(
+                child: ColoredBox(
+                  color: borderColor,
+                ),
               ),
             ),
-          ),
+          ],
         ],
       ),
     );
   }
+}
+
+class _FaceShapePainter extends CustomPainter {
+  final Color color;
+
+  const _FaceShapePainter({
+    required this.color,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Offset.zero & size;
+    final innerRect = rect.deflate(30);
+    final path = Path()
+      ..addRect(rect)
+      ..addOval(innerRect)
+      ..fillType = PathFillType.evenOdd;
+    canvas.drawPath(
+      path,
+      Paint()..color = color,
+    );
+    canvas.drawOval(
+      innerRect,
+      Paint()
+        ..color = Colors.blue
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 4,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _FaceShapePainter oldDelegate) =>
+      oldDelegate.color != color;
 }
 
 Future<Uint8List?> _cropImage(Uint8List imageBytes, Rect rect) async {
