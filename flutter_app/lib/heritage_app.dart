@@ -15,6 +15,7 @@ import 'package:heritage/layout.dart';
 import 'package:heritage/menu_page.dart';
 import 'package:heritage/restart_app.dart';
 import 'package:heritage/transition.dart';
+import 'package:heritage/util.dart';
 
 import 'package:sentry_flutter/sentry_flutter.dart';
 
@@ -290,7 +291,6 @@ class _CacheAssetsState extends State<_CacheAssets> {
     if (!_cached) {
       _cached = true;
       const assets = [
-        'assets/images/app_loading.webp',
         'assets/images/binoculars.png',
         'assets/images/logo_text.png',
         'assets/images/tagline.png',
@@ -489,8 +489,7 @@ Person _createPerson(String id) {
       gender: Gender.male,
       photo: Photo.network(
         key: '',
-        url:
-            'https://d2xzkuyodufiic.cloudfront.net/avatars/${int.parse(id) + 1 % 70}.jpg',
+        url: '$cdn/avatars/${int.parse(id) + 1 % 70}.jpg',
       ),
       gallery: [],
       birthday: null,

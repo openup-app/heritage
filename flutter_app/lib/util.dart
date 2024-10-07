@@ -328,3 +328,5 @@ class Greyscale extends StatelessWidget {
     );
   }
 }
+
+const cdn = 'https://d2xzkuyodufiic.cloudfront.net';

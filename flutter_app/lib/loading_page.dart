@@ -22,12 +22,20 @@ class LoadingPage extends StatelessWidget {
                     width: 180,
                     height: 180,
                   ),
-                  const LogoText(
+                  const SizedBox(
                     width: 350,
+                    height: 98,
+                    child: LogoText(
+                      width: 350,
+                    ),
                   ),
-                  Image.asset(
-                    'assets/images/tagline.png',
+                  SizedBox(
                     width: 240,
+                    height: 68,
+                    child: Image.asset(
+                      'assets/images/tagline.png',
+                      width: 240,
+                    ),
                   ),
                 ],
               ),

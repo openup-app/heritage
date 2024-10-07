@@ -49,7 +49,6 @@ flutter:
   uses-material-design: true
 
   assets:
-    - assets/images/app_loading.webp
     - assets/images/badge.svg
     - assets/images/binoculars.png
     - assets/images/connection_child.svg
