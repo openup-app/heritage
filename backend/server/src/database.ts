@@ -314,7 +314,7 @@ export class Database {
 
   public async updateOwnership(id: Id, newOwnerId: Id): Promise<Person> {
     const personRef = this.personRef(id);
-    await personRef.update({ "ownedBy": id });
+    await personRef.update({ "ownedBy": newOwnerId });
     const snapshot = await personRef.get();
     const data = snapshot.data();
     return personSchema.parse(data);

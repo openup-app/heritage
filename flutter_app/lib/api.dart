@@ -31,7 +31,6 @@ class Api {
           'x-app-version-name': appVersionName,
           'x-app-version-code': appVersionCode,
           'x-app-platform': _platformName(),
-          'x-app-uid': 'test_uid',
         };
 
   void setAuthToken(String? authToken) {
@@ -40,6 +39,10 @@ class Api {
     } else {
       _headers['authorization'] = 'Bearer $authToken';
     }
+  }
+
+  void setUid(String uid) {
+    _headers['x-app-uid'] = uid;
   }
 
   Future<Either<Error, (Id id, List<Person> people)>> addConnection({

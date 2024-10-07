@@ -209,7 +209,8 @@ class _PanelsState extends ConsumerState<Panels> {
                           ProfileDisplay(
                             initialProfile: person.profile,
                             isPrimaryUser: isPrimaryUser,
-                            isEditable: person.ownedBy == person.id &&
+                            isEditable: person.ownedBy ==
+                                    widget.focalPerson.id &&
                                 widget.viewHistory.perspectiveUserId == null,
                             hasDifferentOwner: person.ownedBy != person.id,
                             onViewPerspective: canViewPerspective(
@@ -1177,14 +1178,22 @@ class ProfileNameSection extends StatelessWidget {
                                       0x7A, 0x7A, 0x7A, 1.0)),
                         ),
                       ),
-                      Text(
-                        'Verified by Parteek',
-                        style: Theme.of(context)
-                            .textTheme
-                            .titleMedium
-                            ?.copyWith(
-                                color: const Color.fromRGBO(
-                                    0x3F, 0x71, 0xFF, 1.0)),
+                      Consumer(
+                        builder: (context, ref, child) {
+                          return Text(
+                            person.ownedBy == person.id
+                                ? 'Verified by ${person.profile.firstName}'
+                                : 'Managed by ${ref.watch(graphProvider.select((s) => s.people[person.ownedBy]?.profile.firstName))}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleMedium
+                                ?.copyWith(
+                                    color: const Color.fromRGBO(
+                                        0x3F, 0x71, 0xFF, 1.0)),
+                          );
+                        },
                       )
                     ],
                   ),

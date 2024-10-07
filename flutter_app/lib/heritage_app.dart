@@ -61,6 +61,7 @@ class HeritageApp extends StatelessWidget {
         child: LayoutWidget(
           child: _CacheAssets(
             child: _RouterBuilder(
+              tempApi: api,
               redirectPath: redirectPath,
               navigatorObservers: [
                 SentryNavigatorObserver(),
@@ -145,12 +146,14 @@ class HeritageApp extends StatelessWidget {
 }
 
 class _RouterBuilder extends StatefulWidget {
+  final Api tempApi;
   final String? redirectPath;
   final List<NavigatorObserver> navigatorObservers;
   final Widget Function(BuildContext context, GoRouter router) builder;
 
   const _RouterBuilder({
     super.key,
+    required this.tempApi,
     required this.redirectPath,
     required this.navigatorObservers,
     required this.builder,
@@ -251,6 +254,11 @@ class _RouterBuilderState extends State<_RouterBuilder> {
             }
             final focalPersonId =
                 viewHistory.perspectiveUserId ?? viewHistory.primaryUserId;
+
+            // TODO: Probably best to set UID as a provider that apiProvider depends on
+            if (viewHistory.perspectiveUserId == null) {
+              widget.tempApi.setUid(focalPersonId);
+            }
             return TopLevelTransitionPage(
               child: ProviderScope(
                 overrides: [

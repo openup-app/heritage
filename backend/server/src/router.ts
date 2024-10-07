@@ -174,9 +174,18 @@ export function router(auth: Auth, database: Database, storage: Storage): Router
 
   router.put('/people/:id/take_ownership', async (req: Request, res: Response) => {
     const id = req.params.id;
+    const newOwnerId = req.headers["x-app-uid"] as string | undefined;
+
+    if (!newOwnerId) {
+      return res.sendStatus(400);
+    }
 
     try {
-      const person = await database.updateOwnership(id, id);
+      const oldPerson = await database.getPerson(id);
+      if (oldPerson.ownedBy) {
+        return res.sendStatus(401);
+      }
+      const person = await database.updateOwnership(id, newOwnerId);
       return res.json({
         'person': constructPerson(person, storage),
       })
