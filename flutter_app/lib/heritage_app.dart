@@ -45,7 +45,7 @@ class HeritageApp extends StatelessWidget {
     );
     const subtitleStyle = TextStyle(
       fontSize: 14,
-      fontWeight: FontWeight.w500,
+      fontWeight: FontWeight.w600,
       fontFamily: 'SF Pro Display',
     );
     const miniTitleStyle = TextStyle(
@@ -114,6 +114,7 @@ class HeritageApp extends StatelessWidget {
                       labelMedium: miniTitleStyle,
                       labelSmall: miniTitleStyle,
                     ),
+                    disabledColor: Colors.black,
                     inputDecorationTheme: const InputDecorationTheme(
                       filled: true,
                       fillColor: greyColor,
