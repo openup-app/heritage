@@ -90,7 +90,7 @@ class _PanelsState extends ConsumerState<Panels> {
     final selectedPerson = widget.selectedPerson;
     final relatedness = widget.relatedness;
     final isPrimaryUser =
-        selectedPerson?.id == widget.viewHistory.primaryUserId;
+        widget.focalPerson.id == widget.viewHistory.primaryUserId;
     final isOwnedByPrimaryUser = isPrimaryUser ||
         selectedPerson?.ownedBy == widget.viewHistory.primaryUserId;
     final small = _layout == LayoutType.small;
@@ -219,7 +219,9 @@ class _PanelsState extends ConsumerState<Panels> {
                   selectedPerson: selectedPerson,
                   relatedness: relatedness,
                   isFocalUser: selectedPerson.id == widget.focalPerson.id,
-                  isPrimaryUser: isPrimaryUser,
+                  primaryUserId: widget.viewHistory.primaryUserId,
+                  isPerspectiveMode:
+                      widget.viewHistory.perspectiveUserId != null,
                   isOwnedByMe: isOwnedByPrimaryUser,
                   onAddConnectionPressed: widget.onAddConnectionPressed,
                   onDismissPanelPopup: widget.onDismissPanelPopup,
@@ -294,7 +296,8 @@ class _PanelsState extends ConsumerState<Panels> {
                           ProfileNameSection(
                             person: person,
                             relatedness: relatedness,
-                            isFocalUser: widget.focalPerson.id == person.id,
+                            isPrimaryUser:
+                                widget.viewHistory.primaryUserId == person.id,
                           ),
                           ProfileDisplay(
                             initialProfile: person.profile,
@@ -846,7 +849,8 @@ class _DraggableSheet extends StatefulWidget {
   final Person selectedPerson;
   final Relatedness relatedness;
   final bool isFocalUser;
-  final bool isPrimaryUser;
+  final String primaryUserId;
+  final bool isPerspectiveMode;
   final bool isOwnedByMe;
   final void Function(Relationship relationship) onAddConnectionPressed;
   final VoidCallback onDismissPanelPopup;
@@ -859,7 +863,8 @@ class _DraggableSheet extends StatefulWidget {
     required this.selectedPerson,
     required this.relatedness,
     required this.isFocalUser,
-    required this.isPrimaryUser,
+    required this.primaryUserId,
+    required this.isPerspectiveMode,
     required this.isOwnedByMe,
     required this.onAddConnectionPressed,
     required this.onDismissPanelPopup,
@@ -953,7 +958,7 @@ class _DraggableSheetState extends State<_DraggableSheet> {
                                   child: buildAddConnectionButtons(
                                     person: widget.selectedPerson,
                                     relatedness: widget.relatedness,
-                                    isPerspectiveMode: !widget.isPrimaryUser,
+                                    isPerspectiveMode: widget.isPerspectiveMode,
                                     paddingWidth: 12,
                                     onAddConnectionPressed:
                                         widget.onAddConnectionPressed,
@@ -977,7 +982,8 @@ class _DraggableSheetState extends State<_DraggableSheet> {
                       child: ProfileNameSection(
                         person: widget.selectedPerson,
                         relatedness: widget.relatedness,
-                        isFocalUser: widget.isFocalUser,
+                        isPrimaryUser:
+                            widget.selectedPerson.id == widget.primaryUserId,
                       ),
                     ),
                   ),
@@ -988,9 +994,10 @@ class _DraggableSheetState extends State<_DraggableSheet> {
                         builder: (context, ref, child) {
                           return ProfileDisplay(
                             initialProfile: widget.selectedPerson.profile,
-                            isPrimaryUser: widget.isPrimaryUser,
+                            isPrimaryUser: widget.selectedPerson.id ==
+                                widget.primaryUserId,
                             isEditable:
-                                widget.isOwnedByMe && widget.isPrimaryUser,
+                                widget.isOwnedByMe && !widget.isPerspectiveMode,
                             hasDifferentOwner: widget.selectedPerson.ownedBy !=
                                 widget.selectedPerson.id,
                             onViewPerspective: widget.onViewPerspective,
@@ -1237,13 +1244,13 @@ class LogoText extends StatelessWidget {
 class ProfileNameSection extends StatelessWidget {
   final Person person;
   final Relatedness relatedness;
-  final bool isFocalUser;
+  final bool isPrimaryUser;
 
   const ProfileNameSection({
     super.key,
     required this.person,
     required this.relatedness,
-    required this.isFocalUser,
+    required this.isPrimaryUser,
   });
 
   @override
@@ -1259,12 +1266,12 @@ class ProfileNameSection extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                if (isFocalUser) ...[
+                if (isPrimaryUser) ...[
+                  const Text('My profile'),
                   Text(
                     person.profile.fullName,
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
-                  const Text('My profile'),
                 ] else ...[
                   Row(
                     children: [
@@ -1448,15 +1455,34 @@ class _ProfileDisplayState extends ConsumerState<_ProfileDisplay> {
       children: [
         Column(
           children: [
-            ClipRRect(
-              borderRadius: const BorderRadius.all(Radius.circular(10)),
-              child: GalleryView(
-                photos:
-                    ref.watch(profileUpdateProvider.select((p) => p.gallery)),
+            if (ref.watch(
+                profileUpdateProvider.select((p) => p.gallery.isNotEmpty))) ...[
+              ClipRRect(
+                borderRadius: const BorderRadius.all(Radius.circular(10)),
+                child: GalleryView(
+                  photos:
+                      ref.watch(profileUpdateProvider.select((p) => p.gallery)),
+                ),
               ),
-            ),
-            if (widget.isEditable) ...[
               const SizedBox(height: 24),
+            ],
+            if (widget.isEditable) ...[
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Gallery',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Add photos for others to see, this is not for your photo on the tree',
+                  style: Theme.of(context).textTheme.labelLarge,
+                ),
+              ),
+              const SizedBox(height: 8),
               Align(
                 alignment: Alignment.centerLeft,
                 child: PhotoManagement(
@@ -1473,22 +1499,18 @@ class _ProfileDisplayState extends ConsumerState<_ProfileDisplay> {
           ],
         ),
         const SizedBox(height: 24),
-        if (widget.onViewPerspective != null) ...[
-          FilledButton(
-            onPressed: widget.onViewPerspective,
-            style: FilledButton.styleFrom(
-              fixedSize: const Size.fromHeight(48),
-            ),
-            child: Text(
-                'View ${ref.watch(profileUpdateProvider.select((s) => s.firstName))}\'s tree'),
-          ),
-          const SizedBox(height: 24),
-        ],
         Text(
           'Details',
           style: Theme.of(context).textTheme.titleLarge,
         ),
-        const SizedBox(height: 8),
+        if (widget.isEditable) ...[
+          const SizedBox(height: 4),
+          Text(
+            'Add some informatino about yourself so your family can see',
+            style: Theme.of(context).textTheme.labelLarge,
+          ),
+          const SizedBox(height: 8),
+        ],
         FocusTraversalGroup(
           child: InputForm(
             children: [
@@ -1677,6 +1699,34 @@ class _ProfileDisplayState extends ConsumerState<_ProfileDisplay> {
                 ),
               ],
             ],
+          ),
+        ],
+        if (widget.onViewPerspective != null) ...[
+          const SizedBox(height: 24),
+          Text(
+            'View Tree',
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          const SizedBox(height: 8),
+          FilledButton(
+            onPressed: widget.onViewPerspective,
+            style: FilledButton.styleFrom(
+              fixedSize: const Size.fromHeight(44),
+              foregroundColor: Colors.white,
+              backgroundColor: primaryColor,
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Binoculars(
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                    'View ${ref.watch(profileUpdateProvider.select((s) => s.firstName))}\'s tree'),
+              ],
+            ),
           ),
         ],
         const SizedBox(height: 16),
