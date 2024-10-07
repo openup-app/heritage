@@ -21,6 +21,7 @@ class LinkedNode<T extends GraphNode> {
   final List<LinkedNode<T>> children;
   final T data;
   bool isBloodRelative;
+  bool isDirectRelativeOrSpouse;
   bool isAncestor;
   bool isSibling;
   int relativeLevel;
@@ -33,6 +34,7 @@ class LinkedNode<T extends GraphNode> {
     required this.children,
     required this.data,
     this.isBloodRelative = false,
+    this.isDirectRelativeOrSpouse = false,
     this.isAncestor = false,
     this.isSibling = false,
     this.relativeLevel = 0,
@@ -172,6 +174,21 @@ void markRelatives<T extends GraphNode>(LinkedNode<T> focalNode) {
     }
     ;
     fringe.addAll(node.children);
+  }
+}
+
+void markDirectRelativesAndSpouses<T extends GraphNode>(
+    LinkedNode<T> focalNode) {
+  final relatives = [
+    ...focalNode.parents,
+    ...focalNode.spouses,
+    ...focalNode.children,
+    ...focalNode.parents
+        .expand((e) => e.children)
+        .where((e) => e.id != focalNode.id),
+  ];
+  for (final relative in relatives) {
+    relative.isDirectRelativeOrSpouse = true;
   }
 }
 

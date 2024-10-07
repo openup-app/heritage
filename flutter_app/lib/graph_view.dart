@@ -104,6 +104,8 @@ class GraphViewState<T extends GraphNode> extends State<GraphView<T>> {
                           key,
                           Relatedness(
                             isBloodRelative: node.isBloodRelative,
+                            isDirectRelativeOrSpouse:
+                                node.isDirectRelativeOrSpouse,
                             isAncestor: node.isAncestor,
                             isSibling: node.isSibling,
                             relativeLevel: node.relativeLevel,
@@ -136,6 +138,8 @@ class GraphViewState<T extends GraphNode> extends State<GraphView<T>> {
                         key,
                         Relatedness(
                           isBloodRelative: node.isBloodRelative,
+                          isDirectRelativeOrSpouse:
+                              node.isDirectRelativeOrSpouse,
                           isAncestor: node.isAncestor,
                           isSibling: node.isSibling,
                           relativeLevel: node.relativeLevel,
@@ -162,6 +166,7 @@ class GraphViewState<T extends GraphNode> extends State<GraphView<T>> {
     _organizeSides(focalNode);
     final (focalCouple, idToCouple) = createCoupleTree(focalNode);
     markRelatives(focalNode);
+    markDirectRelativesAndSpouses(focalNode);
     markLevelsAndAncestors(focalNode);
 
     // Maintains the child ordering from `_organizeSides`,
@@ -699,6 +704,7 @@ class Spacing with _$Spacing {
 class Relatedness with _$Relatedness {
   const factory Relatedness({
     required bool isBloodRelative,
+    required bool isDirectRelativeOrSpouse,
     required bool isAncestor,
     required bool isSibling,
     required int relativeLevel,

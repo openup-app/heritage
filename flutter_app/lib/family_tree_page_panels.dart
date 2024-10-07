@@ -141,6 +141,9 @@ class _PanelsState extends ConsumerState<Panels> {
                   )
                       ? widget.onViewPerspective
                       : null,
+                  onShareLoginLink: !relatedness.isDirectRelativeOrSpouse
+                      ? null
+                      : () => _onShareLoginLink(selectedPerson),
                   onClearProfile: () => _onClearProfile(selectedPerson.id),
                 );
               },
@@ -216,6 +219,10 @@ class _PanelsState extends ConsumerState<Panels> {
                             )
                                 ? widget.onViewPerspective
                                 : null,
+                            onShareLoginLink:
+                                !relatedness.isDirectRelativeOrSpouse
+                                    ? null
+                                    : () => _onShareLoginLink(person),
                             onClearProfile: () {
                               _onClearProfile(person.id);
                               widget.onDismissPanelPopup();
@@ -568,6 +575,9 @@ class _PanelsState extends ConsumerState<Panels> {
     }
   }
 
+  void _onShareLoginLink(Person person) =>
+      shareInvite(person.profile.firstName, person.id);
+
   void _onClearProfile(Id id) async {
     final notifier = ref.read(graphProvider.notifier);
     await showBlockingModal(
@@ -716,8 +726,9 @@ class _DraggableSheet extends StatefulWidget {
   final bool isOwnedByMe;
   final void Function(Relationship relationship) onAddConnectionPressed;
   final VoidCallback onDismissPanelPopup;
-  final VoidCallback? onClearProfile;
   final VoidCallback? onViewPerspective;
+  final VoidCallback? onShareLoginLink;
+  final VoidCallback? onClearProfile;
 
   const _DraggableSheet({
     super.key,
@@ -727,8 +738,9 @@ class _DraggableSheet extends StatefulWidget {
     required this.isOwnedByMe,
     required this.onAddConnectionPressed,
     required this.onDismissPanelPopup,
-    required this.onClearProfile,
     required this.onViewPerspective,
+    required this.onShareLoginLink,
+    required this.onClearProfile,
   });
 
   @override
@@ -855,6 +867,7 @@ class _DraggableSheetState extends State<_DraggableSheet> {
                             hasDifferentOwner: widget.selectedPerson.ownedBy !=
                                 widget.selectedPerson.id,
                             onViewPerspective: widget.onViewPerspective,
+                            onShareLoginLink: widget.onShareLoginLink,
                             onClearProfile: widget.onClearProfile == null
                                 ? null
                                 : () {
@@ -1180,6 +1193,7 @@ class ProfileDisplay extends StatelessWidget {
   final bool isEditable;
   final bool hasDifferentOwner;
   final VoidCallback? onViewPerspective;
+  final VoidCallback? onShareLoginLink;
   final VoidCallback? onClearProfile;
   final void Function(Profile profile) onSave;
 
@@ -1190,6 +1204,7 @@ class ProfileDisplay extends StatelessWidget {
     required this.isEditable,
     required this.hasDifferentOwner,
     required this.onViewPerspective,
+    required this.onShareLoginLink,
     required this.onClearProfile,
     required this.onSave,
   });
@@ -1206,6 +1221,7 @@ class ProfileDisplay extends StatelessWidget {
         isEditable: isEditable,
         hasDifferentOwner: hasDifferentOwner,
         onViewPerspective: onViewPerspective,
+        onShareLoginLink: onShareLoginLink,
         onClearProfile: onClearProfile,
         onSave: onSave,
       ),
@@ -1218,6 +1234,7 @@ class _ProfileDisplay extends ConsumerStatefulWidget {
   final bool isEditable;
   final bool hasDifferentOwner;
   final VoidCallback? onViewPerspective;
+  final VoidCallback? onShareLoginLink;
   final VoidCallback? onClearProfile;
   final void Function(Profile profile) onSave;
 
@@ -1227,6 +1244,7 @@ class _ProfileDisplay extends ConsumerStatefulWidget {
     required this.isEditable,
     required this.hasDifferentOwner,
     required this.onViewPerspective,
+    required this.onShareLoginLink,
     required this.onClearProfile,
     required this.onSave,
   });
@@ -1458,7 +1476,6 @@ class _ProfileDisplayState extends ConsumerState<_ProfileDisplay> {
                   textInputAction: TextInputAction.next,
                   onChanged:
                       ref.read(profileUpdateProvider.notifier).birthplace,
-                  onFieldSubmitted: (_) {},
                 ),
               ),
               InputLabel(
@@ -1470,7 +1487,6 @@ class _ProfileDisplayState extends ConsumerState<_ProfileDisplay> {
                   textInputAction: TextInputAction.next,
                   onChanged:
                       ref.read(profileUpdateProvider.notifier).occupation,
-                  onFieldSubmitted: (_) {},
                 ),
               ),
               InputLabel(
@@ -1481,7 +1497,6 @@ class _ProfileDisplayState extends ConsumerState<_ProfileDisplay> {
                   textCapitalization: TextCapitalization.words,
                   textInputAction: TextInputAction.next,
                   onChanged: ref.read(profileUpdateProvider.notifier).hobbies,
-                  onFieldSubmitted: (_) {},
                 ),
               ),
             ],
@@ -1528,34 +1543,35 @@ class _ProfileDisplayState extends ConsumerState<_ProfileDisplay> {
           ),
         ],
         const SizedBox(height: 16),
-        Text(
-          'Login Link',
-          style: Theme.of(context).textTheme.titleLarge,
-        ),
-        const SizedBox(height: 4),
-        Builder(
-          builder: (context) {
-            final name =
-                ref.watch(profileUpdateProvider.select((s) => s.firstName));
-            return Text(
-              // 'If $name can\'t loses access, direct relatives can share this link with them.\nShare this link with no one else.',
-              'Visible to direct relatives for login assistance. Share this with $name, sharing it with others risks the family tree.',
-              style: Theme.of(context).textTheme.labelLarge,
-            );
-          },
-        ),
-        const SizedBox(height: 8),
-        FilledButton(
-          onPressed: () {},
-          style: FilledButton.styleFrom(
-            fixedSize: const Size.fromHeight(44),
-            foregroundColor: Colors.white,
-            backgroundColor: primaryColor,
+        if (widget.onShareLoginLink != null) ...[
+          Text(
+            'Login Link',
+            style: Theme.of(context).textTheme.titleLarge,
           ),
-          child: const Text(
-            'Share Login Link',
+          const SizedBox(height: 4),
+          Builder(
+            builder: (context) {
+              final name =
+                  ref.watch(profileUpdateProvider.select((s) => s.firstName));
+              return Text(
+                'Visible to direct relatives for login assistance. Share this with $name, sharing it with others risks the family tree.',
+                style: Theme.of(context).textTheme.labelLarge,
+              );
+            },
           ),
-        ),
+          const SizedBox(height: 8),
+          FilledButton(
+            onPressed: widget.onShareLoginLink,
+            style: FilledButton.styleFrom(
+              fixedSize: const Size.fromHeight(44),
+              foregroundColor: Colors.white,
+              backgroundColor: primaryColor,
+            ),
+            child: const Text(
+              'Share Login Link',
+            ),
+          ),
+        ],
         if (widget.isEditable) ...[
           const SizedBox(height: 24),
           TextButton(

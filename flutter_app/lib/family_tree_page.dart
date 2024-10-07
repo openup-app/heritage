@@ -119,6 +119,7 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
               final person = linkedNode.data;
               final relatedness = Relatedness(
                 isBloodRelative: linkedNode.isBloodRelative,
+                isDirectRelativeOrSpouse: linkedNode.isDirectRelativeOrSpouse,
                 isAncestor: linkedNode.isAncestor,
                 isSibling: linkedNode.isSibling,
                 relativeLevel: linkedNode.relativeLevel,
