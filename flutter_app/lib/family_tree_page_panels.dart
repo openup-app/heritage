@@ -126,7 +126,7 @@ class _PanelsState extends ConsumerState<Panels> {
             ),
           Positioned(
             left: 16,
-            bottom: 236,
+            bottom: 256,
             width: 48,
             height: 48,
             child: AnimatedOpacity(
