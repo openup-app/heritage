@@ -5,18 +5,42 @@ import 'package:flutter/material.dart';
 import 'package:heritage/api.dart';
 import 'package:heritage/profile_display.dart';
 import 'package:heritage/util.dart';
+import 'package:http/http.dart';
 
 const height = 80.0;
 
-class PhotoManagement extends StatelessWidget {
+class PhotoManagement extends StatefulWidget {
   final UnmodifiableListView<Photo> gallery;
   final void Function(List<Photo> gallery) onChanged;
+  final void Function(Photo photo) onProfilePhotoChanged;
 
   PhotoManagement({
     super.key,
     required List<Photo> gallery,
     required this.onChanged,
+    required this.onProfilePhotoChanged,
   }) : gallery = UnmodifiableListView(gallery);
+
+  @override
+  State<PhotoManagement> createState() => _PhotoManagementState();
+}
+
+class _PhotoManagementState extends State<PhotoManagement> {
+  final _keys = <GlobalKey>[];
+
+  @override
+  void initState() {
+    super.initState();
+    _updateKeys();
+  }
+
+  @override
+  void didUpdateWidget(covariant PhotoManagement oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.gallery.length != widget.gallery.length) {
+      _updateKeys();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -29,7 +53,7 @@ class PhotoManagement extends StatelessWidget {
             scrollDirection: Axis.horizontal,
             padding: EdgeInsets.zero,
             shrinkWrap: true,
-            itemCount: gallery.length,
+            itemCount: widget.gallery.length,
             buildDefaultDragHandles: false,
             proxyDecorator: (child, index, animation) {
               return Material(
@@ -38,54 +62,120 @@ class PhotoManagement extends StatelessWidget {
               );
             },
             onReorder: (oldIndex, newIndex) {
-              final newGallery = List.of(gallery);
+              final newGallery = List.of(widget.gallery);
               final item = newGallery.removeAt(oldIndex);
               newGallery.insert(
                   oldIndex < newIndex ? newIndex - 1 : newIndex, item);
-              onChanged(newGallery);
+              widget.onChanged(newGallery);
             },
             itemBuilder: (context, index) {
-              final photo = gallery[index];
-              final child = _Thumbnail(
-                photo: photo,
-                onReplace: () async {
-                  final photo = await pickPhotoWithCropper(context);
-                  if (photo != null && context.mounted) {
-                    final newGallery = List.of(gallery);
-                    newGallery.replaceRange(index, index + 1, [photo]);
-                    onChanged(newGallery);
-                  }
-                },
-                onDelete: () {
-                  final newGallery = List.of(gallery);
-                  newGallery.removeAt(index);
-                  onChanged(newGallery);
-                },
-              );
+              final photo = widget.gallery[index];
+              final key = _keys[index];
               return MouseRegion(
                 key: Key('$index'),
                 cursor: SystemMouseCursors.move,
                 child: ReorderableDragStartListener(
                   index: index,
-                  child: child,
+                  child: _Thumbnail(
+                    key: key,
+                    photo: photo,
+                    onTap: () async {
+                      final rect = locateWidget(key) ?? Rect.zero;
+                      showMenu(
+                        context: context,
+                        position: RelativeRect.fromLTRB(
+                          rect.left,
+                          rect.top,
+                          rect.right,
+                          rect.bottom,
+                        ).shift(const Offset(10, height)),
+                        items: [
+                          PopupMenuItem(
+                            onTap: () async {
+                              final imageFuture = photo.map(
+                                network: (network) => _download(network.url),
+                                memory: (memory) => Future.value(memory.bytes),
+                              );
+                              final image =
+                                  await showBlockingModal(context, imageFuture);
+                              if (image == null || !context.mounted) {
+                                return;
+                              }
+                              final cropped = await showCropperForImage(
+                                context,
+                                image: image,
+                                faceMask: true,
+                              );
+                              if (cropped == null || !context.mounted) {
+                                return;
+                              }
+                              widget.onProfilePhotoChanged(cropped);
+                            },
+                            child: const Text('Use as profile photo'),
+                          ),
+                          PopupMenuItem(
+                            onTap: () async {
+                              final delete = await showDialog(
+                                context: context,
+                                builder: (context) {
+                                  return AlertDialog(
+                                    title: const Text('Delete photo?'),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: Navigator.of(context).pop,
+                                        style: TextButton.styleFrom(
+                                          foregroundColor: Colors.black,
+                                        ),
+                                        child: const Text('Cancel'),
+                                      ),
+                                      TextButton(
+                                        onPressed: () =>
+                                            Navigator.of(context).pop(true),
+                                        style: TextButton.styleFrom(
+                                          foregroundColor: Colors.red,
+                                        ),
+                                        child: const Text('Delete'),
+                                      ),
+                                    ],
+                                  );
+                                },
+                              );
+                              if (delete == true && context.mounted) {
+                                final newGallery = List.of(widget.gallery);
+                                newGallery.removeAt(index);
+                                widget.onChanged(newGallery);
+                              }
+                            },
+                            child: const Text('Delete'),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
                 ),
               );
             },
           ),
-          if (gallery.length < 4)
+          if (widget.gallery.length < 4)
             _AddImage(
               onPressed: () async {
                 final photo = await pickPhotoWithCropper(context);
                 if (photo != null && context.mounted) {
-                  final newGallery = List.of(gallery);
+                  final newGallery = List.of(widget.gallery);
                   newGallery.add(photo);
-                  onChanged(newGallery);
+                  widget.onChanged(newGallery);
                 }
               },
             ),
         ],
       ),
     );
+  }
+
+  void _updateKeys() {
+    setState(() => _keys
+      ..clear()
+      ..addAll(List.generate(widget.gallery.length, (_) => GlobalKey())));
   }
 }
 
@@ -119,85 +209,33 @@ class _AddImage extends StatelessWidget {
 
 class _Thumbnail extends StatelessWidget {
   final Photo photo;
-  final VoidCallback onReplace;
-  final VoidCallback onDelete;
+  final VoidCallback onTap;
 
   const _Thumbnail({
     super.key,
     required this.photo,
-    required this.onReplace,
-    required this.onDelete,
+    required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     return _Container(
-      child: Stack(
-        children: [
-          Positioned.fill(
-            child: FilledButton(
-              onPressed: onReplace,
-              style: FilledButton.styleFrom(
-                shape: const RoundedRectangleBorder(),
-              ),
-              child: switch (photo) {
-                NetworkPhoto(:final url) => Image.network(
-                    url,
-                    fit: BoxFit.cover,
-                  ),
-                MemoryPhoto(:final Uint8List bytes) => Image.memory(
-                    bytes,
-                    fit: BoxFit.cover,
-                  ),
-                _ => const SizedBox.shrink(),
-              },
+      child: FilledButton(
+        onPressed: onTap,
+        style: FilledButton.styleFrom(
+          shape: const RoundedRectangleBorder(),
+        ),
+        child: switch (photo) {
+          NetworkPhoto(:final url) => Image.network(
+              url,
+              fit: BoxFit.cover,
             ),
-          ),
-          Positioned(
-            top: 4,
-            right: 4,
-            child: FilledButton(
-              style: FilledButton.styleFrom(
-                minimumSize: const Size.square(30),
-                shape: const CircleBorder(),
-              ),
-              onPressed: () async {
-                final delete = await showDialog(
-                  context: context,
-                  builder: (context) {
-                    return AlertDialog(
-                      title: const Text('Delete photo?'),
-                      actions: [
-                        TextButton(
-                          onPressed: Navigator.of(context).pop,
-                          style: TextButton.styleFrom(
-                            foregroundColor: Colors.black,
-                          ),
-                          child: const Text('Cancel'),
-                        ),
-                        TextButton(
-                          onPressed: () => Navigator.of(context).pop(true),
-                          style: TextButton.styleFrom(
-                            foregroundColor: Colors.red,
-                          ),
-                          child: const Text('Delete'),
-                        ),
-                      ],
-                    );
-                  },
-                );
-                if (delete == true && context.mounted) {
-                  onDelete();
-                }
-              },
-              child: const Icon(
-                Icons.close,
-                color: Colors.black,
-                size: 16,
-              ),
+          MemoryPhoto(:final Uint8List bytes) => Image.memory(
+              bytes,
+              fit: BoxFit.cover,
             ),
-          ),
-        ],
+          _ => const SizedBox.shrink(),
+        },
       ),
     );
   }
@@ -237,5 +275,17 @@ class _Container extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+Future<Uint8List?> _download(String url) async {
+  try {
+    print('download');
+    final response = await get(Uri.parse(url));
+    print('response ${response.contentLength}');
+    return response.bodyBytes;
+  } catch (e) {
+    print(e);
+    return null;
   }
 }

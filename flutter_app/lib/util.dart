@@ -44,6 +44,20 @@ Future<Photo?> pickPhotoWithCropper(
   return MemoryPhoto(key: '${Random().nextInt(1000000000)}', bytes: image);
 }
 
+Future<Photo?> showCropperForImage(
+  BuildContext context, {
+  required Uint8List image,
+  bool faceMask = false,
+}) async {
+  final (frame, size) = await getFirstFrameAndSize(image);
+  if (!context.mounted || frame == null) {
+    return null;
+  }
+  final cropped =
+      await showCropDialog(context, frame, size, faceMask: faceMask);
+  return MemoryPhoto(key: '${Random().nextInt(1000000000)}', bytes: cropped);
+}
+
 Future<Uint8List?> _pickImageWithCropper({
   required BuildContext context,
   required bool faceMask,

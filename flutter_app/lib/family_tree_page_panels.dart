@@ -1253,6 +1253,10 @@ class _ProfileDisplayState extends ConsumerState<_ProfileDisplay> {
                   gallery:
                       ref.watch(profileUpdateProvider.select((p) => p.gallery)),
                   onChanged: ref.read(profileUpdateProvider.notifier).gallery,
+                  onProfilePhotoChanged: (photo) {
+                    ref.read(profileUpdateProvider.notifier).photo(photo);
+                    widget.onSave(ref.read(profileUpdateProvider));
+                  },
                 ),
               ),
             ],
