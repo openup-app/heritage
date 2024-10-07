@@ -14,6 +14,7 @@ import 'package:heritage/graph_view.dart';
 import 'package:heritage/layout.dart';
 import 'package:heritage/menu_page.dart';
 import 'package:heritage/restart_app.dart';
+import 'package:heritage/transition.dart';
 
 import 'package:sentry_flutter/sentry_flutter.dart';
 
@@ -190,8 +191,10 @@ class _RouterBuilderState extends State<_RouterBuilder> {
         GoRoute(
           path: '/',
           name: 'menu',
-          builder: (context, state) {
-            return const MenuPage();
+          pageBuilder: (context, state) {
+            return const TopLevelTransitionPage(
+              child: MenuPage(),
+            );
           },
         ),
         if (kDebugMode)
@@ -238,20 +241,24 @@ class _RouterBuilderState extends State<_RouterBuilder> {
         GoRoute(
           path: '/view',
           name: 'view',
-          builder: (context, state) {
+          pageBuilder: (context, state) {
             final viewHistory = state.extra as ViewHistory?;
             if (viewHistory == null) {
-              return const ErrorPage();
+              return const TopLevelTransitionPage(
+                child: ErrorPage(),
+              );
             }
             final focalPersonId =
                 viewHistory.perspectiveUserId ?? viewHistory.primaryUserId;
-            return ProviderScope(
-              overrides: [
-                focalPersonIdProvider.overrideWith((ref) => focalPersonId),
-              ],
-              child: FamilyTreeLoadingPage(
-                child: FamilyTreePage(
-                  viewHistory: viewHistory,
+            return TopLevelTransitionPage(
+              child: ProviderScope(
+                overrides: [
+                  focalPersonIdProvider.overrideWith((ref) => focalPersonId),
+                ],
+                child: FamilyTreeLoadingPage(
+                  child: FamilyTreePage(
+                    viewHistory: viewHistory,
+                  ),
                 ),
               ),
             );
@@ -286,6 +293,7 @@ class _CacheAssetsState extends State<_CacheAssets> {
         'assets/images/app_loading.webp',
         'assets/images/binoculars.png',
         'assets/images/logo_text.png',
+        'assets/images/tagline.png',
         'assets/images/tree_background.png',
       ];
       for (final asset in assets) {

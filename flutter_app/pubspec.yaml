@@ -27,6 +27,7 @@ dependencies:
   image: ^4.2.0  
   intl: ^0.19.0
   json_annotation: ^4.9.0
+  lottie: ^3.1.2
   package_info_plus: ^8.0.2
   path_drawing: ^1.0.1
   permission_handler: ^11.3.1
@@ -56,6 +57,8 @@ flutter:
     - assets/images/connection_sibling.svg
     - assets/images/connection_spouse.svg
     - assets/images/logo_text.png
+    - assets/images/logo.json
+    - assets/images/tagline.png
     - assets/images/tree_background.png
 
   fonts:
