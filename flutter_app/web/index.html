@@ -16,7 +16,7 @@
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
   <!-- Favicon -->
-  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <link rel="icon" type="image/png" href="favicon.png" />
 
   <title>Stitchfam</title>
   <link rel="manifest" href="manifest.json">
@@ -38,6 +38,12 @@
   <img src="logo_text.png" style="width: 350px" alt="Stitchfam">
   <img src="tagline.png" style="width: 240px" alt="Create a family tree with your family!">
 
+  <!-- Disable right click and long presses -->
+  <script>
+    document.addEventListener('contextmenu', function (event) {
+      event.preventDefault();
+    });
+  </script>
 </body>
 
 </html>
