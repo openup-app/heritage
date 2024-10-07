@@ -141,6 +141,7 @@ class _PanelsState extends ConsumerState<Panels> {
                   )
                       ? widget.onViewPerspective
                       : null,
+                  onClearProfile: () => _onClearProfile(selectedPerson.id),
                 );
               },
             ),
@@ -215,6 +216,10 @@ class _PanelsState extends ConsumerState<Panels> {
                             )
                                 ? widget.onViewPerspective
                                 : null,
+                            onClearProfile: () {
+                              _onClearProfile(person.id);
+                              widget.onDismissPanelPopup();
+                            },
                             onSave: (update) async {
                               final notifier = ref.read(graphProvider.notifier);
                               await showBlockingModal(
@@ -562,6 +567,17 @@ class _PanelsState extends ConsumerState<Panels> {
       context.goNamed('menu');
     }
   }
+
+  void _onClearProfile(Id id) async {
+    final notifier = ref.read(graphProvider.notifier);
+    await showBlockingModal(
+      context,
+      notifier.clearProfile(id),
+    );
+    if (mounted) {
+      showProfileUpdateSuccess(context: context);
+    }
+  }
 }
 
 Future<T?> showScrollableModalBottomSheet<T>({
@@ -700,6 +716,7 @@ class _DraggableSheet extends StatefulWidget {
   final bool isOwnedByMe;
   final void Function(Relationship relationship) onAddConnectionPressed;
   final VoidCallback onDismissPanelPopup;
+  final VoidCallback? onClearProfile;
   final VoidCallback? onViewPerspective;
 
   const _DraggableSheet({
@@ -710,6 +727,7 @@ class _DraggableSheet extends StatefulWidget {
     required this.isOwnedByMe,
     required this.onAddConnectionPressed,
     required this.onDismissPanelPopup,
+    required this.onClearProfile,
     required this.onViewPerspective,
   });
 
@@ -837,6 +855,13 @@ class _DraggableSheetState extends State<_DraggableSheet> {
                             hasDifferentOwner: widget.selectedPerson.ownedBy !=
                                 widget.selectedPerson.id,
                             onViewPerspective: widget.onViewPerspective,
+                            onClearProfile: widget.onClearProfile == null
+                                ? null
+                                : () {
+                                    _dismissDraggableSheet(minPanelRatio);
+                                    widget.onDismissPanelPopup();
+                                    widget.onClearProfile?.call();
+                                  },
                             onSave: (update) async {
                               final notifier = ref.read(graphProvider.notifier);
                               await showBlockingModal(
@@ -846,11 +871,7 @@ class _DraggableSheetState extends State<_DraggableSheet> {
                               );
                               if (context.mounted) {
                                 showProfileUpdateSuccess(context: context);
-                                _draggableScrollableController.animateTo(
-                                  minPanelRatio,
-                                  duration: const Duration(milliseconds: 300),
-                                  curve: Curves.easeOut,
-                                );
+                                _dismissDraggableSheet(minPanelRatio);
                                 widget.onDismissPanelPopup();
                               }
                             },
@@ -865,6 +886,14 @@ class _DraggableSheetState extends State<_DraggableSheet> {
           ),
         );
       },
+    );
+  }
+
+  void _dismissDraggableSheet(double ratio) {
+    _draggableScrollableController.animateTo(
+      ratio,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeOut,
     );
   }
 }
@@ -1151,6 +1180,7 @@ class ProfileDisplay extends StatelessWidget {
   final bool isEditable;
   final bool hasDifferentOwner;
   final VoidCallback? onViewPerspective;
+  final VoidCallback? onClearProfile;
   final void Function(Profile profile) onSave;
 
   const ProfileDisplay({
@@ -1160,6 +1190,7 @@ class ProfileDisplay extends StatelessWidget {
     required this.isEditable,
     required this.hasDifferentOwner,
     required this.onViewPerspective,
+    required this.onClearProfile,
     required this.onSave,
   });
 
@@ -1175,6 +1206,7 @@ class ProfileDisplay extends StatelessWidget {
         isEditable: isEditable,
         hasDifferentOwner: hasDifferentOwner,
         onViewPerspective: onViewPerspective,
+        onClearProfile: onClearProfile,
         onSave: onSave,
       ),
     );
@@ -1186,6 +1218,7 @@ class _ProfileDisplay extends ConsumerStatefulWidget {
   final bool isEditable;
   final bool hasDifferentOwner;
   final VoidCallback? onViewPerspective;
+  final VoidCallback? onClearProfile;
   final void Function(Profile profile) onSave;
 
   const _ProfileDisplay({
@@ -1194,6 +1227,7 @@ class _ProfileDisplay extends ConsumerStatefulWidget {
     required this.isEditable,
     required this.hasDifferentOwner,
     required this.onViewPerspective,
+    required this.onClearProfile,
     required this.onSave,
   });
 
@@ -1525,11 +1559,11 @@ class _ProfileDisplayState extends ConsumerState<_ProfileDisplay> {
         if (widget.isEditable) ...[
           const SizedBox(height: 24),
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: _onClearProfilePressed,
             style: TextButton.styleFrom(
               foregroundColor: Colors.red,
             ),
-            child: const Text('Delete profile information from the tree'),
+            child: const Text('Delete my profile details from the tree'),
           ),
           const SizedBox(height: 24),
           FilledButton(
@@ -1540,8 +1574,41 @@ class _ProfileDisplayState extends ConsumerState<_ProfileDisplay> {
             child: const Text('Save'),
           ),
         ],
+        const SizedBox(height: 24),
       ],
     );
+  }
+
+  void _onClearProfilePressed() async {
+    final delete = await showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Delete profile information?'),
+          content: const Text(
+              'Your connections will remain, but your personal details will be cleared'),
+          actions: [
+            TextButton(
+              onPressed: Navigator.of(context).pop,
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.black,
+              ),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.red,
+              ),
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
+    if (mounted && delete == true) {
+      widget.onClearProfile?.call();
+    }
   }
 }
 

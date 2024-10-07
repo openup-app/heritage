@@ -331,7 +331,7 @@ export class Database {
       "ownedBy": null,
       "createdAt": new Date().toISOString(),
       "profile": {
-        "firstName": "Unknown",
+        "firstName": "",
         "lastName": "",
         "gender": gender,
         "photoKey": null,

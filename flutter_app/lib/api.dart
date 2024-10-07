@@ -198,6 +198,19 @@ class Api {
     );
   }
 
+  Future<Either<Error, Person>> deleteProfile(Id id) {
+    return _makeRequest(
+      request: () => http.delete(
+        Uri.parse('$_baseUrl/v1/people/$id/profile'),
+        headers: _headers,
+      ),
+      handleResponse: (response) {
+        final json = jsonDecode(response.body);
+        return right(Person.fromJson(json['person']));
+      },
+    );
+  }
+
   Future<Either<Error, Person>> takeOwnership(Id id) {
     return _makeRequest(
       request: () => http.put(
@@ -330,7 +343,9 @@ class Profile with _$Profile {
 
   const Profile._();
 
-  String get fullName => '$firstName $lastName';
+  String get fullName => firstName.isEmpty && lastName.isEmpty
+      ? "Missing Name"
+      : "$firstName $lastName";
 }
 
 class DateTimeConverter implements JsonConverter<DateTime, String> {

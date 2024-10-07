@@ -120,9 +120,9 @@ export function router(auth: Auth, database: Database, storage: Storage): Router
   router.delete('/people/:id', async (req: Request, res: Response) => {
     const id = req.params.id;
     try {
-      const tempPerson = await database.getPerson(id);
+      const oldPerson = await database.getPerson(id);
       const updatedPeople = await database.deletePerson(id);
-      const imageKeysToDelete = [tempPerson.profile.photoKey, ...tempPerson.profile.galleryKeys];
+      const imageKeysToDelete = [oldPerson.profile.photoKey, ...oldPerson.profile.galleryKeys];
       for (const key of imageKeysToDelete) {
         if (key) {
           await storage.delete(key);
@@ -130,6 +130,41 @@ export function router(auth: Auth, database: Database, storage: Storage): Router
       }
       return res.json({
         'people': updatedPeople.map(p => constructPerson(p, storage)),
+      })
+    } catch (e) {
+      console.log(e);
+      return res.sendStatus(500);
+    }
+  });
+
+  router.delete('/people/:id/profile', async (req: Request, res: Response) => {
+    const id = req.params.id;
+
+    try {
+      const oldPerson = await database.getPerson(id);
+      oldPerson.profile;
+      const updatedProfile: Profile = {
+        firstName: "",
+        lastName: "",
+        gender: "male",
+        photoKey: null,
+        galleryKeys: [],
+        birthday: null,
+        deathday: null,
+        birthplace: "",
+        occupation: "",
+        hobbies: "",
+      };
+      const updatedPerson = await database.updateProfile(id, updatedProfile);
+
+      const imageKeysToDelete = [oldPerson.profile.photoKey, ...oldPerson.profile.galleryKeys];
+      for (const key of imageKeysToDelete) {
+        if (key) {
+          await storage.delete(key);
+        }
+      }
+      return res.json({
+        'person': constructPerson(updatedPerson, storage),
       })
     } catch (e) {
       console.log(e);

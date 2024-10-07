@@ -107,6 +107,17 @@ class GraphNotifier extends StateNotifier<Graph> {
     );
   }
 
+  Future<void> clearProfile(Id id) async {
+    final result = await api.deleteProfile(id);
+    if (!mounted) {
+      return;
+    }
+    return result.fold(
+      debugPrint,
+      (r) => _updatePeople([r]),
+    );
+  }
+
   Future<void> takeOwnership(String id) async {
     final result = await api.takeOwnership(id);
     if (!mounted) {
