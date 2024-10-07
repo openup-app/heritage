@@ -294,6 +294,7 @@ class Person with _$Person implements GraphNode {
     required Id addedBy,
     required Id? ownedBy,
     @DateTimeConverter() required DateTime createdAt,
+    @DateTimeConverter() DateTime? ownedAt,
     required Profile profile,
   }) = _Person;
 

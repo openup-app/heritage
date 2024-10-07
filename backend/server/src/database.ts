@@ -134,6 +134,7 @@ export class Database {
     person.profile.firstName = firstName;
     person.profile.lastName = lastName;
     person.ownedBy = person.id;
+    person.ownedAt = new Date().toISOString();
     await this.personRef(person.id).create(person);
     return person;
   }
@@ -314,7 +315,7 @@ export class Database {
 
   public async updateOwnership(id: Id, newOwnerId: Id): Promise<Person> {
     const personRef = this.personRef(id);
-    await personRef.update({ "ownedBy": newOwnerId });
+    await personRef.update({ "ownedBy": newOwnerId, "ownedAt": new Date().toISOString(), });
     const snapshot = await personRef.get();
     const data = snapshot.data();
     return personSchema.parse(data);
@@ -330,6 +331,7 @@ export class Database {
       "addedBy": creatorId,
       "ownedBy": null,
       "createdAt": new Date().toISOString(),
+      "ownedAt": null,
       "profile": {
         "firstName": "",
         "lastName": "",
@@ -386,6 +388,7 @@ const personSchema = z.object({
   addedBy: idSchema,
   ownedBy: idSchema.nullable(),
   createdAt: z.string(),
+  ownedAt: z.string().nullable(),
   profile: profileSchema,
 });
 

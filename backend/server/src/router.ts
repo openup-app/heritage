@@ -172,7 +172,7 @@ export function router(auth: Auth, database: Database, storage: Storage): Router
     }
   });
 
-  router.put('/people/:id/take_ownership', async (req: Request, res: Response) => {
+  router.put("/people/:id/take_ownership", async (req: Request, res: Response) => {
     const id = req.params.id;
     const newOwnerId = req.headers["x-app-uid"] as string | undefined;
 
