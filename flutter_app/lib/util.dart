@@ -121,9 +121,9 @@ Future<void> showProfileUpdateSuccess({required BuildContext context}) async {
   late OverlayEntry overlayEntry;
   overlayEntry = OverlayEntry(
     builder: (context) => Align(
-      alignment: Alignment.bottomCenter,
+      alignment: Alignment.topCenter,
       child: Padding(
-        padding: const EdgeInsets.only(bottom: 24),
+        padding: const EdgeInsets.only(top: 112),
         child: DefaultTextStyle(
           style: textStyle,
           child: _AnimatedSuccessPopup(
@@ -253,13 +253,13 @@ class _SuccessPopup extends StatelessWidget {
         ],
       ),
       child: SizedBox(
-        width: 250,
-        height: 54,
+        width: 150,
+        height: 32,
         child: Center(
           child: Text(
             'Profile Saved',
             style: TextStyle(
-              fontSize: 20,
+              fontSize: 16,
               fontWeight: FontWeight.w700,
               color: Colors.white,
             ),
