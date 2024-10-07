@@ -87,7 +87,9 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
         FamilyTreeView(
           key: _familyTreeViewKey,
           focalPerson: graph.focalPerson,
-          people: graph.people.values.toList(),
+          people: widget.viewHistory.perspectiveUserId == null
+              ? graph.people.values.toList()
+              : graph.people.values.where((e) => e.ownedBy != null).toList(),
           viewHistory: widget.viewHistory,
           selectedPerson: _selectedPerson,
           viewRectNotifier: _viewRectNotifier,

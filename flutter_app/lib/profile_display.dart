@@ -11,6 +11,7 @@ import 'package:path_drawing/path_drawing.dart' as path_drawing;
 class AddConnectionButtons extends StatelessWidget {
   final bool enabled;
   final bool canAddParent;
+  final bool canAddSpouse;
   final bool canAddChildren;
   final double paddingWidth;
   final void Function(Relationship relationship) onAddConnectionPressed;
@@ -19,6 +20,7 @@ class AddConnectionButtons extends StatelessWidget {
     super.key,
     required this.enabled,
     required this.canAddParent,
+    required this.canAddSpouse,
     required this.canAddChildren,
     required this.paddingWidth,
     required this.onAddConnectionPressed,
@@ -31,7 +33,7 @@ class AddConnectionButtons extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
         _AddConnectionButton(
-          onPressed: canAddParent
+          onPressed: enabled && canAddParent
               ? () => onAddConnectionPressed(Relationship.parent)
               : null,
           paddingWidth: paddingWidth,
@@ -43,7 +45,9 @@ class AddConnectionButtons extends StatelessWidget {
         ),
         SizedBox(width: paddingWidth * 2),
         _AddConnectionButton(
-          onPressed: () => onAddConnectionPressed(Relationship.sibling),
+          onPressed: enabled
+              ? () => onAddConnectionPressed(Relationship.sibling)
+              : null,
           paddingWidth: paddingWidth,
           icon: SvgPicture.asset(
             'assets/images/connection_sibling.svg',
@@ -53,7 +57,7 @@ class AddConnectionButtons extends StatelessWidget {
         ),
         SizedBox(width: paddingWidth * 2),
         _AddConnectionButton(
-          onPressed: canAddChildren
+          onPressed: enabled && canAddChildren
               ? () => onAddConnectionPressed(Relationship.child)
               : null,
           paddingWidth: paddingWidth,
@@ -65,7 +69,9 @@ class AddConnectionButtons extends StatelessWidget {
         ),
         SizedBox(width: paddingWidth * 2),
         _AddConnectionButton(
-          onPressed: () => onAddConnectionPressed(Relationship.spouse),
+          onPressed: enabled && canAddSpouse
+              ? () => onAddConnectionPressed(Relationship.spouse)
+              : null,
           paddingWidth: paddingWidth,
           icon: SvgPicture.asset(
             'assets/images/connection_spouse.svg',

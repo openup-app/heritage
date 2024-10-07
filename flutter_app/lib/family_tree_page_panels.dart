@@ -128,6 +128,7 @@ class _PanelsState extends ConsumerState<Panels> {
                 return _DraggableSheet(
                   selectedPerson: selectedPerson,
                   relatedness: relatedness,
+                  isFocalUser: selectedPerson.id == widget.focalPerson.id,
                   isPrimaryUser: isPrimaryUser,
                   isOwnedByMe: isOwnedByPrimaryUser,
                   onAddConnectionPressed: widget.onAddConnectionPressed,
@@ -203,12 +204,13 @@ class _PanelsState extends ConsumerState<Panels> {
                           ProfileNameSection(
                             person: person,
                             relatedness: relatedness,
-                            isPrimaryUser: isPrimaryUser,
+                            isFocalUser: widget.focalPerson.id == person.id,
                           ),
                           ProfileDisplay(
                             initialProfile: person.profile,
                             isPrimaryUser: isPrimaryUser,
-                            isEditable: isOwnedByPrimaryUser,
+                            isEditable: person.ownedBy == person.id &&
+                                widget.viewHistory.perspectiveUserId == null,
                             hasDifferentOwner: person.ownedBy != person.id,
                             onViewPerspective: canViewPerspective(
                               id: person.id,
@@ -314,6 +316,8 @@ class _PanelsState extends ConsumerState<Panels> {
                           child: buildAddConnectionButtons(
                             person: selectedPerson,
                             relatedness: relatedness,
+                            isPerspectiveMode:
+                                widget.viewHistory.perspectiveUserId != null,
                             paddingWidth: 20,
                             onAddConnectionPressed:
                                 widget.onAddConnectionPressed,
@@ -401,6 +405,8 @@ class _PanelsState extends ConsumerState<Panels> {
                             child: buildAddConnectionButtons(
                               person: person,
                               relatedness: relatedness,
+                              isPerspectiveMode:
+                                  widget.viewHistory.perspectiveUserId != null,
                               paddingWidth: 16,
                               onAddConnectionPressed: (relationship) {
                                 Navigator.of(context).pop();
@@ -624,13 +630,15 @@ Future<T?> showScrollableModalBottomSheet<T>({
 Widget buildAddConnectionButtons({
   required Person person,
   required Relatedness relatedness,
+  required bool isPerspectiveMode,
   required double paddingWidth,
   required void Function(Relationship relationship) onAddConnectionPressed,
 }) {
   return AddConnectionButtons(
-    enabled: relatedness.isBloodRelative,
+    enabled: relatedness.isBloodRelative && !isPerspectiveMode,
     paddingWidth: paddingWidth,
-    canAddParent: person.parents.isEmpty,
+    canAddParent: person.parents.isEmpty && relatedness.isBloodRelative,
+    canAddSpouse: person.spouses.isEmpty,
     canAddChildren:
         relatedness.isAncestor || !relatedness.isGrandparentLevelOrHigher,
     onAddConnectionPressed: onAddConnectionPressed,
@@ -722,6 +730,7 @@ class _DismissWhenNullState extends State<_DismissWhenNull>
 class _DraggableSheet extends StatefulWidget {
   final Person selectedPerson;
   final Relatedness relatedness;
+  final bool isFocalUser;
   final bool isPrimaryUser;
   final bool isOwnedByMe;
   final void Function(Relationship relationship) onAddConnectionPressed;
@@ -734,6 +743,7 @@ class _DraggableSheet extends StatefulWidget {
     super.key,
     required this.selectedPerson,
     required this.relatedness,
+    required this.isFocalUser,
     required this.isPrimaryUser,
     required this.isOwnedByMe,
     required this.onAddConnectionPressed,
@@ -828,6 +838,7 @@ class _DraggableSheetState extends State<_DraggableSheet> {
                                   child: buildAddConnectionButtons(
                                     person: widget.selectedPerson,
                                     relatedness: widget.relatedness,
+                                    isPerspectiveMode: !widget.isPrimaryUser,
                                     paddingWidth: 12,
                                     onAddConnectionPressed:
                                         widget.onAddConnectionPressed,
@@ -851,7 +862,7 @@ class _DraggableSheetState extends State<_DraggableSheet> {
                       child: ProfileNameSection(
                         person: widget.selectedPerson,
                         relatedness: widget.relatedness,
-                        isPrimaryUser: widget.isPrimaryUser,
+                        isFocalUser: widget.isFocalUser,
                       ),
                     ),
                   ),
@@ -863,7 +874,8 @@ class _DraggableSheetState extends State<_DraggableSheet> {
                           return ProfileDisplay(
                             initialProfile: widget.selectedPerson.profile,
                             isPrimaryUser: widget.isPrimaryUser,
-                            isEditable: widget.isOwnedByMe,
+                            isEditable:
+                                widget.isOwnedByMe && widget.isPrimaryUser,
                             hasDifferentOwner: widget.selectedPerson.ownedBy !=
                                 widget.selectedPerson.id,
                             onViewPerspective: widget.onViewPerspective,
@@ -1108,13 +1120,13 @@ class LogoText extends StatelessWidget {
 class ProfileNameSection extends StatelessWidget {
   final Person person;
   final Relatedness relatedness;
-  final bool isPrimaryUser;
+  final bool isFocalUser;
 
   const ProfileNameSection({
     super.key,
     required this.person,
     required this.relatedness,
-    required this.isPrimaryUser,
+    required this.isFocalUser,
   });
 
   @override
@@ -1130,7 +1142,7 @@ class ProfileNameSection extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                if (isPrimaryUser) ...[
+                if (isFocalUser) ...[
                   Text(
                     person.profile.fullName,
                     style: Theme.of(context).textTheme.titleLarge,
