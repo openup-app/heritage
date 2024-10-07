@@ -9,7 +9,6 @@ import 'package:heritage/util.dart';
 import 'package:path_drawing/path_drawing.dart' as path_drawing;
 
 class AddConnectionButtons extends StatelessWidget {
-  final bool enabled;
   final bool canAddParent;
   final bool canAddSpouse;
   final bool canAddChildren;
@@ -18,7 +17,6 @@ class AddConnectionButtons extends StatelessWidget {
 
   const AddConnectionButtons({
     super.key,
-    required this.enabled,
     required this.canAddParent,
     required this.canAddSpouse,
     required this.canAddChildren,
@@ -33,7 +31,7 @@ class AddConnectionButtons extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
         _AddConnectionButton(
-          onPressed: enabled && canAddParent
+          onPressed: canAddParent
               ? () => onAddConnectionPressed(Relationship.parent)
               : null,
           paddingWidth: paddingWidth,
@@ -45,9 +43,7 @@ class AddConnectionButtons extends StatelessWidget {
         ),
         SizedBox(width: paddingWidth * 2),
         _AddConnectionButton(
-          onPressed: enabled
-              ? () => onAddConnectionPressed(Relationship.sibling)
-              : null,
+          onPressed: () => onAddConnectionPressed(Relationship.sibling),
           paddingWidth: paddingWidth,
           icon: SvgPicture.asset(
             'assets/images/connection_sibling.svg',
@@ -57,7 +53,7 @@ class AddConnectionButtons extends StatelessWidget {
         ),
         SizedBox(width: paddingWidth * 2),
         _AddConnectionButton(
-          onPressed: enabled && canAddChildren
+          onPressed: canAddChildren
               ? () => onAddConnectionPressed(Relationship.child)
               : null,
           paddingWidth: paddingWidth,
@@ -69,7 +65,7 @@ class AddConnectionButtons extends StatelessWidget {
         ),
         SizedBox(width: paddingWidth * 2),
         _AddConnectionButton(
-          onPressed: enabled && canAddSpouse
+          onPressed: canAddSpouse
               ? () => onAddConnectionPressed(Relationship.spouse)
               : null,
           paddingWidth: paddingWidth,

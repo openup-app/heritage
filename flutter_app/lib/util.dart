@@ -179,6 +179,9 @@ bool canViewPerspective({
 }) =>
     id != primaryUserId && id != focalPersonId && !isSibling && isOwned;
 
+bool canAddRelative(bool isBloodRelative, bool isPerspectiveMode) =>
+    isBloodRelative && !isPerspectiveMode;
+
 bool canDeletePerson(Person person) {
   if (person.ownedBy != null) {
     return false;

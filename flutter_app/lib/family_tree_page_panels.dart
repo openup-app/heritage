@@ -329,45 +329,48 @@ class _PanelsState extends ConsumerState<Panels> {
               ),
             ),
           ),
-          AnimatedSlideIn(
-            duration: const Duration(milliseconds: 300),
-            beginOffset: const Offset(0, 0.1),
-            alignment: Alignment.bottomCenter,
-            child: selectedPerson == null || relatedness == null
-                ? null
-                : Align(
-                    alignment: Alignment.bottomCenter,
-                    child: Padding(
-                      padding: const EdgeInsets.only(bottom: 24),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                        decoration: const BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.all(Radius.circular(20)),
-                          boxShadow: [
-                            BoxShadow(
-                              offset: Offset(0, 4),
-                              blurRadius: 16,
-                              color: Color.fromRGBO(0x00, 0x00, 0x00, 0.25),
+          if (canAddRelative(relatedness?.isBloodRelative == true,
+              widget.viewHistory.perspectiveUserId != null))
+            AnimatedSlideIn(
+              duration: const Duration(milliseconds: 300),
+              beginOffset: const Offset(0, 0.1),
+              alignment: Alignment.bottomCenter,
+              child: selectedPerson == null || relatedness == null
+                  ? null
+                  : Align(
+                      alignment: Alignment.bottomCenter,
+                      child: Padding(
+                        padding: const EdgeInsets.only(bottom: 24),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          decoration: const BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.all(Radius.circular(20)),
+                            boxShadow: [
+                              BoxShadow(
+                                offset: Offset(0, 4),
+                                blurRadius: 16,
+                                color: Color.fromRGBO(0x00, 0x00, 0x00, 0.25),
+                              ),
+                            ],
+                          ),
+                          child: Padding(
+                            padding:
+                                const EdgeInsets.symmetric(horizontal: 20.0),
+                            child: buildAddConnectionButtons(
+                              person: selectedPerson,
+                              relatedness: relatedness,
+                              isPerspectiveMode:
+                                  widget.viewHistory.perspectiveUserId != null,
+                              paddingWidth: 20,
+                              onAddConnectionPressed:
+                                  widget.onAddConnectionPressed,
                             ),
-                          ],
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                          child: buildAddConnectionButtons(
-                            person: selectedPerson,
-                            relatedness: relatedness,
-                            isPerspectiveMode:
-                                widget.viewHistory.perspectiveUserId != null,
-                            paddingWidth: 20,
-                            onAddConnectionPressed:
-                                widget.onAddConnectionPressed,
                           ),
                         ),
                       ),
                     ),
-                  ),
-          ),
+            ),
         ],
       ],
     );
@@ -437,51 +440,57 @@ class _PanelsState extends ConsumerState<Panels> {
               if (mounted) {
                 _showOwnershipModal(
                     person: person,
-                    onAddConnectionPressed: () {
-                      Navigator.of(context).pop();
-                      showModalBottomSheet(
-                        context: context,
-                        shape: const RoundedRectangleBorder(
-                          borderRadius: BorderRadius.only(
-                            topLeft: Radius.circular(10),
-                            topRight: Radius.circular(10),
-                          ),
-                        ),
-                        builder: (context) {
-                          return Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Align(
-                                alignment: Alignment.centerLeft,
-                                child: Padding(
-                                  padding: const EdgeInsets.all(16.0),
-                                  child: Text(
-                                    person.profile.fullName,
-                                    style:
-                                        Theme.of(context).textTheme.titleLarge,
-                                  ),
+                    onAddConnectionPressed: !canAddRelative(
+                            relatedness.isBloodRelative,
+                            widget.viewHistory.perspectiveUserId != null)
+                        ? null
+                        : () {
+                            Navigator.of(context).pop();
+                            showModalBottomSheet(
+                              context: context,
+                              shape: const RoundedRectangleBorder(
+                                borderRadius: BorderRadius.only(
+                                  topLeft: Radius.circular(10),
+                                  topRight: Radius.circular(10),
                                 ),
                               ),
-                              Padding(
-                                padding: const EdgeInsets.all(16.0),
-                                child: buildAddConnectionButtons(
-                                  person: person,
-                                  relatedness: relatedness,
-                                  isPerspectiveMode:
-                                      widget.viewHistory.perspectiveUserId !=
-                                          null,
-                                  paddingWidth: 16,
-                                  onAddConnectionPressed: (relationship) {
-                                    Navigator.of(context).pop();
-                                    widget.onAddConnectionPressed(relationship);
-                                  },
-                                ),
-                              ),
-                            ],
-                          );
-                        },
-                      );
-                    },
+                              builder: (context) {
+                                return Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Align(
+                                      alignment: Alignment.centerLeft,
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(16.0),
+                                        child: Text(
+                                          person.profile.fullName,
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .titleLarge,
+                                        ),
+                                      ),
+                                    ),
+                                    Padding(
+                                      padding: const EdgeInsets.all(16.0),
+                                      child: buildAddConnectionButtons(
+                                        person: person,
+                                        relatedness: relatedness,
+                                        isPerspectiveMode: widget.viewHistory
+                                                .perspectiveUserId !=
+                                            null,
+                                        paddingWidth: 16,
+                                        onAddConnectionPressed: (relationship) {
+                                          Navigator.of(context).pop();
+                                          widget.onAddConnectionPressed(
+                                              relationship);
+                                        },
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              },
+                            );
+                          },
                     onDeletePressed: !canDeletePerson(person)
                         ? null
                         : () => _onDelete(person));
@@ -501,7 +510,7 @@ class _PanelsState extends ConsumerState<Panels> {
 
   void _showOwnershipModal({
     required Person person,
-    required VoidCallback onAddConnectionPressed,
+    required VoidCallback? onAddConnectionPressed,
     required VoidCallback? onDeletePressed,
   }) async {
     final shouldDismiss = await showScrollableModalBottomSheet<bool>(
@@ -510,9 +519,7 @@ class _PanelsState extends ConsumerState<Panels> {
         return WaitingForApprovalDisplay(
           key: _modalKey,
           person: person,
-          onAddConnectionPressed: () {
-            onAddConnectionPressed();
-          },
+          onAddConnectionPressed: onAddConnectionPressed,
           onSaveAndShare: (firstName, lastName, gender) async {
             await _onSaveAndShare(person.id, firstName, lastName, gender);
             if (context.mounted) {
@@ -699,7 +706,6 @@ Widget buildAddConnectionButtons({
   required void Function(Relationship relationship) onAddConnectionPressed,
 }) {
   return AddConnectionButtons(
-    enabled: relatedness.isBloodRelative && !isPerspectiveMode,
     paddingWidth: paddingWidth,
     canAddParent: person.parents.isEmpty && relatedness.isBloodRelative,
     canAddSpouse: person.spouses.isEmpty,
@@ -877,51 +883,56 @@ class _DraggableSheetState extends State<_DraggableSheet> {
                 keyboardDismissBehavior:
                     ScrollViewKeyboardDismissBehavior.onDrag,
                 slivers: [
-                  PinnedHeaderSliver(
-                    child: ColoredBox(
-                      color: Colors.white,
-                      child: Column(
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Center(
-                                  child: Padding(
-                                    padding:
-                                        EdgeInsets.symmetric(vertical: 12.0),
-                                    child: _DragHandle(),
+                  if (canAddRelative(widget.relatedness.isBloodRelative,
+                      widget.isPerspectiveMode))
+                    PinnedHeaderSliver(
+                      child: ColoredBox(
+                        color: Colors.white,
+                        child: Column(
+                          children: [
+                            Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 16),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Center(
+                                    child: Padding(
+                                      padding:
+                                          EdgeInsets.symmetric(vertical: 12.0),
+                                      child: _DragHandle(),
+                                    ),
                                   ),
-                                ),
-                                Text(
-                                  'Invite a...',
-                                  style: Theme.of(context).textTheme.titleLarge,
-                                ),
-                                const SizedBox(height: 4),
-                                Align(
-                                  alignment: Alignment.centerLeft,
-                                  child: buildAddConnectionButtons(
-                                    person: widget.selectedPerson,
-                                    relatedness: widget.relatedness,
-                                    isPerspectiveMode: widget.isPerspectiveMode,
-                                    paddingWidth: 12,
-                                    onAddConnectionPressed:
-                                        widget.onAddConnectionPressed,
+                                  Text(
+                                    'Invite a...',
+                                    style:
+                                        Theme.of(context).textTheme.titleLarge,
                                   ),
-                                ),
-                              ],
+                                  const SizedBox(height: 4),
+                                  Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: buildAddConnectionButtons(
+                                      person: widget.selectedPerson,
+                                      relatedness: widget.relatedness,
+                                      isPerspectiveMode:
+                                          widget.isPerspectiveMode,
+                                      paddingWidth: 12,
+                                      onAddConnectionPressed:
+                                          widget.onAddConnectionPressed,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 16),
-                          const Divider(
-                            height: 1,
-                            color: Color.fromRGBO(0xEB, 0xEB, 0xEB, 1.0),
-                          ),
-                        ],
+                            const SizedBox(height: 16),
+                            const Divider(
+                              height: 1,
+                              color: Color.fromRGBO(0xEB, 0xEB, 0xEB, 1.0),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
                   SliverToBoxAdapter(
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
