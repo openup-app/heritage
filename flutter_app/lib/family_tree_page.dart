@@ -942,11 +942,12 @@ class _EdgePainter extends CustomPainter {
         topCenter: rect.bottomCenter + const Offset(0, 16),
         maxWidth: rect.width,
       );
-      final birthyear = person.profile.birthday?.year.toString();
-      if (birthyear != null) {
+      final birthYear = person.profile.birthday?.year.toString();
+      final deathYear = person.profile.deathday?.year.toString();
+      if (birthYear != null) {
         _paintText(
           canvas: canvas,
-          text: birthyear,
+          text: deathYear == null ? birthYear : '$birthYear - $deathYear',
           style: const TextStyle(
             color: Color.fromRGBO(0x37, 0x37, 0x37, 1),
             fontSize: 17,
