@@ -94,7 +94,6 @@ class _PanelsState extends ConsumerState<Panels> {
     final isOwnedByPrimaryUser = isPrimaryUser ||
         selectedPerson?.ownedBy == widget.viewHistory.primaryUserId;
     final small = _layout == LayoutType.small;
-    const darkColor = Color.fromRGBO(0x3B, 0x3B, 0x3B, 1.0);
     return Stack(
       children: [
         if (small) ...[
@@ -105,49 +104,8 @@ class _PanelsState extends ConsumerState<Panels> {
               children: [
                 const LogoText(width: 250),
                 if (widget.viewHistory.perspectiveUserId != null)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8.0,
-                      vertical: 6.0,
-                    ),
-                    decoration: const BoxDecoration(
-                      borderRadius: BorderRadius.all(
-                        Radius.circular(10),
-                      ),
-                      color: Colors.white,
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const ColorFiltered(
-                          colorFilter: ColorFilter.mode(
-                            darkColor,
-                            BlendMode.srcIn,
-                          ),
-                          child: Binoculars(
-                            size: 16,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          '${widget.focalPerson.profile.firstName}\'s Tree',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style:
-                              Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            color: darkColor,
-                            shadows: const [
-                              Shadow(
-                                color: Color.fromRGBO(0x00, 0x00, 0x00, 0.25),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                  _PerspectiveTitle(
+                      firstName: widget.focalPerson.profile.firstName),
               ],
             ),
           ),
@@ -162,20 +120,8 @@ class _PanelsState extends ConsumerState<Panels> {
             Positioned(
               left: 16,
               bottom: 16,
-              child: DecoratedBox(
-                decoration: _bottomButtonDecoration,
-                child: FilledButton(
-                  style: FilledButton.styleFrom(
-                    minimumSize: const Size.square(48),
-                    foregroundColor: Colors.black,
-                    backgroundColor: Colors.white,
-                  ),
-                  onPressed: _goHome,
-                  child: const RotatedBox(
-                    quarterTurns: 2,
-                    child: Icon(Icons.logout),
-                  ),
-                ),
+              child: _LeavePerspectiveButton(
+                onPressed: _goHome,
               ),
             ),
           Positioned(
@@ -206,7 +152,6 @@ class _PanelsState extends ConsumerState<Panels> {
                   'assets/images/perspective_portal.png',
                   fit: BoxFit.cover,
                 ),
-                // child: FlutterLogo(),
               ),
             ),
           ),
@@ -254,14 +199,8 @@ class _PanelsState extends ConsumerState<Panels> {
                 children: [
                   const LogoText(),
                   if (widget.viewHistory.perspectiveUserId != null)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                      child: Text(
-                        '${widget.focalPerson.profile.firstName}\'s tree',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
+                    _PerspectiveTitle(
+                      firstName: widget.focalPerson.profile.firstName,
                     ),
                 ],
               ),
@@ -274,6 +213,14 @@ class _PanelsState extends ConsumerState<Panels> {
               onRecenterPressed: widget.onRecenter,
             ),
           ),
+          if (widget.viewHistory.perspectiveUserId != null)
+            Positioned(
+              left: 24,
+              bottom: 24,
+              child: _LeavePerspectiveButton(
+                onPressed: _goHome,
+              ),
+            ),
           Positioned(
             top: 100,
             left: 24,
@@ -1063,6 +1010,34 @@ class _DragHandle extends StatelessWidget {
   }
 }
 
+class _LeavePerspectiveButton extends StatelessWidget {
+  final VoidCallback onPressed;
+
+  const _LeavePerspectiveButton({
+    super.key,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: _bottomButtonDecoration,
+      child: FilledButton(
+        style: FilledButton.styleFrom(
+          minimumSize: const Size.square(48),
+          foregroundColor: Colors.black,
+          backgroundColor: Colors.white,
+        ),
+        onPressed: onPressed,
+        child: const RotatedBox(
+          quarterTurns: 2,
+          child: Icon(Icons.logout),
+        ),
+      ),
+    );
+  }
+}
+
 class _MenuButtons extends StatelessWidget {
   final VoidCallback onRecenterPressed;
 
@@ -1478,7 +1453,7 @@ class _ProfileDisplayState extends ConsumerState<_ProfileDisplay> {
               Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
-                  'Add photos for others to see, this is not for your photo on the tree',
+                  'Add photos for others to see, this is not your photo on the tree',
                   style: Theme.of(context).textTheme.labelLarge,
                 ),
               ),
@@ -2253,6 +2228,61 @@ class _GalleryViewState extends State<GalleryView> {
     _controller.nextPage(
       duration: const Duration(milliseconds: 600),
       curve: Curves.easeOut,
+    );
+  }
+}
+
+class _PerspectiveTitle extends StatelessWidget {
+  final String firstName;
+  const _PerspectiveTitle({
+    super.key,
+    required this.firstName,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    const darkColor = Color.fromRGBO(0x3B, 0x3B, 0x3B, 1.0);
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 8.0,
+        vertical: 6.0,
+      ),
+      decoration: const BoxDecoration(
+        borderRadius: BorderRadius.all(
+          Radius.circular(10),
+        ),
+        color: Colors.white,
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const ColorFiltered(
+            colorFilter: ColorFilter.mode(
+              darkColor,
+              BlendMode.srcIn,
+            ),
+            child: Binoculars(
+              size: 16,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            '$firstName\'s Tree',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: darkColor,
+              shadows: const [
+                Shadow(
+                  color: Color.fromRGBO(0x00, 0x00, 0x00, 0.25),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
