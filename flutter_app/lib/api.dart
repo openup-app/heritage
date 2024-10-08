@@ -235,13 +235,13 @@ class Api {
     String basename,
     Uint8List bytes,
   ) async {
-    final downscaled = await downscaleImage(bytes, size: 400);
+    final downscaled = await downscaleImage(bytes, size: 600);
     if (downscaled == null) {
       return;
     }
     request.files.add(http.MultipartFile.fromBytes(
       key,
-      bytes,
+      downscaled,
       filename: '$basename.jpg',
     ));
   }

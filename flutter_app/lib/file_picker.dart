@@ -12,11 +12,11 @@ Future<XFile?> pickFile(String title) async {
     dialogTitle: title,
     allowMultiple: false,
   );
-  final path = result?.files.first.path;
-  if (path == null) {
+  final file = result?.xFiles.firstOrNull;
+  if (file == null) {
     return null;
   }
-  return XFile(path);
+  return file;
 }
 
 Future<(Uint8List? bytes, Size size)> getFirstFrameAndSize(
@@ -46,11 +46,11 @@ Future<ui.Image> _downscaleImage(ui.Image image, int size) async {
   final int targetWidth;
   final int targetHeight;
   if (aspect < 1) {
-    targetWidth = size;
-    targetHeight = targetWidth ~/ aspect;
-  } else {
     targetHeight = size;
     targetWidth = (targetHeight * aspect).toInt();
+  } else {
+    targetWidth = size;
+    targetHeight = (targetWidth / aspect).toInt();
   }
 
   final pictureRecorder = ui.PictureRecorder();
