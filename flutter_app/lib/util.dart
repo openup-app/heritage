@@ -122,15 +122,11 @@ Future<void> showProfileUpdateSuccess({required BuildContext context}) async {
   final overlay = Overlay.of(context);
   late OverlayEntry overlayEntry;
   overlayEntry = OverlayEntry(
-    builder: (context) => Align(
-      alignment: Alignment.topCenter,
-      child: Padding(
-        padding: const EdgeInsets.only(top: 112),
-        child: DefaultTextStyle(
-          style: textStyle,
-          child: _AnimatedSuccessPopup(
-            onDone: overlayEntry.remove,
-          ),
+    builder: (context) => Center(
+      child: DefaultTextStyle(
+        style: textStyle,
+        child: _AnimatedSuccessPopup(
+          onDone: overlayEntry.remove,
         ),
       ),
     ),
@@ -399,30 +395,32 @@ class _SuccessPopup extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const DecoratedBox(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.all(
-          Radius.circular(10),
-        ),
-        color: Color.fromRGBO(0x07, 0xCA, 0x35, 1.0),
-        boxShadow: [
-          BoxShadow(
-            offset: Offset(0, 5),
-            blurRadius: 15,
-            color: Color.fromRGBO(0x00, 0x00, 0x00, 0.3),
+    return const IgnorePointer(
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.all(
+            Radius.circular(10),
           ),
-        ],
-      ),
-      child: SizedBox(
-        width: 150,
-        height: 32,
-        child: Center(
-          child: Text(
-            'Profile Saved',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              color: Colors.white,
+          color: Color.fromRGBO(0x07, 0xCA, 0x35, 1.0),
+          boxShadow: [
+            BoxShadow(
+              offset: Offset(0, 5),
+              blurRadius: 15,
+              color: Color.fromRGBO(0x00, 0x00, 0x00, 0.3),
+            ),
+          ],
+        ),
+        child: SizedBox(
+          width: 150,
+          height: 32,
+          child: Center(
+            child: Text(
+              'Profile Saved',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
+              ),
             ),
           ),
         ),
