@@ -75,6 +75,7 @@ class GraphNotifier extends StateNotifier<Graph> {
     required String lastName,
     required Gender gender,
     required Relationship relationship,
+    bool takeOwnership = false,
   }) async {
     final result = await api.addConnection(
       sourceId: source,
@@ -82,6 +83,7 @@ class GraphNotifier extends StateNotifier<Graph> {
       lastName: lastName,
       gender: gender,
       relationship: relationship,
+      takeOwnership: takeOwnership,
     );
     if (!mounted) {
       return null;

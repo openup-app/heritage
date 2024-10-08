@@ -671,10 +671,10 @@ class AddConnectionDisplay extends ConsumerStatefulWidget {
 
   @override
   ConsumerState<AddConnectionDisplay> createState() =>
-      _BasicProfileDisplayState();
+      _AddConnectionDisplayState();
 }
 
-class _BasicProfileDisplayState extends ConsumerState<AddConnectionDisplay> {
+class _AddConnectionDisplayState extends ConsumerState<AddConnectionDisplay> {
   String _firstName = '';
   String _lastName = '';
   Gender _gender = Gender.male;

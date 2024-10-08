@@ -51,6 +51,7 @@ class Api {
     required String lastName,
     required Gender gender,
     required Relationship relationship,
+    bool takeOwnership = false,
   }) {
     return _makeRequest(
       request: () => http.post(
@@ -61,6 +62,7 @@ class Api {
           'lastName': lastName,
           'gender': gender.name,
           'relationship': relationship.name,
+          'takeOwnership': takeOwnership,
         }),
       ),
       handleResponse: (response) {

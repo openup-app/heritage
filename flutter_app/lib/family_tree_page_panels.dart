@@ -290,7 +290,7 @@ class _PanelsState extends ConsumerState<Panels> {
                         onSave:
                             (firstName, lastName, gender, takeOwnership) async {
                           await _saveNewConnection(firstName, lastName, gender,
-                              person, relationship);
+                              person, relationship, takeOwnership);
                           if (mounted) {
                             widget.onDismissPanelPopup();
                           }
@@ -545,8 +545,8 @@ class _PanelsState extends ConsumerState<Panels> {
         return AddConnectionDisplay(
           relationship: relationship,
           onSave: (firstName, lastName, gender, takeOwnership) async {
-            await _saveNewConnection(
-                firstName, lastName, gender, person, relationship);
+            await _saveNewConnection(firstName, lastName, gender, person,
+                relationship, takeOwnership);
             if (context.mounted) {
               Navigator.of(context).pop(true);
             }
@@ -559,8 +559,14 @@ class _PanelsState extends ConsumerState<Panels> {
     }
   }
 
-  Future<void> _saveNewConnection(String firstName, String lastName,
-      Gender gender, Person person, Relationship relationship) async {
+  Future<void> _saveNewConnection(
+    String firstName,
+    String lastName,
+    Gender gender,
+    Person person,
+    Relationship relationship,
+    bool takeOwnership,
+  ) async {
     final graphNotifier = ref.read(graphProvider.notifier);
     final addConnectionFuture = graphNotifier.addConnection(
       source: person.id,
@@ -568,18 +574,19 @@ class _PanelsState extends ConsumerState<Panels> {
       lastName: lastName,
       gender: gender,
       relationship: relationship,
+      takeOwnership: takeOwnership,
     );
     final newId = await showBlockingModal(context, addConnectionFuture);
     if (!mounted) {
       return;
     }
-    if (newId != null) {
+    if (newId != null && !takeOwnership) {
       final type = await shareInvite(firstName, newId);
       if (!mounted) {
         return;
       }
-      showProfileUpdateSuccess(context: context);
     }
+    showProfileUpdateSuccess(context: context);
   }
 
   Future<void> _onSaveAndShare(
