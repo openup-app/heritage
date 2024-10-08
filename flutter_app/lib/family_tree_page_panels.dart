@@ -941,8 +941,14 @@ class _DraggableSheetState extends State<_DraggableSheet> {
                   else
                     PinnedHeaderSliver(
                       child: Container(
-                        height: 8,
+                        width: double.infinity,
                         color: Colors.white,
+                        child: const Center(
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(vertical: 12.0),
+                            child: _DragHandle(),
+                          ),
+                        ),
                       ),
                     ),
                   SliverToBoxAdapter(
