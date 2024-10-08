@@ -252,18 +252,33 @@ class _RouterBuilderState extends State<_RouterBuilder> {
               final (:focalPerson, :people) = _makeManyAncestoryTree();
               // final (:focalPerson, :people) = _makeWideTree();
               // final (:focalPerson, :people) = _makeTallTree();
+              // final (:focalPerson, :people) = _makeJumbledTree();
               final nodeKeys = people.map((e) => (e, GlobalKey())).toList();
+              const spacing = Spacing(
+                level: 40,
+                sibling: 30,
+                spouse: 4,
+              );
               return Scaffold(
                 body: GraphView<Person>(
                   focalNodeId: focalPerson.id,
                   nodeKeys: nodeKeys,
-                  spacing: const Spacing(
-                    level: 40,
-                    sibling: 8,
-                    spouse: 2,
-                  ),
-                  builder: (context, nodes, child) => child,
-                  nodeBuilder: (context, data, key, relatedness) {
+                  spacing: spacing,
+                  builder: (context, nodes, child) {
+                    return Stack(
+                      children: [
+                        Edges(
+                          idToKey: Map.fromEntries(
+                              nodeKeys.map((e) => MapEntry(e.$1.id, e.$2))),
+                          idToNode: nodes,
+                          spacing: spacing,
+                          transform: Matrix4.identity(),
+                          child: child,
+                        ),
+                      ],
+                    );
+                  },
+                  nodeBuilder: (context, data, node, key, relatedness) {
                     return Container(
                       key: key,
                       width: 60,
@@ -271,13 +286,35 @@ class _RouterBuilderState extends State<_RouterBuilder> {
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: relatedness.isBloodRelative
-                            ? Colors.blue.shade300
-                            : Colors.blue.shade100,
+                        color: relatedness.isAncestor
+                            ? Colors.orange.shade300
+                            : Colors.blue.shade300,
                       ),
-                      child: Text(
-                        data.id,
-                        style: const TextStyle(fontSize: 24),
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          Text(
+                            data.id,
+                            style: const TextStyle(fontSize: 24),
+                          ),
+                          if (node.shouldBeRightChild && relatedness.isAncestor)
+                            const Align(
+                              alignment: Alignment.centerRight,
+                              child: Text(
+                                'R',
+                                style: TextStyle(fontSize: 12),
+                              ),
+                            ),
+                          if (!node.shouldBeRightChild &&
+                              relatedness.isAncestor)
+                            const Align(
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                'L',
+                                style: TextStyle(fontSize: 12),
+                              ),
+                            ),
+                        ],
                       ),
                     );
                   },
@@ -527,6 +564,21 @@ class ViewHistory with _$ViewHistory {
 
   final focalPerson = people[32];
   return (focalPerson: focalPerson, people: people);
+}
+
+({Person focalPerson, List<Person> people}) _makeJumbledTree() {
+  final people = List.generate(21, (i) => _createPerson('$i'));
+
+  connect(people, spouseA: 19, spouseB: 15, children: [10, 11]);
+  connect(people, spouseA: 16, spouseB: 6, children: [0, 1]);
+
+  connect(people, spouseA: 9, spouseB: 20, children: [14, 2]);
+  connect(people, spouseA: 11, spouseB: 0, children: [3, 17, 18]);
+  connect(people, spouseA: 13, spouseB: 14, children: [4, 5, 7]);
+  connect(people, spouseA: 18, spouseB: 4, children: [8, 12]);
+
+  final focalPerson = people[8];
+  return (focalPerson: focalPerson, people: people..shuffle());
 }
 
 void connect(

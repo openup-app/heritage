@@ -16,9 +16,8 @@ class GraphView<T extends GraphNode> extends StatefulWidget {
   final Spacing spacing;
   final Widget Function(
       BuildContext context, Map<Id, LinkedNode<T>> nodes, Widget child) builder;
-  final Widget Function(
-          BuildContext context, T data, Key key, Relatedness relatedness)
-      nodeBuilder;
+  final Widget Function(BuildContext context, T data, LinkedNode<T> node,
+      Key key, Relatedness relatedness) nodeBuilder;
 
   const GraphView({
     super.key,
@@ -102,6 +101,7 @@ class GraphViewState<T extends GraphNode> extends State<GraphView<T>> {
                         child: widget.nodeBuilder(
                           context,
                           node.data,
+                          node,
                           key,
                           Relatedness(
                             isBloodRelative: node.isBloodRelative,
@@ -140,6 +140,7 @@ class GraphViewState<T extends GraphNode> extends State<GraphView<T>> {
                       child: widget.nodeBuilder(
                         context,
                         node.data,
+                        node,
                         key,
                         Relatedness(
                           isBloodRelative: node.isBloodRelative,
@@ -172,7 +173,7 @@ class GraphViewState<T extends GraphNode> extends State<GraphView<T>> {
     if (focalNode == null) {
       throw 'Missing node with focalNodeId';
     }
-    _organizeSides(focalNode);
+    _organizeAncestorSiblings(focalNode);
     final (focalCouple, idToCouple) = createCoupleTree(focalNode);
     markRelatives(focalNode);
     markDirectRelativesAndSpouses(focalNode);
@@ -210,48 +211,37 @@ class GraphViewState<T extends GraphNode> extends State<GraphView<T>> {
     return (focalCouple, idToCouple, downRoots);
   }
 
-  void _organizeSides(LinkedNode<T> node) {
+  void _organizeAncestorSiblings(LinkedNode<T> node) {
     if (node.parents.isEmpty) {
       return;
     }
-
-    final s1 = node.parents.first;
-    final s2 = node.parents.last;
-    if (s1 < s2) {
-      s1.shouldBeRightChild = true;
-      s2.shouldBeRightChild = false;
-      // P1 right-most sibling, P2 left-most sibling
-      if (s1.parents.isNotEmpty) {
-        s1.parents.first.children.remove(s1);
-        s1.parents.first.children.add(s1);
-        s1.parents.last.children.remove(s1);
-        s1.parents.last.children.add(s1);
-      }
-      if (s2.parents.isNotEmpty) {
-        s2.parents.first.children.remove(s2);
-        s2.parents.first.children.insert(0, s2);
-        s2.parents.last.children.remove(s2);
-        s2.parents.last.children.insert(0, s2);
-      }
-    } else {
-      s1.shouldBeRightChild = false;
-      s2.shouldBeRightChild = true;
-      // P1 left-most sibling, P2 right-most sibling
-      if (s1.parents.isNotEmpty) {
-        s1.parents.first.children.remove(s1);
-        s1.parents.first.children.insert(0, s1);
-        s1.parents.last.children.remove(s1);
-        s1.parents.last.children.insert(0, s1);
-      }
-      if (s2.parents.isNotEmpty) {
-        s2.parents.first.children.remove(s2);
-        s2.parents.first.children.add(s2);
-        s2.parents.last.children.remove(s2);
-        s2.parents.last.children.add(s2);
-      }
+    if (node.parents.last < node.parents.first) {
+      node.parents.swap(0, 1);
     }
-    _organizeSides(s1);
-    _organizeSides(s2);
+    final leftP = node.parents.first;
+    final rightP = node.parents.last;
+    leftP.shouldBeRightChild = true;
+    rightP.shouldBeRightChild = false;
+
+    final leftGPs = leftP.parents;
+    if (leftGPs.isNotEmpty) {
+      // Move sibling to end of siblings
+      leftGPs.first.children.remove(leftP);
+      leftGPs.first.children.add(leftP);
+      leftGPs.last.children.remove(leftP);
+      leftGPs.last.children.add(leftP);
+    }
+    final rightGPs = rightP.parents;
+    if (rightGPs.isNotEmpty) {
+      // Move sibling to beginning of siblings
+      rightGPs.first.children.remove(rightP);
+      rightGPs.first.children.insert(0, rightP);
+      rightGPs.last.children.remove(rightP);
+      rightGPs.last.children.insert(0, rightP);
+    }
+
+    _organizeAncestorSiblings(leftP);
+    _organizeAncestorSiblings(rightP);
   }
 
   LinkedNode<T>? linkedNodeForId(Id id) => _linkedNodes[id];
@@ -371,15 +361,11 @@ class SimpleTree<T extends GraphNode> extends StatelessWidget {
                   right:
                       index == node.children.length - 1 ? 0 : spacing.sibling,
                 ),
-                child: Padding(
-                  padding: EdgeInsets
-                      .zero, //EdgeInsets.only(right: node.children.length == 1 ? 310.0 : 0),
-                  child: SimpleTree(
-                    node: child,
-                    reverse: reverse,
-                    spacing: spacing,
-                    nodeBuilder: nodeBuilder,
-                  ),
+                child: SimpleTree(
+                  node: child,
+                  reverse: reverse,
+                  spacing: spacing,
+                  nodeBuilder: nodeBuilder,
                 ),
               ),
           ],

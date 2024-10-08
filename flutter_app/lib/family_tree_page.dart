@@ -361,7 +361,7 @@ class FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
                           ValueListenableBuilder(
                             valueListenable: _transformNotifier,
                             builder: (context, value, _) {
-                              return _Edges(
+                              return Edges(
                                 idToKey: _idToKey,
                                 idToNode: nodes,
                                 spacing: spacing,
@@ -373,7 +373,7 @@ class FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
                         ],
                       );
                     },
-                    nodeBuilder: (context, data, key, relatedness) {
+                    nodeBuilder: (context, data, node, key, relatedness) {
                       final enabled = widget.selectedPerson == null ||
                           widget.selectedPerson?.id == data.id;
                       final canEditPhoto =
@@ -914,14 +914,14 @@ class OwnershipDialog extends StatelessWidget {
   }
 }
 
-class _Edges extends StatefulWidget {
+class Edges extends StatefulWidget {
   final Map<Id, GlobalKey> idToKey;
   final Map<Id, LinkedNode<Person>> idToNode;
   final Spacing spacing;
   final Matrix4 transform;
   final Widget child;
 
-  const _Edges({
+  const Edges({
     super.key,
     required this.idToKey,
     required this.idToNode,
@@ -931,10 +931,10 @@ class _Edges extends StatefulWidget {
   });
 
   @override
-  State<_Edges> createState() => _EdgesState();
+  State<Edges> createState() => _EdgesState();
 }
 
-class _EdgesState extends State<_Edges> {
+class _EdgesState extends State<Edges> {
   final _nodeRects = <Id, (LinkedNode<Person>, Rect)>{};
   final _parentKey = GlobalKey();
 
@@ -950,7 +950,7 @@ class _EdgesState extends State<_Edges> {
   }
 
   @override
-  void didUpdateWidget(covariant _Edges oldWidget) {
+  void didUpdateWidget(covariant Edges oldWidget) {
     super.didUpdateWidget(oldWidget);
     const unordered = DeepCollectionEquality.unordered();
     if (oldWidget.spacing != widget.spacing ||
