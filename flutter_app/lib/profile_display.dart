@@ -435,25 +435,28 @@ class NodeProfile extends StatelessWidget {
                       Positioned(
                         right: 0,
                         top: 4,
-                        child: AnimatedOpacity(
-                          duration: const Duration(milliseconds: 200),
-                          opacity: showBadge ? 1.0 : 0.0,
-                          child: FilledButton(
-                            onPressed: onBadgePressed,
-                            style: FilledButton.styleFrom(
-                              fixedSize: const Size.square(44),
-                              backgroundColor:
-                                  const Color.fromRGBO(0x00, 0x00, 0x00, 0.6),
-                              shape: const CircleBorder(),
+                        child: IgnorePointer(
+                          ignoring: !showBadge,
+                          child: AnimatedOpacity(
+                            duration: const Duration(milliseconds: 200),
+                            opacity: showBadge ? 1.0 : 0.0,
+                            child: FilledButton(
+                              onPressed: onBadgePressed,
+                              style: FilledButton.styleFrom(
+                                fixedSize: const Size.square(44),
+                                backgroundColor:
+                                    const Color.fromRGBO(0x00, 0x00, 0x00, 0.6),
+                                shape: const CircleBorder(),
+                              ),
+                              child: switch (badgeType) {
+                                BadgeType.editPhoto => const Icon(
+                                    Icons.camera_alt,
+                                    color: Colors.white,
+                                  ),
+                                BadgeType.viewPerspective => const Binoculars(),
+                                BadgeType.none => const SizedBox.shrink(),
+                              },
                             ),
-                            child: switch (badgeType) {
-                              BadgeType.editPhoto => const Icon(
-                                  Icons.camera_alt,
-                                  color: Colors.white,
-                                ),
-                              BadgeType.viewPerspective => const Binoculars(),
-                              BadgeType.none => const SizedBox.shrink(),
-                            },
                           ),
                         ),
                       ),
