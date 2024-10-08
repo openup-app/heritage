@@ -93,8 +93,6 @@ class _PanelsState extends ConsumerState<Panels> {
     final relatedness = widget.relatedness;
     final isPrimaryUser =
         widget.focalPerson.id == widget.viewHistory.primaryUserId;
-    final isOwnedByPrimaryUser = isPrimaryUser ||
-        selectedPerson?.ownedBy == widget.viewHistory.primaryUserId;
     final small = _layout == LayoutType.small;
     return Stack(
       children: [
@@ -170,7 +168,7 @@ class _PanelsState extends ConsumerState<Panels> {
                   primaryUserId: widget.viewHistory.primaryUserId,
                   isPerspectiveMode:
                       widget.viewHistory.perspectiveUserId != null,
-                  isOwnedByMe: isOwnedByPrimaryUser,
+                  isOwnedByMe: selectedPerson.ownedBy == widget.focalPerson.id,
                   onAddConnectionPressed: widget.onAddConnectionPressed,
                   onDismissPanelPopup: widget.onDismissPanelPopup,
                   onViewPerspective: canViewPerspective(
