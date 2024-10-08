@@ -88,13 +88,8 @@ Future<ShareType> shareInvite({
         '$targetName has been invited by $senderName! Your family is waiting!',
     url: 'https://stitchfam.com/invite/$targetId',
   );
-  // Workaround for share sometimes not working the first time in Chrome iOS
-  final tempStart = DateTime.now();
+
   await shareContent(data);
-  final timeTaken = DateTime.now().difference(tempStart);
-  if (timeTaken < const Duration(milliseconds: 500)) {
-    await shareContent(data);
-  }
   return ShareType.share;
 }
 
