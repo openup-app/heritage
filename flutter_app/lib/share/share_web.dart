@@ -2,6 +2,7 @@ import 'dart:js_interop';
 
 import 'package:flutter/foundation.dart';
 import 'package:heritage/share/share.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 
 @JS()
 @staticInterop
@@ -51,6 +52,8 @@ Future<bool> canShare(ShareData data) async {
 Future<void> shareContent(ShareData data) async {
   if (navigator == null) {
     debugPrint('Web Share API is not supported on this browser.');
+    Sentry.captureException('Navigator is null',
+        stackTrace: StackTrace.current);
     return;
   }
 
@@ -65,6 +68,7 @@ Future<void> shareContent(ShareData data) async {
         )
         .toDart;
   } catch (e) {
+    Sentry.captureException(e, stackTrace: StackTrace.current);
     debugPrint('Error sharing: $e');
   }
 }
