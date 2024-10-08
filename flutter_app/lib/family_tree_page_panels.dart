@@ -1407,26 +1407,18 @@ class _ProfileDisplayState extends ConsumerState<_ProfileDisplay> {
   void initState() {
     super.initState();
     final profile = ref.read(profileUpdateProvider);
-    final deathday = profile.deathday;
     _firstNameController = TextEditingController(text: profile.firstName);
     _lastNameController = TextEditingController(text: profile.lastName);
     _birthdayController = TextEditingController();
-    _deathdayController = TextEditingController(
-        text: deathday == null ? '' : formatDate(deathday));
+    _deathdayController = TextEditingController();
     _birthplaceController = TextEditingController(text: profile.birthplace);
     _occupationController = TextEditingController(text: profile.occupation);
     _hobbiesController = TextEditingController(text: profile.hobbies);
 
-    ref.listenManual(
-      profileUpdateProvider,
-      fireImmediately: true,
-      (previous, next) {
-        final birthday = next.birthday;
-        final deathday = next.deathday;
-        _birthdayController.text = birthday == null ? '' : formatDate(birthday);
-        _deathdayController.text = deathday == null ? '' : formatDate(deathday);
-      },
-    );
+    final birthday = profile.birthday;
+    final deathday = profile.deathday;
+    _birthdayController.text = birthday == null ? '' : formatDate(birthday);
+    _deathdayController.text = deathday == null ? '' : formatDate(deathday);
 
     ref.listenManual(profileUpdateProvider, (_, next) => widget.onEdit(next));
   }
@@ -1557,10 +1549,10 @@ class _ProfileDisplayState extends ConsumerState<_ProfileDisplay> {
                           onPressed: () async {
                             final date = await showDatePicker(
                               context: context,
-                              firstDate: DateTime(1500),
-                              lastDate: DateTime.now(),
+                              firstDate: firstDate,
+                              lastDate: lastDate,
                               initialDate: ref.watch(profileUpdateProvider
-                                  .select((p) => p.birthday ?? DateTime.now())),
+                                  .select((p) => p.birthday ?? lastDate)),
                             );
                             if (!mounted || date == null) {
                               return;
@@ -1603,11 +1595,10 @@ class _ProfileDisplayState extends ConsumerState<_ProfileDisplay> {
                             onPressed: () async {
                               final date = await showDatePicker(
                                 context: context,
-                                firstDate: DateTime(1500),
-                                lastDate: DateTime.now(),
-                                initialDate: ref.watch(
-                                    profileUpdateProvider.select(
-                                        (p) => p.deathday ?? DateTime.now())),
+                                firstDate: firstDate,
+                                lastDate: lastDate,
+                                initialDate: ref.watch(profileUpdateProvider
+                                    .select((p) => p.deathday ?? lastDate)),
                               );
                               if (!mounted || date == null) {
                                 return;

@@ -2,6 +2,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:heritage/api.dart';
 import 'package:heritage/date.dart';
 
+final firstDate = DateTime(1500);
+final lastDate =
+    DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
+
 final profileUpdateProvider =
     StateNotifierProvider<ProfileUpdateNotifier, Profile>(
         (ref) => throw 'Uninitialized provider');
@@ -29,8 +33,7 @@ class ProfileUpdateNotifier extends StateNotifier<Profile> {
     } else {
       final birthday = tryParseSeparatedDate(value);
       if (birthday != null) {
-        state = state.copyWith(
-            birthday: DateTime(birthday.year, birthday.month, birthday.day));
+        state = state.copyWith(birthday: _clampDateAndRemoveTime(birthday));
       }
     }
   }
@@ -44,8 +47,7 @@ class ProfileUpdateNotifier extends StateNotifier<Profile> {
     } else {
       final deathday = tryParseSeparatedDate(value);
       if (deathday != null) {
-        state = state.copyWith(
-            deathday: DateTime(deathday.year, deathday.month, deathday.day));
+        state = state.copyWith(deathday: _clampDateAndRemoveTime(deathday));
       }
     }
   }
@@ -59,3 +61,9 @@ class ProfileUpdateNotifier extends StateNotifier<Profile> {
 
   void hobbies(String value) => state = state.copyWith(hobbies: value);
 }
+
+DateTime _clampDateAndRemoveTime(DateTime date) => date.isBefore(firstDate)
+    ? firstDate
+    : date.isAfter(lastDate)
+        ? lastDate
+        : DateTime(date.year, date.month, date.day);
