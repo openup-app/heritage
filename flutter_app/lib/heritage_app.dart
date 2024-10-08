@@ -178,7 +178,7 @@ class _RouterBuilderState extends State<_RouterBuilder> {
     String? initialLocation;
     ViewHistory? viewHistory;
     final redirectPath = widget.redirectPath;
-    if (redirectPath != null && redirectPath.startsWith('invite/')) {
+    if (redirectPath != null && redirectPath.startsWith('/invite')) {
       final focalUserId = redirectPath.substring(7);
       initialLocation = '/view';
       viewHistory = ViewHistory(primaryUserId: focalUserId);
