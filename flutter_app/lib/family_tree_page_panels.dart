@@ -226,100 +226,103 @@ class _PanelsState extends ConsumerState<Panels> {
               ),
             ),
           Positioned(
-            top: 100,
+            top: 128,
             left: 24,
             width: 390,
             bottom: 144,
             child: Align(
               alignment: Alignment.centerLeft,
-              child: AnimatedSlideIn(
-                duration: const Duration(milliseconds: 300),
-                beginOffset: const Offset(-1, 0),
-                alignment: Alignment.centerLeft,
-                child: switch (widget.panelPopupState) {
-                  PanelPopupStateNone() => null,
-                  PanelPopupStateProfile(:final person, :final relatedness) =>
-                    _SidePanelContainer(
-                      key: Key('profile_${person.id}'),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          ProfileNameSection(
-                            person: person,
-                            relatedness: relatedness,
-                            isPrimaryUser:
-                                widget.viewHistory.primaryUserId == person.id,
-                          ),
-                          ProfileDisplay(
-                            initialProfile: person.profile,
-                            isPrimaryUser: isPrimaryUser,
-                            isEditable: person.ownedBy ==
-                                    widget.focalPerson.id &&
-                                widget.viewHistory.perspectiveUserId == null,
-                            hasDifferentOwner: person.ownedBy != person.id,
-                            onViewPerspective: canViewPerspective(
-                              id: person.id,
-                              primaryUserId: widget.viewHistory.primaryUserId,
-                              focalPersonId: widget.focalPerson.id,
-                              isSibling: relatedness.isSibling,
-                              isOwned: person.ownedBy != null,
-                            )
-                                ? widget.onViewPerspective
-                                : null,
-                            onShareLoginLink:
-                                !relatedness.isDirectRelativeOrSpouse
-                                    ? null
-                                    : () => _onShareLoginLink(person),
-                            onClearProfile: () {
-                              _onClearProfile(person.id);
-                              widget.onDismissPanelPopup();
-                            },
-                            onEdit: widget.onEdit,
-                          ),
-                        ],
-                      ),
-                    ),
-                  PanelPopupStateAddConnection(
-                    :final person,
-                    :final relationship
-                  ) =>
-                    _SidePanelContainer(
-                      key: Key('connection_${relationship.name}'),
-                      child: AddConnectionDisplay(
-                        relationship: relationship,
-                        onSave:
-                            (firstName, lastName, gender, takeOwnership) async {
-                          await _saveNewConnection(firstName, lastName, gender,
-                              person, relationship, takeOwnership);
-                          if (mounted) {
-                            widget.onDismissPanelPopup();
-                          }
-                        },
-                      ),
-                    ),
-                  PanelPopupStateWaitingForApproval(:final person) =>
-                    _SidePanelContainer(
-                      key: Key('approval_${person.id}'),
-                      child: WaitingForApprovalDisplay(
-                        person: person,
-                        onAddConnectionPressed: null,
-                        onSaveAndShare: (firstName, lastName, gender) async {
-                          await _onSaveAndShare(
-                              person.id, firstName, lastName, gender);
-                          if (mounted) {
-                            widget.onDismissPanelPopup();
-                          }
-                        },
-                        onTakeOwnership: _takeOwnership,
-                        onDeletePressed: !canDeletePerson(person)
-                            ? null
-                            : () {
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 660),
+                child: AnimatedSlideIn(
+                  duration: const Duration(milliseconds: 300),
+                  beginOffset: const Offset(-1, 0),
+                  alignment: Alignment.centerLeft,
+                  child: switch (widget.panelPopupState) {
+                    PanelPopupStateNone() => null,
+                    PanelPopupStateProfile(:final person, :final relatedness) =>
+                      _SidePanelContainer(
+                        key: Key('profile_${person.id}'),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            ProfileNameSection(
+                              person: person,
+                              relatedness: relatedness,
+                              isPrimaryUser:
+                                  widget.viewHistory.primaryUserId == person.id,
+                            ),
+                            ProfileDisplay(
+                              initialProfile: person.profile,
+                              isPrimaryUser: isPrimaryUser,
+                              isEditable: person.ownedBy ==
+                                      widget.focalPerson.id &&
+                                  widget.viewHistory.perspectiveUserId == null,
+                              hasDifferentOwner: person.ownedBy != person.id,
+                              onViewPerspective: canViewPerspective(
+                                id: person.id,
+                                primaryUserId: widget.viewHistory.primaryUserId,
+                                focalPersonId: widget.focalPerson.id,
+                                isSibling: relatedness.isSibling,
+                                isOwned: person.ownedBy != null,
+                              )
+                                  ? widget.onViewPerspective
+                                  : null,
+                              onShareLoginLink:
+                                  !relatedness.isDirectRelativeOrSpouse
+                                      ? null
+                                      : () => _onShareLoginLink(person),
+                              onClearProfile: () {
+                                _onClearProfile(person.id);
                                 widget.onDismissPanelPopup();
-                                _onDelete(person);
                               },
+                              onEdit: widget.onEdit,
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                },
+                    PanelPopupStateAddConnection(
+                      :final person,
+                      :final relationship
+                    ) =>
+                      _SidePanelContainer(
+                        key: Key('connection_${relationship.name}'),
+                        child: AddConnectionDisplay(
+                          relationship: relationship,
+                          onSave: (firstName, lastName, gender,
+                              takeOwnership) async {
+                            await _saveNewConnection(firstName, lastName,
+                                gender, person, relationship, takeOwnership);
+                            if (mounted) {
+                              widget.onDismissPanelPopup();
+                            }
+                          },
+                        ),
+                      ),
+                    PanelPopupStateWaitingForApproval(:final person) =>
+                      _SidePanelContainer(
+                        key: Key('approval_${person.id}'),
+                        child: WaitingForApprovalDisplay(
+                          person: person,
+                          onAddConnectionPressed: null,
+                          onSaveAndShare: (firstName, lastName, gender) async {
+                            await _onSaveAndShare(
+                                person.id, firstName, lastName, gender);
+                            if (mounted) {
+                              widget.onDismissPanelPopup();
+                            }
+                          },
+                          onTakeOwnership: _takeOwnership,
+                          onDeletePressed: !canDeletePerson(person)
+                              ? null
+                              : () {
+                                  widget.onDismissPanelPopup();
+                                  _onDelete(person);
+                                },
+                        ),
+                      ),
+                  },
+                ),
               ),
             ),
           ),
