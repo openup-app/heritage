@@ -188,8 +188,9 @@ export class Database {
     return this.firestore.runTransaction(async (t: Transaction) => {
       const personSnapshot = await t.get(this.personRef(id));
       const person = personSchema.parse(personSnapshot.data());
-      if (person.ownedBy) {
-        throw "Unable to delete an owned person";
+      const ownedByThemself = person.ownedBy != null && person.ownedBy == person.id;
+      if (ownedByThemself) {
+        throw "Unable to delete users who own themself";
       }
 
       if (person.children.length > 0) {
