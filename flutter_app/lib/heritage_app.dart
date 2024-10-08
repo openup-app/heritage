@@ -11,9 +11,11 @@ import 'package:heritage/error_page.dart';
 import 'package:heritage/family_tree_page.dart';
 import 'package:heritage/graph_provider.dart';
 import 'package:heritage/graph_view.dart';
+import 'package:heritage/landing_page.dart';
 import 'package:heritage/layout.dart';
 import 'package:heritage/menu_page.dart';
 import 'package:heritage/restart_app.dart';
+import 'package:heritage/storage.dart';
 import 'package:heritage/transition.dart';
 import 'package:heritage/util.dart';
 
@@ -27,13 +29,15 @@ const greyColor = Color.fromRGBO(0xEC, 0xEC, 0xEC, 1.0);
 const unselectedColor = Color.fromRGBO(175, 175, 175, 1);
 
 class HeritageApp extends StatelessWidget {
-  final String? redirectPath;
   final Api api;
+  final Storage storage;
+  final String? redirectPath;
 
   const HeritageApp({
     super.key,
-    required this.redirectPath,
     required this.api,
+    required this.storage,
+    required this.redirectPath,
   });
 
   @override
@@ -61,11 +65,10 @@ class HeritageApp extends StatelessWidget {
         child: LayoutWidget(
           child: _CacheAssets(
             child: _RouterBuilder(
-              tempApi: api,
               redirectPath: redirectPath,
-              navigatorObservers: [
-                SentryNavigatorObserver(),
-              ],
+              navigatorObservers: [SentryNavigatorObserver()],
+              tempApi: api,
+              storage: storage,
               builder: (context, router) {
                 return MaterialApp.router(
                   routerConfig: router,
@@ -147,16 +150,18 @@ class HeritageApp extends StatelessWidget {
 }
 
 class _RouterBuilder extends StatefulWidget {
-  final Api tempApi;
   final String? redirectPath;
   final List<NavigatorObserver> navigatorObservers;
+  final Api tempApi;
+  final Storage storage;
   final Widget Function(BuildContext context, GoRouter router) builder;
 
   const _RouterBuilder({
     super.key,
-    required this.tempApi,
     required this.redirectPath,
     required this.navigatorObservers,
+    required this.tempApi,
+    required this.storage,
     required this.builder,
   });
 
@@ -170,7 +175,21 @@ class _RouterBuilderState extends State<_RouterBuilder> {
   @override
   void initState() {
     super.initState();
-    _router = _initRouter();
+    String? initialLocation;
+    ViewHistory? viewHistory;
+    final redirectPath = widget.redirectPath;
+    if (redirectPath != null && redirectPath.startsWith('invite/')) {
+      final focalUserId = redirectPath.substring(7);
+      initialLocation = '/view';
+      viewHistory = ViewHistory(primaryUserId: focalUserId);
+    } else if (redirectPath != null) {
+      initialLocation = '/?status=failure';
+    }
+
+    _router = _initRouter(
+      initialLocation: initialLocation,
+      initialExtra: viewHistory,
+    );
   }
 
   @override
@@ -184,24 +203,47 @@ class _RouterBuilderState extends State<_RouterBuilder> {
     return widget.builder(context, _router);
   }
 
-  GoRouter _initRouter() {
+  GoRouter _initRouter({
+    String? initialLocation,
+    Object? initialExtra,
+  }) {
     return GoRouter(
       debugLogDiagnostics: kDebugMode,
       observers: widget.navigatorObservers,
-      initialLocation: widget.redirectPath ?? '/',
+      initialLocation: initialLocation ?? '/',
       overridePlatformDefaultLocation: true,
+      initialExtra: initialExtra,
       extraCodec: const _ExtraCodec(),
       errorBuilder: (context, state) => const ErrorPage(),
       routes: [
         GoRoute(
           path: '/',
-          name: 'menu',
+          name: 'landing',
           pageBuilder: (context, state) {
-            return const TopLevelTransitionPage(
-              child: MenuPage(),
+            final statusString = state.uri.queryParameters['status'];
+            final status = statusString == 'failure'
+                ? LandingPageStatus.invalidLink
+                : statusString == 'decline'
+                    ? LandingPageStatus.decline
+                    : null;
+            return TopLevelTransitionPage(
+              child: LandingPage(
+                storage: widget.storage,
+                status: status,
+              ),
             );
           },
         ),
+        if (kDebugMode)
+          GoRoute(
+            path: '/menu',
+            name: 'menu',
+            pageBuilder: (context, state) {
+              return const TopLevelTransitionPage(
+                child: MenuPage(),
+              );
+            },
+          ),
         if (kDebugMode)
           GoRoute(
             path: '/test_layout',
@@ -266,6 +308,23 @@ class _RouterBuilderState extends State<_RouterBuilder> {
                   focalPersonIdProvider.overrideWith((ref) => focalPersonId),
                 ],
                 child: FamilyTreeLoadingPage(
+                  onReady: () {
+                    final isPersectiveMode =
+                        viewHistory.perspectiveUserId != null;
+                    if (!isPersectiveMode) {
+                      widget.storage.saveUid(focalPersonId);
+                    }
+                  },
+                  onError: () {
+                    final uid = widget.storage.loadUid();
+                    if (uid == focalPersonId) {
+                      widget.storage.clearUid();
+                    }
+                    _router.goNamed(
+                      'landing',
+                      queryParameters: {'status': 'failure'},
+                    );
+                  },
                   child: FamilyTreePage(
                     viewHistory: viewHistory,
                   ),

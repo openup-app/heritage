@@ -21,10 +21,14 @@ import 'package:lottie/lottie.dart';
 import 'package:path_drawing/path_drawing.dart' as path_drawing;
 
 class FamilyTreeLoadingPage extends ConsumerStatefulWidget {
+  final VoidCallback onReady;
+  final VoidCallback onError;
   final Widget child;
 
   const FamilyTreeLoadingPage({
     super.key,
+    required this.onReady,
+    required this.onError,
     required this.child,
   });
 
@@ -43,7 +47,25 @@ class FamilyTreeLoadingPageState extends ConsumerState<FamilyTreeLoadingPage> {
       hasPeopleProvider,
       (previous, next) {
         if (next) {
+          WidgetsBinding.instance.endOfFrame.then((_) {
+            if (mounted) {
+              widget.onReady();
+            }
+          });
           setState(() => _ready = true);
+        }
+      },
+    );
+
+    ref.listenManual(
+      hasPeopleErrorProvider,
+      (previous, next) {
+        if (next) {
+          WidgetsBinding.instance.endOfFrame.then((_) {
+            if (mounted) {
+              widget.onError();
+            }
+          });
         }
       },
     );
@@ -471,7 +493,12 @@ class FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
     if (tookOwnership == true) {
       ref.read(graphProvider.notifier).takeOwnership(widget.focalPerson.id);
     } else {
-      context.goNamed('menu');
+      context.goNamed(
+        'landing',
+        queryParameters: {
+          'status': 'decline',
+        },
+      );
     }
   }
 }

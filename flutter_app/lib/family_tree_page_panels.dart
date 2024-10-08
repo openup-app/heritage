@@ -636,14 +636,10 @@ class _PanelsState extends ConsumerState<Panels> {
   }
 
   void _goHome() {
-    if (widget.viewHistory.perspectiveUserId != null) {
-      context.goNamed(
-        'view',
-        extra: ViewHistory(primaryUserId: widget.viewHistory.primaryUserId),
-      );
-    } else {
-      context.goNamed('menu');
-    }
+    context.goNamed(
+      'view',
+      extra: ViewHistory(primaryUserId: widget.viewHistory.primaryUserId),
+    );
   }
 
   void _onShareLoginLink(Person person) =>

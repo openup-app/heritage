@@ -12,7 +12,12 @@ final _peopleProvider = FutureProvider<List<Person>>(
     final result = await api.getLimitedGraph(focalPersonId);
     return result.fold(
       (l) => throw l,
-      (r) => r,
+      (r) {
+        if (r.isEmpty) {
+          throw 'No people';
+        }
+        return r;
+      },
     );
   },
   dependencies: [focalPersonIdProvider],
@@ -20,6 +25,11 @@ final _peopleProvider = FutureProvider<List<Person>>(
 
 final hasPeopleProvider = Provider<bool>(
   (ref) => ref.watch(_peopleProvider.select((s) => s.hasValue)),
+  dependencies: [_peopleProvider],
+);
+
+final hasPeopleErrorProvider = Provider<bool>(
+  (ref) => ref.watch(_peopleProvider.select((s) => s.hasError)),
   dependencies: [_peopleProvider],
 );
 
