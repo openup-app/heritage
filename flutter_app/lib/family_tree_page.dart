@@ -17,6 +17,7 @@ import 'package:heritage/loading_page.dart';
 import 'package:heritage/profile_display.dart';
 import 'package:heritage/util.dart';
 import 'package:heritage/zoomable_pannable_viewport.dart';
+import 'package:lottie/lottie.dart';
 import 'package:path_drawing/path_drawing.dart' as path_drawing;
 
 class FamilyTreeLoadingPage extends ConsumerStatefulWidget {
@@ -77,6 +78,9 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
   Relatedness? _relatedness;
   PanelPopupState _panelPopupState = const PanelPopupStateNone();
   final _viewRectNotifier = ValueNotifier(Rect.zero);
+
+  final _savingNotifier = ValueNotifier(false);
+  final _profileEditor = ValueNotifier<Profile?>(null);
 
   @override
   Widget build(BuildContext context) {
@@ -149,6 +153,28 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
           onViewRectUpdated: (rect) => _viewRectNotifier.value = rect,
           onRecenter: () => _familyTreeViewKey.currentState
               ?.centerOnPersonWithId(graph.focalPerson.id),
+          onEdit: (profile) {
+            _profileEditor.value = profile;
+          },
+        ),
+        Positioned(
+          top: 16,
+          right: 16,
+          width: 48,
+          height: 128,
+          child: ValueListenableBuilder(
+            valueListenable: _savingNotifier,
+            builder: (context, saving, child) {
+              return AnimatedOpacity(
+                duration: const Duration(milliseconds: 200),
+                opacity: saving ? 1.0 : 0.0,
+                child: child,
+              );
+            },
+            child: Lottie.asset(
+              'assets/images/logo.json',
+            ),
+          ),
         ),
       ],
     );
@@ -170,11 +196,28 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
   }
 
   void _onDismissSelected() {
+    final updatedProfile = _profileEditor.value;
+    final selectedPersonId = _selectedPerson?.id;
+    if (updatedProfile != null && selectedPersonId != null) {
+      _applyProfileUpdate(selectedPersonId, updatedProfile);
+    }
     setState(() {
       _panelPopupState = const PanelPopupStateNone();
       _selectedPerson = null;
       _relatedness = null;
+      _profileEditor.value = null;
     });
+  }
+
+  void _applyProfileUpdate(Id id, Profile update) async {
+    // Desktop
+    final notifier = ref.read(graphProvider.notifier);
+    _savingNotifier.value = true;
+    await notifier.updateProfile(id, update);
+    if (mounted) {
+      _savingNotifier.value = false;
+      showProfileUpdateSuccess(context: context);
+    }
   }
 }
 

@@ -34,6 +34,7 @@ class Panels extends ConsumerStatefulWidget {
   final VoidCallback onViewPerspective;
   final void Function(Rect rect) onViewRectUpdated;
   final VoidCallback onRecenter;
+  final void Function(Profile profile) onEdit;
 
   const Panels({
     super.key,
@@ -48,6 +49,7 @@ class Panels extends ConsumerStatefulWidget {
     required this.onViewPerspective,
     required this.onViewRectUpdated,
     required this.onRecenter,
+    required this.onEdit,
   });
 
   @override
@@ -184,6 +186,7 @@ class _PanelsState extends ConsumerState<Panels> {
                       ? null
                       : () => _onShareLoginLink(selectedPerson),
                   onClearProfile: () => _onClearProfile(selectedPerson.id),
+                  onEdit: widget.onEdit,
                 );
               },
             ),
@@ -271,17 +274,7 @@ class _PanelsState extends ConsumerState<Panels> {
                               _onClearProfile(person.id);
                               widget.onDismissPanelPopup();
                             },
-                            onSave: (update) async {
-                              final notifier = ref.read(graphProvider.notifier);
-                              await showBlockingModal(
-                                context,
-                                notifier.updateProfile(person.id, update),
-                              );
-                              if (context.mounted) {
-                                showProfileUpdateSuccess(context: context);
-                                widget.onDismissPanelPopup();
-                              }
-                            },
+                            onEdit: widget.onEdit,
                           ),
                         ],
                       ),
@@ -819,6 +812,7 @@ class _DraggableSheet extends StatefulWidget {
   final VoidCallback? onViewPerspective;
   final VoidCallback? onShareLoginLink;
   final VoidCallback? onClearProfile;
+  final void Function(Profile profile) onEdit;
 
   const _DraggableSheet({
     super.key,
@@ -833,6 +827,7 @@ class _DraggableSheet extends StatefulWidget {
     required this.onViewPerspective,
     required this.onShareLoginLink,
     required this.onClearProfile,
+    required this.onEdit,
   });
 
   @override
@@ -983,19 +978,7 @@ class _DraggableSheetState extends State<_DraggableSheet> {
                                     widget.onDismissPanelPopup();
                                     widget.onClearProfile?.call();
                                   },
-                            onSave: (update) async {
-                              final notifier = ref.read(graphProvider.notifier);
-                              await showBlockingModal(
-                                context,
-                                notifier.updateProfile(
-                                    widget.selectedPerson.id, update),
-                              );
-                              if (context.mounted) {
-                                showProfileUpdateSuccess(context: context);
-                                _dismissDraggableSheet(minPanelRatio);
-                                widget.onDismissPanelPopup();
-                              }
-                            },
+                            onEdit: widget.onEdit,
                           );
                         },
                       ),
@@ -1341,7 +1324,7 @@ class ProfileDisplay extends StatelessWidget {
   final VoidCallback? onViewPerspective;
   final VoidCallback? onShareLoginLink;
   final VoidCallback? onClearProfile;
-  final void Function(Profile profile) onSave;
+  final void Function(Profile profile) onEdit;
 
   const ProfileDisplay({
     super.key,
@@ -1352,7 +1335,7 @@ class ProfileDisplay extends StatelessWidget {
     required this.onViewPerspective,
     required this.onShareLoginLink,
     required this.onClearProfile,
-    required this.onSave,
+    required this.onEdit,
   });
 
   @override
@@ -1369,7 +1352,7 @@ class ProfileDisplay extends StatelessWidget {
         onViewPerspective: onViewPerspective,
         onShareLoginLink: onShareLoginLink,
         onClearProfile: onClearProfile,
-        onSave: onSave,
+        onEdit: onEdit,
       ),
     );
   }
@@ -1382,7 +1365,7 @@ class _ProfileDisplay extends ConsumerStatefulWidget {
   final VoidCallback? onViewPerspective;
   final VoidCallback? onShareLoginLink;
   final VoidCallback? onClearProfile;
-  final void Function(Profile profile) onSave;
+  final void Function(Profile profile) onEdit;
 
   const _ProfileDisplay({
     super.key,
@@ -1392,7 +1375,7 @@ class _ProfileDisplay extends ConsumerStatefulWidget {
     required this.onViewPerspective,
     required this.onShareLoginLink,
     required this.onClearProfile,
-    required this.onSave,
+    required this.onEdit,
   });
 
   @override
@@ -1432,6 +1415,8 @@ class _ProfileDisplayState extends ConsumerState<_ProfileDisplay> {
         _deathdayController.text = deathday == null ? '' : formatDate(deathday);
       },
     );
+
+    ref.listenManual(profileUpdateProvider, (_, next) => widget.onEdit(next));
   }
 
   @override
@@ -1493,7 +1478,7 @@ class _ProfileDisplayState extends ConsumerState<_ProfileDisplay> {
                   onChanged: ref.read(profileUpdateProvider.notifier).gallery,
                   onProfilePhotoChanged: (photo) {
                     ref.read(profileUpdateProvider.notifier).photo(photo);
-                    widget.onSave(ref.read(profileUpdateProvider));
+                    widget.onEdit(ref.read(profileUpdateProvider));
                   },
                 ),
               ),
@@ -1771,13 +1756,6 @@ class _ProfileDisplayState extends ConsumerState<_ProfileDisplay> {
             child: const Text('Delete my profile details from the tree'),
           ),
           const SizedBox(height: 24),
-          FilledButton(
-            onPressed: () => widget.onSave(ref.read(profileUpdateProvider)),
-            style: FilledButton.styleFrom(
-              fixedSize: const Size.fromHeight(73),
-            ),
-            child: const Text('Save'),
-          ),
         ],
         const SizedBox(height: 24),
       ],
