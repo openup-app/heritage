@@ -159,8 +159,9 @@ class _PanelsState extends ConsumerState<Panels> {
             child: _DismissWhenNull(
               selectedPerson: selectedPerson,
               relatedness: relatedness,
-              builder: (context, selectedPerson, relatedness) {
+              builder: (context, childKey, selectedPerson, relatedness) {
                 return _DraggableSheet(
+                  key: childKey,
                   selectedPerson: selectedPerson,
                   relatedness: relatedness,
                   isFocalUser: selectedPerson.id == widget.focalPerson.id,
@@ -718,9 +719,8 @@ Widget buildAddConnectionButtons({
 class _DismissWhenNull extends StatefulWidget {
   final Person? selectedPerson;
   final Relatedness? relatedness;
-  final Widget Function(
-          BuildContext context, Person selectedPerson, Relatedness relatedness)
-      builder;
+  final Widget Function(BuildContext context, Key childKey,
+      Person selectedPerson, Relatedness relatedness) builder;
 
   const _DismissWhenNull({
     super.key,
@@ -742,12 +742,14 @@ class _DismissWhenNullState extends State<_DismissWhenNull>
 
   Person? _selectedPerson;
   Relatedness? _relatedness;
+  late Key _childKey;
 
   @override
   void initState() {
     super.initState();
     _selectedPerson = widget.selectedPerson;
     _relatedness = widget.relatedness;
+    _childKey = UniqueKey();
   }
 
   @override
@@ -763,9 +765,16 @@ class _DismissWhenNullState extends State<_DismissWhenNull>
       if (!shouldShow) {
         _controller.reverse();
       } else {
+        _childKey = UniqueKey();
         _controller.forward();
       }
     }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
 
   @override
@@ -789,7 +798,8 @@ class _DismissWhenNullState extends State<_DismissWhenNull>
             if (selectedPerson == null || relatedness == null) {
               return const SizedBox.shrink();
             }
-            return widget.builder(context, selectedPerson, relatedness);
+            return widget.builder(
+                context, _childKey, selectedPerson, relatedness);
           },
         ),
       ),
