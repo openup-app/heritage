@@ -28,7 +28,7 @@ export function router(auth: Auth, database: Database, storage: Storage): Router
     }
 
     try {
-      const result = await database.addConnection(sourceId, body.firstName, body.lastName, body.gender, body.relationship, creatorId);
+      const result = await database.addConnection(sourceId, body.firstName, body.lastName, body.gender, body.relationship, body.takeOwnership, creatorId);
       if (!result) {
         return res.sendStatus(400);
       }
@@ -329,6 +329,7 @@ const addConnectionSchema = z.object({
   lastName: z.string(),
   gender: genderSchema,
   relationship: relationshipSchema,
+  takeOwnership: z.boolean(),
 });
 
 const createRootSchema = z.object({
