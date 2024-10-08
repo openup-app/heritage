@@ -35,7 +35,7 @@ void init() async {
   final sharedPreferences = await SharedPreferences.getInstance();
   final storage = Storage(sharedPreferences: sharedPreferences);
   final uid = storage.loadUid();
-  final redirectPath = redirect ?? (uid != null ? '/invite/$uid' : null);
+  final redirectPath = uid != null ? '/invite/$uid' : redirect;
 
   runApp(
     HeritageApp(
