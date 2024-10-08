@@ -88,13 +88,8 @@ Future<ShareType> shareInvite({
         '$targetName has been invited by $senderName! Your family is waiting!',
     url: 'https://stitchfam.com/invite/$targetId',
   );
-  if (await canShare(data)) {
-    await shareContent(data);
-    return ShareType.share;
-  } else {
-    await Clipboard.setData(ClipboardData(text: data.url!));
-    return ShareType.clipboard;
-  }
+  await shareContent(data);
+  return ShareType.share;
 }
 
 enum ShareType { share, clipboard }
