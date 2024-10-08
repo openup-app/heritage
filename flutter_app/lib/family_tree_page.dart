@@ -475,15 +475,12 @@ class FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
       _graphKey.currentState?.linkedNodeForId(id);
 
   void _showOwnershipModal() async {
-    final addedBy = widget.people
-        .firstWhereOrNull((e) => e.id == widget.focalPerson.addedBy);
     final tookOwnership = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
       builder: (context) {
         return OwnershipDialog(
           focalPerson: widget.focalPerson,
-          addedBy: addedBy,
         );
       },
     );
@@ -880,52 +877,42 @@ class _MinimalProfileEditorState extends State<MinimalProfileEditor> {
 
 class OwnershipDialog extends StatelessWidget {
   final Person focalPerson;
-  final Person? addedBy;
 
   const OwnershipDialog({
     super.key,
     required this.focalPerson,
-    required this.addedBy,
   });
 
   @override
   Widget build(BuildContext context) {
-    final addedBy = this.addedBy;
     return AlertDialog(
-      title: addedBy == null
-          ? Text(
-              '${focalPerson.profile.fullName} has been added to the family tree')
-          : Text(
-              '${focalPerson.profile.fullName} has been added to the family tree by ${addedBy.profile.fullName}'),
+      title: Text('Are you ${focalPerson.profile.fullName}?'),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Center(
-            child: Text('Are you ${focalPerson.profile.fullName}?'),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color.fromRGBO(0xEB, 0xEB, 0xEB, 1.0),
+              fixedSize: const Size.fromHeight(48),
+            ),
+            child: const Text('Yes'),
           ),
           const SizedBox(height: 16),
           FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: _bigButtonStyle,
-            child: Text('Yes, I am ${focalPerson.profile.fullName}'),
-          ),
-          const SizedBox(height: 16),
-          TextButton(
             onPressed: Navigator.of(context).pop,
-            child: const Text('No, I am someone else'),
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color.fromRGBO(0xEB, 0xEB, 0xEB, 1.0),
+              fixedSize: const Size.fromHeight(48),
+            ),
+            child: const Text('No'),
           ),
         ],
       ),
     );
   }
 }
-
-ButtonStyle _bigButtonStyle = FilledButton.styleFrom(
-  foregroundColor: Colors.white,
-  backgroundColor: primaryColor,
-  fixedSize: const Size.fromHeight(64),
-);
 
 class _Edges extends StatefulWidget {
   final Map<Id, GlobalKey> idToKey;
