@@ -410,8 +410,7 @@ class FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
                         onBadgePressed: () async {
                           switch (badgeType) {
                             case BadgeType.editPhoto:
-                              final photo = await pickPhotoWithCropper(context,
-                                  faceMask: true);
+                              final photo = await pickPhotoWithCropper(context);
                               if (photo != null && mounted) {
                                 final notifier =
                                     ref.read(graphProvider.notifier);

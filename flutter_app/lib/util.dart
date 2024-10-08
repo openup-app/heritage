@@ -31,37 +31,26 @@ Rect? locateWidgetLocal(GlobalKey key) {
   return offset & size;
 }
 
-Future<Photo?> pickPhotoWithCropper(
-  BuildContext context, {
-  bool faceMask = false,
-}) async {
-  final image = await _pickImageWithCropper(
-    context: context,
-    faceMask: faceMask,
-  );
+Future<Photo?> pickPhotoWithCropper(BuildContext context) async {
+  final image = await _pickImageWithCropper(context: context);
   if (image == null) {
     return null;
   }
   return MemoryPhoto(key: '${Random().nextInt(1000000000)}', bytes: image);
 }
 
-Future<Photo?> showCropperForImage(
-  BuildContext context, {
-  required Uint8List image,
-  bool faceMask = false,
-}) async {
+Future<Photo?> showCropperForImage(BuildContext context,
+    {required Uint8List image}) async {
   final (frame, size) = await getFirstFrameAndSize(image);
   if (!context.mounted || frame == null) {
     return null;
   }
-  final cropped =
-      await showCropDialog(context, frame, size, faceMask: faceMask);
+  final cropped = await showCropDialog(context, frame, size);
   return MemoryPhoto(key: '${Random().nextInt(1000000000)}', bytes: cropped);
 }
 
 Future<Uint8List?> _pickImageWithCropper({
   required BuildContext context,
-  required bool faceMask,
 }) async {
   final file = await pickFile('Pick a photo');
   final image = await file?.readAsBytes();
@@ -72,7 +61,7 @@ Future<Uint8List?> _pickImageWithCropper({
   if (!context.mounted || frame == null) {
     return null;
   }
-  return await showCropDialog(context, frame, size, faceMask: faceMask);
+  return await showCropDialog(context, frame, size);
 }
 
 String genderedRelationship(Relationship relationship, Gender gender) {

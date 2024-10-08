@@ -113,7 +113,6 @@ class _PhotoManagementState extends State<PhotoManagement> {
                                 final cropped = await showCropperForImage(
                                   context,
                                   image: image,
-                                  faceMask: true,
                                 );
                                 if (cropped == null || !context.mounted) {
                                   return;
