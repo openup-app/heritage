@@ -598,7 +598,9 @@ class _PanelsState extends ConsumerState<Panels> {
         return;
       }
     }
-    showProfileUpdateSuccess(context: context);
+    if (newId != null) {
+      showProfileUpdateSuccess(context: context);
+    }
   }
 
   Future<void> _onSaveAndShare(
