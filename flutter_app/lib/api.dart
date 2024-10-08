@@ -203,19 +203,6 @@ class Api {
     );
   }
 
-  Future<Either<Error, Person>> deleteProfile(Id id) {
-    return _makeRequest(
-      request: () => http.delete(
-        Uri.parse('$_baseUrl/v1/people/$id/profile'),
-        headers: _headers,
-      ),
-      handleResponse: (response) {
-        final json = jsonDecode(response.body);
-        return right(Person.fromJson(json['person']));
-      },
-    );
-  }
-
   Future<Either<Error, Person>> takeOwnership(Id id) {
     return _makeRequest(
       request: () => http.put(

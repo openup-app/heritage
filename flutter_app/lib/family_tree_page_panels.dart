@@ -185,7 +185,9 @@ class _PanelsState extends ConsumerState<Panels> {
                   onShareLoginLink: !relatedness.isDirectRelativeOrSpouse
                       ? null
                       : () => _onShareLoginLink(selectedPerson),
-                  onClearProfile: () => _onClearProfile(selectedPerson.id),
+                  onDeleteManagedUser: canDeletePerson(selectedPerson)
+                      ? () => _onDeleteManagedUser(selectedPerson.id)
+                      : null,
                   onEdit: widget.onEdit,
                 );
               },
@@ -258,6 +260,8 @@ class _PanelsState extends ConsumerState<Panels> {
                               isEditable: person.ownedBy ==
                                       widget.focalPerson.id &&
                                   widget.viewHistory.perspectiveUserId == null,
+                              isOwnedByPrimaryUser: person.ownedBy ==
+                                  widget.viewHistory.primaryUserId,
                               hasDifferentOwner: person.ownedBy != person.id,
                               onViewPerspective: canViewPerspective(
                                 id: person.id,
@@ -272,10 +276,12 @@ class _PanelsState extends ConsumerState<Panels> {
                                   !relatedness.isDirectRelativeOrSpouse
                                       ? null
                                       : () => _onShareLoginLink(person),
-                              onClearProfile: () {
-                                _onClearProfile(person.id);
-                                widget.onDismissPanelPopup();
-                              },
+                              onDeleteManagedUser: canDeletePerson(person)
+                                  ? () {
+                                      _onDeleteManagedUser(person.id);
+                                      widget.onDismissPanelPopup();
+                                    }
+                                  : null,
                               onEdit: widget.onEdit,
                             ),
                           ],
@@ -655,11 +661,11 @@ class _PanelsState extends ConsumerState<Panels> {
   void _onShareLoginLink(Person person) =>
       shareInvite(person.profile.firstName, person.id);
 
-  void _onClearProfile(Id id) async {
+  void _onDeleteManagedUser(Id id) async {
     final notifier = ref.read(graphProvider.notifier);
     await showBlockingModal(
       context,
-      notifier.clearProfile(id),
+      notifier.deletePerson(id),
     );
     if (mounted) {
       showProfileUpdateSuccess(context: context);
@@ -817,7 +823,7 @@ class _DraggableSheet extends StatefulWidget {
   final VoidCallback onDismissPanelPopup;
   final VoidCallback? onViewPerspective;
   final VoidCallback? onShareLoginLink;
-  final VoidCallback? onClearProfile;
+  final VoidCallback? onDeleteManagedUser;
   final void Function(Profile profile) onEdit;
 
   const _DraggableSheet({
@@ -832,7 +838,7 @@ class _DraggableSheet extends StatefulWidget {
     required this.onDismissPanelPopup,
     required this.onViewPerspective,
     required this.onShareLoginLink,
-    required this.onClearProfile,
+    required this.onDeleteManagedUser,
     required this.onEdit,
   });
 
@@ -979,17 +985,21 @@ class _DraggableSheetState extends State<_DraggableSheet> {
                                 widget.primaryUserId,
                             isEditable:
                                 widget.isOwnedByMe && !widget.isPerspectiveMode,
+                            isOwnedByPrimaryUser:
+                                widget.selectedPerson.ownedBy ==
+                                    widget.primaryUserId,
                             hasDifferentOwner: widget.selectedPerson.ownedBy !=
                                 widget.selectedPerson.id,
                             onViewPerspective: widget.onViewPerspective,
                             onShareLoginLink: widget.onShareLoginLink,
-                            onClearProfile: widget.onClearProfile == null
-                                ? null
-                                : () {
-                                    _dismissDraggableSheet(minPanelRatio);
-                                    widget.onDismissPanelPopup();
-                                    widget.onClearProfile?.call();
-                                  },
+                            onDeleteManagedUser:
+                                widget.onDeleteManagedUser == null
+                                    ? null
+                                    : () {
+                                        _dismissDraggableSheet(minPanelRatio);
+                                        widget.onDismissPanelPopup();
+                                        widget.onDeleteManagedUser?.call();
+                                      },
                             onEdit: widget.onEdit,
                           );
                         },
@@ -1332,10 +1342,11 @@ class ProfileDisplay extends StatelessWidget {
   final Profile initialProfile;
   final bool isPrimaryUser;
   final bool isEditable;
+  final bool isOwnedByPrimaryUser;
   final bool hasDifferentOwner;
   final VoidCallback? onViewPerspective;
   final VoidCallback? onShareLoginLink;
-  final VoidCallback? onClearProfile;
+  final VoidCallback? onDeleteManagedUser;
   final void Function(Profile profile) onEdit;
 
   const ProfileDisplay({
@@ -1343,10 +1354,11 @@ class ProfileDisplay extends StatelessWidget {
     required this.initialProfile,
     required this.isPrimaryUser,
     required this.isEditable,
+    required this.isOwnedByPrimaryUser,
     required this.hasDifferentOwner,
     required this.onViewPerspective,
     required this.onShareLoginLink,
-    required this.onClearProfile,
+    required this.onDeleteManagedUser,
     required this.onEdit,
   });
 
@@ -1360,10 +1372,11 @@ class ProfileDisplay extends StatelessWidget {
       child: _ProfileDisplay(
         isPrimaryUser: isPrimaryUser,
         isEditable: isEditable,
+        isOwnedByPrimaryUser: isOwnedByPrimaryUser,
         hasDifferentOwner: hasDifferentOwner,
         onViewPerspective: onViewPerspective,
         onShareLoginLink: onShareLoginLink,
-        onClearProfile: onClearProfile,
+        onDeleteManagedUser: onDeleteManagedUser,
         onEdit: onEdit,
       ),
     );
@@ -1373,20 +1386,22 @@ class ProfileDisplay extends StatelessWidget {
 class _ProfileDisplay extends ConsumerStatefulWidget {
   final bool isPrimaryUser;
   final bool isEditable;
+  final bool isOwnedByPrimaryUser;
   final bool hasDifferentOwner;
   final VoidCallback? onViewPerspective;
   final VoidCallback? onShareLoginLink;
-  final VoidCallback? onClearProfile;
+  final VoidCallback? onDeleteManagedUser;
   final void Function(Profile profile) onEdit;
 
   const _ProfileDisplay({
     super.key,
     required this.isPrimaryUser,
     required this.isEditable,
+    required this.isOwnedByPrimaryUser,
     required this.hasDifferentOwner,
     required this.onViewPerspective,
     required this.onShareLoginLink,
-    required this.onClearProfile,
+    required this.onDeleteManagedUser,
     required this.onEdit,
   });
 
@@ -1749,14 +1764,18 @@ class _ProfileDisplayState extends ConsumerState<_ProfileDisplay> {
             ),
           ),
         ],
-        if (widget.isEditable) ...[
+        // Display the button for certain users, even if parent won't handle the click
+        if (widget.hasDifferentOwner && widget.isOwnedByPrimaryUser) ...[
           const SizedBox(height: 24),
           TextButton(
-            onPressed: _onClearProfilePressed,
+            onPressed: widget.onDeleteManagedUser == null
+                ? null
+                : _onDeleteManagedUser,
             style: TextButton.styleFrom(
               foregroundColor: Colors.red,
             ),
-            child: const Text('Delete my profile details from the tree'),
+            child: Text(
+                'Delete ${ref.watch(profileUpdateProvider.select((p) => p.firstName))} from the tree'),
           ),
           const SizedBox(height: 24),
         ],
@@ -1765,14 +1784,13 @@ class _ProfileDisplayState extends ConsumerState<_ProfileDisplay> {
     );
   }
 
-  void _onClearProfilePressed() async {
+  void _onDeleteManagedUser() async {
+    final profile = ref.watch(profileUpdateProvider);
     final delete = await showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Delete profile information?'),
-          content: const Text(
-              'Your connections will remain, but your personal details will be cleared'),
+          title: Text('Delete ${profile.firstName}?'),
           actions: [
             TextButton(
               onPressed: Navigator.of(context).pop,
@@ -1793,7 +1811,7 @@ class _ProfileDisplayState extends ConsumerState<_ProfileDisplay> {
       },
     );
     if (mounted && delete == true) {
-      widget.onClearProfile?.call();
+      widget.onDeleteManagedUser?.call();
     }
   }
 }

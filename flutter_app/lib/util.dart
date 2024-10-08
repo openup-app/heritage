@@ -178,7 +178,8 @@ bool canAddRelative(bool isBloodRelative, bool isPerspectiveMode) =>
     isBloodRelative && !isPerspectiveMode;
 
 bool canDeletePerson(Person person) {
-  if (person.ownedBy != null) {
+  final ownedByThemself = person.ownedBy != null && person.ownedBy == person.id;
+  if (ownedByThemself) {
     return false;
   }
   if (person.children.isNotEmpty) {
