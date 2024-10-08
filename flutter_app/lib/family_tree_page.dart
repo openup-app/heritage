@@ -49,10 +49,17 @@ class FamilyTreeLoadingPageState extends ConsumerState<FamilyTreeLoadingPage> {
         if (next) {
           WidgetsBinding.instance.endOfFrame.then((_) {
             if (mounted) {
-              widget.onReady();
+              final focalPerson = ref.read(graphProvider).focalPerson;
+              final isOwnedBySomeoneElse = focalPerson.ownedBy != null &&
+                  focalPerson.ownedBy != focalPerson.id;
+              if (isOwnedBySomeoneElse) {
+                widget.onError();
+              } else {
+                widget.onReady();
+                setState(() => _ready = true);
+              }
             }
           });
-          setState(() => _ready = true);
         }
       },
     );
