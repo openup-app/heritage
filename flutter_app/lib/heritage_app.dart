@@ -303,6 +303,7 @@ class _RouterBuilderState extends State<_RouterBuilder> {
               widget.tempApi.setUid(focalPersonId);
             }
             return TopLevelTransitionPage(
+              key: ValueKey(focalPersonId),
               child: ProviderScope(
                 overrides: [
                   focalPersonIdProvider.overrideWith((ref) => focalPersonId),

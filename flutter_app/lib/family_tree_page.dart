@@ -164,7 +164,7 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
               return;
             }
             _onDismissSelected();
-            context.pushNamed(
+            context.goNamed(
               'view',
               extra: ViewHistory(
                 primaryUserId: widget.viewHistory.primaryUserId,

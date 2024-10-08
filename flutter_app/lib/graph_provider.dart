@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:heritage/api.dart';
@@ -48,13 +50,14 @@ final graphProvider = StateNotifierProvider<GraphNotifier, Graph>(
     if (focalPerson == null) {
       throw 'Missing focal person';
     }
-    return GraphNotifier(
+    final notifier = GraphNotifier(
       api: api,
       initialGraph: Graph(
         focalPerson: focalPerson,
         people: peopleMap,
       ),
     );
+    return notifier;
   },
   dependencies: [_peopleProvider],
 );
@@ -62,12 +65,21 @@ final graphProvider = StateNotifierProvider<GraphNotifier, Graph>(
 class GraphNotifier extends StateNotifier<Graph> {
   final Api api;
   final String _focalPersonId;
+  late final Timer _timer;
 
   GraphNotifier({
     required this.api,
     required Graph initialGraph,
   })  : _focalPersonId = initialGraph.focalPerson.id,
-        super(initialGraph);
+        super(initialGraph) {
+    _timer = Timer.periodic(const Duration(seconds: 30), (_) => _onTimer());
+  }
+
+  @override
+  void dispose() {
+    _timer.cancel();
+    super.dispose();
+  }
 
   Future<Id?> addConnection({
     required Id source,
@@ -156,6 +168,28 @@ class GraphNotifier extends StateNotifier<Graph> {
     state = Graph(
       focalPerson: focalPerson,
       people: people,
+    );
+  }
+
+  void _onTimer() async {
+    final focalPersonId = state.focalPerson.id;
+    final result = await api.getLimitedGraph(focalPersonId);
+    if (!mounted) {
+      return;
+    }
+    result.fold(
+      (_) {},
+      (people) {
+        final peopleMap = Map.fromEntries(people.map((e) => MapEntry(e.id, e)));
+        final focalPerson = peopleMap[focalPersonId];
+        if (focalPerson == null) {
+          return;
+        }
+        state = Graph(
+          focalPerson: focalPerson,
+          people: peopleMap,
+        );
+      },
     );
   }
 }
