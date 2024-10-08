@@ -77,11 +77,16 @@ String genderedRelationship(Relationship relationship, Gender gender) {
   }
 }
 
-Future<ShareType> shareInvite(String name, String id) async {
+Future<ShareType> shareInvite({
+  required String targetId,
+  required String targetName,
+  required String senderName,
+}) async {
   final data = ShareData(
-    title: '$name\'s family tree invite!',
-    text: 'Verify your place on the family tree',
-    url: 'https://stitchfam.com/invite/$id',
+    title: '$targetName\'s family tree invite!',
+    text:
+        '$targetName has been invited by $senderName! Your family is waiting!',
+    url: 'https://stitchfam.com/invite/$targetId',
   );
   if (await canShare(data)) {
     await shareContent(data);

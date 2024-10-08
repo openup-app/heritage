@@ -588,7 +588,12 @@ class _PanelsState extends ConsumerState<Panels> {
       return;
     }
     if (newId != null && !takeOwnership) {
-      final type = await shareInvite(firstName, newId);
+      final focalPerson = ref.read(graphProvider).focalPerson;
+      final type = await shareInvite(
+        targetId: newId,
+        targetName: firstName,
+        senderName: focalPerson.profile.firstName,
+      );
       if (!mounted) {
         return;
       }
@@ -622,7 +627,12 @@ class _PanelsState extends ConsumerState<Panels> {
       showProfileUpdateSuccess(context: context);
     }
 
-    final type = await shareInvite(firstName, id);
+    final focalPerson = ref.read(graphProvider).focalPerson;
+    final type = await shareInvite(
+      targetId: id,
+      targetName: firstName,
+      senderName: focalPerson.profile.firstName,
+    );
     if (!mounted) {
       return;
     }
@@ -656,8 +666,14 @@ class _PanelsState extends ConsumerState<Panels> {
     );
   }
 
-  void _onShareLoginLink(Person person) =>
-      shareInvite(person.profile.firstName, person.id);
+  void _onShareLoginLink(Person person) {
+    final focalPerson = ref.read(graphProvider).focalPerson;
+    shareInvite(
+      targetId: person.id,
+      targetName: person.profile.firstName,
+      senderName: focalPerson.profile.firstName,
+    );
+  }
 
   void _onDeleteManagedUser(Id id) async {
     final notifier = ref.read(graphProvider.notifier);
