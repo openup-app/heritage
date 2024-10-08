@@ -1,21 +1,11 @@
 import 'dart:math';
 import 'dart:ui' as ui;
 
+import 'package:cross_file/cross_file.dart';
 import 'package:file_picker/file_picker.dart' as fp;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image/image.dart' as img;
-import 'package:image_picker/image_picker.dart';
-import 'package:permission_handler/permission_handler.dart';
-
-enum PhotoSource {
-  camera(ImageSource.camera),
-  gallery(ImageSource.gallery);
-
-  const PhotoSource(this.imageSource);
-
-  final ImageSource imageSource;
-}
 
 Future<XFile?> pickFile(String title) async {
   final result = await fp.FilePicker.platform.pickFiles(
@@ -27,61 +17,6 @@ Future<XFile?> pickFile(String title) async {
     return null;
   }
   return XFile(path);
-}
-
-Future<PhotoSource?> showPhotoSourceDialog(BuildContext context) {
-  return showDialog<PhotoSource>(
-    context: context,
-    builder: (context) {
-      return AlertDialog(
-        title: const Text('Pick a photo'),
-        actions: [
-          ElevatedButton.icon(
-            onPressed: () => Navigator.of(context).pop(PhotoSource.camera),
-            icon: const Icon(Icons.camera_alt),
-            label: const Text('Take new photo'),
-          ),
-          ElevatedButton.icon(
-            onPressed: () => Navigator.of(context).pop(PhotoSource.gallery),
-            icon: const Icon(Icons.photo),
-            label: const Text('Pick from files'),
-          ),
-        ],
-      );
-    },
-  );
-}
-
-/// Capture a photo or pick from gallery, or fallback to a file picker.
-Future<XFile?> pickPhoto({required PhotoSource source}) async {
-  final picker = ImagePicker();
-  XFile? result;
-  try {
-    if (source == PhotoSource.camera) {
-      final status = await Permission.camera.request();
-      if (!status.isGranted) {
-        return null;
-      }
-    }
-
-    result = await picker.pickImage(
-      source: source.imageSource,
-      maxWidth: 1000,
-      maxHeight: 1000,
-      preferredCameraDevice: CameraDevice.front,
-    );
-  } on PlatformException catch (e) {
-    if (e.code == 'camera_access_denied') {
-      result = null;
-    } else {
-      rethrow;
-    }
-  }
-  if (result == null) {
-    return null;
-  }
-
-  return XFile(result.path);
 }
 
 Future<(Uint8List? bytes, Size size)> getFirstFrameAndSize(

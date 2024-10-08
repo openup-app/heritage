@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:collection/collection.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:heritage/api.dart';
@@ -64,7 +63,7 @@ Future<Uint8List?> _pickImageWithCropper({
   required BuildContext context,
   required bool faceMask,
 }) async {
-  final file = await pickPhoto(source: PhotoSource.gallery);
+  final file = await pickFile('Pick a photo');
   final image = await file?.readAsBytes();
   if (!context.mounted || image == null) {
     return null;
