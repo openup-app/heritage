@@ -210,7 +210,7 @@ class _RouterBuilderState extends State<_RouterBuilder> {
     return GoRouter(
       debugLogDiagnostics: kDebugMode,
       observers: widget.navigatorObservers,
-      initialLocation: initialLocation ?? '/',
+      initialLocation: kDebugMode ? '/menu' : initialLocation ?? '/',
       overridePlatformDefaultLocation: true,
       initialExtra: initialExtra,
       extraCodec: const _ExtraCodec(),

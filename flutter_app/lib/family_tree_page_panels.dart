@@ -605,13 +605,13 @@ class _PanelsState extends ConsumerState<Panels> {
       if (!mounted) {
         return;
       }
+      showProfileUpdateSuccess(context: context);
     }
 
     final type = await shareInvite(firstName, id);
     if (!mounted) {
       return;
     }
-    showProfileUpdateSuccess(context: context);
   }
 
   void _takeOwnership() async {

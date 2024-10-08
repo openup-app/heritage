@@ -9,7 +9,7 @@ import 'package:heritage/api.dart';
 import 'package:heritage/file_picker.dart';
 import 'package:heritage/graph.dart';
 import 'package:heritage/image_croper.dart';
-import 'package:heritage/share.dart';
+import 'package:heritage/share/share.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 Rect? locateWidget(GlobalKey key) {
@@ -95,7 +95,7 @@ Future<ShareType> shareInvite(String name, String id) async {
     text: 'Verify your place on the family tree',
     url: 'https://stitchfam.com/invite/$id',
   );
-  if (!kDebugMode && await canShare(data)) {
+  if (await canShare(data)) {
     await shareContent(data);
     return ShareType.share;
   } else {
