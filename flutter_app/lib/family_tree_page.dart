@@ -123,9 +123,7 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
         FamilyTreeView(
           key: _familyTreeViewKey,
           focalPerson: graph.focalPerson,
-          people: widget.viewHistory.perspectiveUserId == null
-              ? graph.people.values.toList()
-              : graph.people.values.where((e) => e.ownedBy != null).toList(),
+          people: graph.people.values.toList(),
           viewHistory: widget.viewHistory,
           selectedPerson: _selectedPerson,
           viewRectNotifier: _viewRectNotifier,
@@ -397,8 +395,12 @@ class FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
                       );
                     },
                     nodeBuilder: (context, data, node, key, relatedness) {
-                      final enabled = widget.selectedPerson == null ||
+                      final isGhost =
+                          widget.viewHistory.perspectiveUserId != null &&
+                              data.ownedBy == null;
+                      final isSelectedPerson = widget.selectedPerson == null ||
                           widget.selectedPerson?.id == data.id;
+                      final enabled = isSelectedPerson && !isGhost;
                       final canEditPhoto =
                           widget.viewHistory.perspectiveUserId == null &&
                               data.ownedBy == widget.focalPerson.id;
@@ -415,41 +417,44 @@ class FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
                         enabled: enabled,
                         forceHover: widget.selectedPerson?.id == data.id,
                         builder: (context, overlaying) {
-                          return MouseRegion(
-                            cursor: enabled
-                                ? SystemMouseCursors.click
-                                : MouseCursor.defer,
-                            child: GestureDetector(
-                              onTap: !enabled
-                                  ? null
-                                  : () => widget.onProfileSelected(
-                                      data, relatedness),
-                              child: NodeProfile(
-                                person: data,
-                                showProfilePhotoEdit:
-                                    canEditPhoto && overlaying,
-                                showViewPerspective: canViewPerspectiveBool,
-                                onProfilePhotoEditPressed: () async {
-                                  final photo =
-                                      await pickPhotoWithCropper(context);
-                                  if (photo != null && mounted) {
-                                    final notifier =
-                                        ref.read(graphProvider.notifier);
-                                    notifier.updateProfile(data.id,
-                                        data.profile.copyWith(photo: photo));
-                                  }
-                                },
-                                onViewPerspectivePressed: () {
-                                  widget.onDismissSelected();
-                                  context.pushNamed(
-                                    'view',
-                                    extra: ViewHistory(
-                                      primaryUserId:
-                                          widget.viewHistory.primaryUserId,
-                                      perspectiveUserId: data.id,
-                                    ),
-                                  );
-                                },
+                          return Opacity(
+                            opacity: isGhost ? 0.4 : 1.0,
+                            child: MouseRegion(
+                              cursor: enabled
+                                  ? SystemMouseCursors.click
+                                  : MouseCursor.defer,
+                              child: GestureDetector(
+                                onTap: !enabled
+                                    ? null
+                                    : () => widget.onProfileSelected(
+                                        data, relatedness),
+                                child: NodeProfile(
+                                  person: data,
+                                  showProfilePhotoEdit:
+                                      canEditPhoto && overlaying,
+                                  showViewPerspective: canViewPerspectiveBool,
+                                  onProfilePhotoEditPressed: () async {
+                                    final photo =
+                                        await pickPhotoWithCropper(context);
+                                    if (photo != null && mounted) {
+                                      final notifier =
+                                          ref.read(graphProvider.notifier);
+                                      notifier.updateProfile(data.id,
+                                          data.profile.copyWith(photo: photo));
+                                    }
+                                  },
+                                  onViewPerspectivePressed: () {
+                                    widget.onDismissSelected();
+                                    context.pushNamed(
+                                      'view',
+                                      extra: ViewHistory(
+                                        primaryUserId:
+                                            widget.viewHistory.primaryUserId,
+                                        perspectiveUserId: data.id,
+                                      ),
+                                    );
+                                  },
+                                ),
                               ),
                             ),
                           );
