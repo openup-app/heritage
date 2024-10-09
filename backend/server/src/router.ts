@@ -79,7 +79,7 @@ export function router(auth: Auth, database: Database, storage: Storage): Router
     try {
       const person = await database.getPerson(id);
       return res.json({
-        'preson': constructPerson(person, storage),
+        'person': constructPerson(person, storage),
       })
     } catch (e) {
       console.log(e);
