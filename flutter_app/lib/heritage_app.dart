@@ -339,6 +339,8 @@ class _RouterBuilderState extends State<_RouterBuilder> {
             if (viewHistory.perspectiveUserId == null) {
               widget.tempApi.setUid(focalPersonId);
             }
+
+            final isPersectiveMode = viewHistory.perspectiveUserId != null;
             return TopLevelTransitionPage(
               key: ValueKey(focalPersonId),
               child: ProviderScope(
@@ -346,9 +348,8 @@ class _RouterBuilderState extends State<_RouterBuilder> {
                   focalPersonIdProvider.overrideWith((ref) => focalPersonId),
                 ],
                 child: FamilyTreeLoadingPage(
+                  isPerspectiveMode: isPersectiveMode,
                   onReady: () {
-                    final isPersectiveMode =
-                        viewHistory.perspectiveUserId != null;
                     if (!isPersectiveMode) {
                       widget.storage.saveUid(focalPersonId);
                     }

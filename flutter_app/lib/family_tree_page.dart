@@ -21,12 +21,14 @@ import 'package:lottie/lottie.dart';
 import 'package:path_drawing/path_drawing.dart' as path_drawing;
 
 class FamilyTreeLoadingPage extends ConsumerStatefulWidget {
+  final bool isPerspectiveMode;
   final VoidCallback onReady;
   final VoidCallback onError;
   final Widget child;
 
   const FamilyTreeLoadingPage({
     super.key,
+    required this.isPerspectiveMode,
     required this.onReady,
     required this.onError,
     required this.child,
@@ -52,7 +54,8 @@ class FamilyTreeLoadingPageState extends ConsumerState<FamilyTreeLoadingPage> {
               final focalPerson = ref.read(graphProvider).focalPerson;
               final isOwnedBySomeoneElse = focalPerson.ownedBy != null &&
                   focalPerson.ownedBy != focalPerson.id;
-              if (isOwnedBySomeoneElse) {
+              // Users owned by another can't login (but can view perspective)
+              if (isOwnedBySomeoneElse && !widget.isPerspectiveMode) {
                 widget.onError();
               } else {
                 widget.onReady();
