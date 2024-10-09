@@ -91,7 +91,7 @@ class Api {
   Future<Either<Error, List<Person>>> getLimitedGraph(Id id) {
     return _makeRequest(
       request: () => http.get(
-        Uri.parse('$_baseUrl/v1/people/$id'),
+        Uri.parse('$_baseUrl/v1/people/$id/graph'),
         headers: _headers,
       ),
       handleResponse: (response) {

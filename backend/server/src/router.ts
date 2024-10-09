@@ -61,12 +61,25 @@ export function router(auth: Auth, database: Database, storage: Storage): Router
     }
   });
 
-  router.get('/people/:id', async (req: Request, res: Response) => {
+  router.get('/people/:id/graph', async (req: Request, res: Response) => {
     const id = req.params.id;
     try {
       const people = await database.getLimitedGraph(id);
       return res.json({
         'people': people.map(e => constructPerson(e, storage)),
+      })
+    } catch (e) {
+      console.log(e);
+      return res.sendStatus(500);
+    }
+  });
+
+  router.get('/people/:id', async (req: Request, res: Response) => {
+    const id = req.params.id;
+    try {
+      const person = await database.getPerson(id);
+      return res.json({
+        'preson': constructPerson(person, storage),
       })
     } catch (e) {
       console.log(e);
