@@ -1581,6 +1581,7 @@ class _ProfileDisplayState extends ConsumerState<_ProfileDisplay> {
                             if (!mounted || date == null) {
                               return;
                             }
+                            _birthdayController.text = formatDate(date);
                             ref
                                 .read(profileUpdateProvider.notifier)
                                 .birthdayObject(date);
@@ -1627,6 +1628,7 @@ class _ProfileDisplayState extends ConsumerState<_ProfileDisplay> {
                               if (!mounted || date == null) {
                                 return;
                               }
+                              _deathdayController.text = formatDate(date);
                               ref
                                   .read(profileUpdateProvider.notifier)
                                   .deathdayObject(date);
