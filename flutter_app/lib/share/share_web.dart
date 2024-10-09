@@ -61,8 +61,6 @@ Future<void> shareContent(ShareData data) async {
     await navigator
         ?.share(
           _ShareOptions(
-            title: data.title,
-            text: data.text,
             url: data.url,
           ),
         )
