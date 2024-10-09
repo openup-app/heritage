@@ -600,23 +600,30 @@ class _PanelsState extends ConsumerState<Panels> {
           gender: gender,
         ),
       );
-      // Unawaited: share caused by user interaction ("transient activation")
-      showBlockingModal(context, updateFuture).then((_) {
-        if (!mounted) {
-          return;
+      // Unawaited because share needs "transient activation"
+      final blockingModalFuture =
+          showBlockingModal(context, updateFuture).then((_) async {
+        if (mounted && takeOwnership) {
+          await graphNotifier.takeOwnership(id);
         }
-        showProfileUpdateSuccess(context: context);
+        if (mounted) {
+          showProfileUpdateSuccess(context: context);
+        }
       });
+
+      if (takeOwnership) {
+        // Can await here because we won't show share shet
+        await blockingModalFuture;
+      }
     }
 
-    final focalPerson = ref.read(graphProvider).focalPerson;
-    final type = await shareInvite(
-      targetId: id,
-      targetName: firstName,
-      senderName: focalPerson.profile.firstName,
-    );
-    if (!mounted) {
-      return;
+    if (!takeOwnership) {
+      final focalPerson = ref.read(graphProvider).focalPerson;
+      final type = await shareInvite(
+        targetId: id,
+        targetName: firstName,
+        senderName: focalPerson.profile.firstName,
+      );
     }
   }
 

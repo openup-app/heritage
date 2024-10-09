@@ -742,7 +742,35 @@ class _AddConnectionDisplayState extends ConsumerState<AddConnectionDisplay> {
         const SizedBox(height: 16),
         Center(
           child: TextButton(
-            onPressed: !canSubmit ? null : () => _done(takeOwnership: true),
+            onPressed: !canSubmit
+                ? null
+                : () async {
+                    final takeOwnership = await showDialog(
+                      context: context,
+                      builder: (context) {
+                        return AlertDialog(
+                          title: const Text('Take ownership?'),
+                          content: const Text(
+                              '\nCompleting someone else\'s profile should only be done if they can\'t do it themself.\n\nExample: child or deceased'),
+                          actions: [
+                            TextButton(
+                              onPressed: Navigator.of(context).pop,
+                              style: TextButton.styleFrom(
+                                  foregroundColor: Colors.black),
+                              child: const Text('Cancel'),
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.of(context).pop(true),
+                              child: const Text('Proceed'),
+                            ),
+                          ],
+                        );
+                      },
+                    );
+                    if (mounted && takeOwnership == true) {
+                      _done(takeOwnership: true);
+                    }
+                  },
             style: TextButton.styleFrom(
               foregroundColor: const Color.fromRGBO(0xB9, 0xB9, 0xB9, 1.0),
             ),
