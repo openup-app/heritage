@@ -94,6 +94,7 @@ export function router(auth: Auth, database: Database, storage: Storage): Router
       const { fields, files } = await parseForm(req);
       const normalized = normalizeFields(fields);
       const profileUpdate = profileUpdateSchema.parse(normalized.profile);
+
       const currentProfile = (await database.getPerson(id)).profile;
 
       let updatedPhotoKey: string | null | undefined;
@@ -195,8 +196,8 @@ function applyProfileUpdates(currentProfile: Profile, profileUpdate: ProfileUpda
     gender: profileUpdate.gender ?? currentProfile.gender,
     photoKey: photoKey ?? (photoKey === null ? null : currentProfile.photoKey),
     galleryKeys: galleryKeys ?? currentProfile.galleryKeys,
-    birthday: profileUpdate.birthday ?? currentProfile.birthday,
-    deathday: profileUpdate.deathday ?? currentProfile.deathday,
+    birthday: profileUpdate.birthday,
+    deathday: profileUpdate.deathday,
     birthplace: profileUpdate.birthplace ?? currentProfile.birthplace,
     occupation: profileUpdate.occupation ?? currentProfile.occupation,
     hobbies: profileUpdate.hobbies ?? currentProfile.hobbies,
