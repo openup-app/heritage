@@ -1468,10 +1468,256 @@ class _ProfileDisplayState extends ConsumerState<_ProfileDisplay> {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        if (widget.isEditable) ...[
+          const SizedBox(height: 24),
+          Text(
+            'Profile Picture',
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Add your profile picture',
+            style: Theme.of(context).textTheme.labelLarge,
+          ),
+          const SizedBox(height: 8),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: AddProfilePhotoButton(
+              photo: ref.watch(profileUpdateProvider.select((p) => p.photo)),
+              onPhoto: ref.read(profileUpdateProvider.notifier).photo,
+              onDelete: () {
+                final notifier = ref.read(profileUpdateProvider.notifier);
+                notifier.photo(
+                  const Photo.network(
+                    key: 'public/no_image.png',
+                    url: '$cdn/public/no_image.png',
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+        const SizedBox(height: 24),
+        Text(
+          'Details',
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
+        if (widget.isEditable) ...[
+          const SizedBox(height: 4),
+          Text(
+            'Add some information about yourself so your family can see',
+            style: Theme.of(context).textTheme.labelLarge,
+          ),
+          const SizedBox(height: 8),
+        ],
         Column(
           children: [
+            FocusTraversalGroup(
+              child: InputForm(
+                children: [
+                  InputLabel(
+                    label: 'First name',
+                    child: TextFormField(
+                      controller: _firstNameController,
+                      enabled: widget.isEditable,
+                      onChanged:
+                          ref.read(profileUpdateProvider.notifier).firstName,
+                      textCapitalization: TextCapitalization.words,
+                      textInputAction: TextInputAction.next,
+                    ),
+                  ),
+                  InputLabel(
+                    label: 'Last name',
+                    child: TextFormField(
+                      controller: _lastNameController,
+                      enabled: widget.isEditable,
+                      onChanged:
+                          ref.read(profileUpdateProvider.notifier).lastName,
+                      textCapitalization: TextCapitalization.words,
+                      textInputAction: TextInputAction.next,
+                    ),
+                  ),
+                  InputLabel(
+                    label: 'Date of birth',
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            controller: _birthdayController,
+                            enabled: widget.isEditable,
+                            keyboardType: TextInputType.number,
+                            textInputAction: TextInputAction.next,
+                            inputFormatters: [DateTextFormatter()],
+                            onChanged: ref
+                                .read(profileUpdateProvider.notifier)
+                                .birthday,
+                            decoration: InputDecoration(
+                              hintText: getFormattedDatePattern().formatted,
+                            ),
+                          ),
+                        ),
+                        if (widget.isEditable)
+                          ExcludeFocus(
+                            child: IconButton(
+                              onPressed: () async {
+                                final date = await showDatePicker(
+                                  context: context,
+                                  firstDate: firstDate,
+                                  lastDate: lastDate,
+                                  initialDate: ref.watch(profileUpdateProvider
+                                      .select((p) => p.birthday ?? lastDate)),
+                                );
+                                if (!mounted || date == null) {
+                                  return;
+                                }
+                                _birthdayController.text = formatDate(date);
+                                ref
+                                    .read(profileUpdateProvider.notifier)
+                                    .birthdayObject(date);
+                              },
+                              icon: const Icon(
+                                Icons.calendar_month,
+                                color: Color.fromRGBO(138, 138, 138, 1),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  if (hasDateOfPassing)
+                    InputLabel(
+                      label: 'Date of passing',
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: TextFormField(
+                              controller: _deathdayController,
+                              enabled: widget.isEditable,
+                              keyboardType: TextInputType.number,
+                              textInputAction: TextInputAction.next,
+                              inputFormatters: [DateTextFormatter()],
+                              onChanged: ref
+                                  .read(profileUpdateProvider.notifier)
+                                  .deathday,
+                              decoration: InputDecoration(
+                                hintText: getFormattedDatePattern().formatted,
+                              ),
+                            ),
+                          ),
+                          if (widget.isEditable)
+                            ExcludeFocus(
+                              child: IconButton(
+                                onPressed: () async {
+                                  final date = await showDatePicker(
+                                    context: context,
+                                    firstDate: firstDate,
+                                    lastDate: lastDate,
+                                    initialDate: ref.watch(profileUpdateProvider
+                                        .select((p) => p.deathday ?? lastDate)),
+                                  );
+                                  if (!mounted || date == null) {
+                                    return;
+                                  }
+                                  _deathdayController.text = formatDate(date);
+                                  ref
+                                      .read(profileUpdateProvider.notifier)
+                                      .deathdayObject(date);
+                                },
+                                icon: const Icon(
+                                  Icons.calendar_month,
+                                  color: Color.fromRGBO(138, 138, 138, 1),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  InputLabel(
+                    label: 'Place of birth',
+                    child: TextFormField(
+                      controller: _birthplaceController,
+                      enabled: widget.isEditable,
+                      textCapitalization: TextCapitalization.words,
+                      textInputAction: TextInputAction.next,
+                      onChanged:
+                          ref.read(profileUpdateProvider.notifier).birthplace,
+                    ),
+                  ),
+                  InputLabel(
+                    label: 'Occupation',
+                    child: TextFormField(
+                      controller: _occupationController,
+                      enabled: widget.isEditable,
+                      textCapitalization: TextCapitalization.words,
+                      textInputAction: TextInputAction.next,
+                      onChanged:
+                          ref.read(profileUpdateProvider.notifier).occupation,
+                    ),
+                  ),
+                  InputLabel(
+                    label: 'Hobbies',
+                    child: TextFormField(
+                      controller: _hobbiesController,
+                      enabled: widget.isEditable,
+                      textCapitalization: TextCapitalization.words,
+                      textInputAction: TextInputAction.next,
+                      onChanged:
+                          ref.read(profileUpdateProvider.notifier).hobbies,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (widget.isEditable) ...[
+              const SizedBox(height: 24),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Gender',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Needed to list you properly in the tree',
+                  style: Theme.of(context).textTheme.labelLarge,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  for (final gender in Gender.values) ...[
+                    if (gender != Gender.values.first)
+                      const SizedBox(width: 16),
+                    Expanded(
+                      child: Builder(builder: (context) {
+                        final selectedGender = ref.watch(
+                            profileUpdateProvider.select((p) => p.gender));
+                        return FilledButton(
+                          onPressed: () => ref
+                              .read(profileUpdateProvider.notifier)
+                              .gender(gender),
+                          style: FilledButton.styleFrom(
+                            fixedSize: const Size.fromHeight(44),
+                            foregroundColor:
+                                selectedGender == gender ? Colors.white : null,
+                            backgroundColor:
+                                selectedGender == gender ? primaryColor : null,
+                          ),
+                          child: Text(
+                              '${gender.name[0].toUpperCase()}${gender.name.substring(1)}'),
+                        );
+                      }),
+                    ),
+                  ],
+                ],
+              ),
+            ],
             if (ref.watch(
                 profileUpdateProvider.select((p) => p.gallery.isNotEmpty))) ...[
+              const SizedBox(height: 24),
               ClipRRect(
                 borderRadius: const BorderRadius.all(Radius.circular(10)),
                 child: GalleryView(
@@ -1479,9 +1725,9 @@ class _ProfileDisplayState extends ConsumerState<_ProfileDisplay> {
                       ref.watch(profileUpdateProvider.select((p) => p.gallery)),
                 ),
               ),
-              const SizedBox(height: 24),
             ],
             if (widget.isEditable) ...[
+              const SizedBox(height: 24),
               Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
@@ -1513,210 +1759,6 @@ class _ProfileDisplayState extends ConsumerState<_ProfileDisplay> {
             ],
           ],
         ),
-        const SizedBox(height: 24),
-        Text(
-          'Details',
-          style: Theme.of(context).textTheme.titleLarge,
-        ),
-        if (widget.isEditable) ...[
-          const SizedBox(height: 4),
-          Text(
-            'Add some information about yourself so your family can see',
-            style: Theme.of(context).textTheme.labelLarge,
-          ),
-          const SizedBox(height: 8),
-        ],
-        FocusTraversalGroup(
-          child: InputForm(
-            children: [
-              InputLabel(
-                label: 'First name',
-                child: TextFormField(
-                  controller: _firstNameController,
-                  enabled: widget.isEditable,
-                  onChanged: ref.read(profileUpdateProvider.notifier).firstName,
-                  textCapitalization: TextCapitalization.words,
-                  textInputAction: TextInputAction.next,
-                ),
-              ),
-              InputLabel(
-                label: 'Last name',
-                child: TextFormField(
-                  controller: _lastNameController,
-                  enabled: widget.isEditable,
-                  onChanged: ref.read(profileUpdateProvider.notifier).lastName,
-                  textCapitalization: TextCapitalization.words,
-                  textInputAction: TextInputAction.next,
-                ),
-              ),
-              InputLabel(
-                label: 'Date of birth',
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: TextFormField(
-                        controller: _birthdayController,
-                        enabled: widget.isEditable,
-                        keyboardType: TextInputType.number,
-                        textInputAction: TextInputAction.next,
-                        inputFormatters: [DateTextFormatter()],
-                        onChanged:
-                            ref.read(profileUpdateProvider.notifier).birthday,
-                        decoration: InputDecoration(
-                          hintText: getFormattedDatePattern().formatted,
-                        ),
-                      ),
-                    ),
-                    if (widget.isEditable)
-                      ExcludeFocus(
-                        child: IconButton(
-                          onPressed: () async {
-                            final date = await showDatePicker(
-                              context: context,
-                              firstDate: firstDate,
-                              lastDate: lastDate,
-                              initialDate: ref.watch(profileUpdateProvider
-                                  .select((p) => p.birthday ?? lastDate)),
-                            );
-                            if (!mounted || date == null) {
-                              return;
-                            }
-                            _birthdayController.text = formatDate(date);
-                            ref
-                                .read(profileUpdateProvider.notifier)
-                                .birthdayObject(date);
-                          },
-                          icon: const Icon(
-                            Icons.calendar_month,
-                            color: Color.fromRGBO(138, 138, 138, 1),
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-              if (hasDateOfPassing)
-                InputLabel(
-                  label: 'Date of passing',
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: TextFormField(
-                          controller: _deathdayController,
-                          enabled: widget.isEditable,
-                          keyboardType: TextInputType.number,
-                          textInputAction: TextInputAction.next,
-                          inputFormatters: [DateTextFormatter()],
-                          onChanged:
-                              ref.read(profileUpdateProvider.notifier).deathday,
-                          decoration: InputDecoration(
-                            hintText: getFormattedDatePattern().formatted,
-                          ),
-                        ),
-                      ),
-                      if (widget.isEditable)
-                        ExcludeFocus(
-                          child: IconButton(
-                            onPressed: () async {
-                              final date = await showDatePicker(
-                                context: context,
-                                firstDate: firstDate,
-                                lastDate: lastDate,
-                                initialDate: ref.watch(profileUpdateProvider
-                                    .select((p) => p.deathday ?? lastDate)),
-                              );
-                              if (!mounted || date == null) {
-                                return;
-                              }
-                              _deathdayController.text = formatDate(date);
-                              ref
-                                  .read(profileUpdateProvider.notifier)
-                                  .deathdayObject(date);
-                            },
-                            icon: const Icon(
-                              Icons.calendar_month,
-                              color: Color.fromRGBO(138, 138, 138, 1),
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              InputLabel(
-                label: 'Place of birth',
-                child: TextFormField(
-                  controller: _birthplaceController,
-                  enabled: widget.isEditable,
-                  textCapitalization: TextCapitalization.words,
-                  textInputAction: TextInputAction.next,
-                  onChanged:
-                      ref.read(profileUpdateProvider.notifier).birthplace,
-                ),
-              ),
-              InputLabel(
-                label: 'Occupation',
-                child: TextFormField(
-                  controller: _occupationController,
-                  enabled: widget.isEditable,
-                  textCapitalization: TextCapitalization.words,
-                  textInputAction: TextInputAction.next,
-                  onChanged:
-                      ref.read(profileUpdateProvider.notifier).occupation,
-                ),
-              ),
-              InputLabel(
-                label: 'Hobbies',
-                child: TextFormField(
-                  controller: _hobbiesController,
-                  enabled: widget.isEditable,
-                  textCapitalization: TextCapitalization.words,
-                  textInputAction: TextInputAction.next,
-                  onChanged: ref.read(profileUpdateProvider.notifier).hobbies,
-                ),
-              ),
-            ],
-          ),
-        ),
-        if (widget.isEditable) ...[
-          const SizedBox(height: 24),
-          Text(
-            'Gender',
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Needed to list you properly in the tree',
-            style: Theme.of(context).textTheme.labelLarge,
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              for (final gender in Gender.values) ...[
-                if (gender != Gender.values.first) const SizedBox(width: 16),
-                Expanded(
-                  child: Builder(builder: (context) {
-                    final selectedGender = ref
-                        .watch(profileUpdateProvider.select((p) => p.gender));
-                    return FilledButton(
-                      onPressed: () => ref
-                          .read(profileUpdateProvider.notifier)
-                          .gender(gender),
-                      style: FilledButton.styleFrom(
-                        fixedSize: const Size.fromHeight(44),
-                        foregroundColor:
-                            selectedGender == gender ? Colors.white : null,
-                        backgroundColor:
-                            selectedGender == gender ? primaryColor : null,
-                      ),
-                      child: Text(
-                          '${gender.name[0].toUpperCase()}${gender.name.substring(1)}'),
-                    );
-                  }),
-                ),
-              ],
-            ],
-          ),
-        ],
         if (widget.onViewPerspective != null) ...[
           const SizedBox(height: 24),
           Text(

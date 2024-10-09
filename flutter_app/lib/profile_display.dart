@@ -373,17 +373,13 @@ class _HoverPersonDisplayState extends State<HoverPersonDisplay> {
 
 class NodeProfile extends StatelessWidget {
   final Person person;
-  final bool showProfilePhotoEdit;
   final bool showViewPerspective;
-  final VoidCallback? onProfilePhotoEditPressed;
   final VoidCallback? onViewPerspectivePressed;
 
   const NodeProfile({
     super.key,
     required this.person,
-    required this.showProfilePhotoEdit,
     required this.showViewPerspective,
-    required this.onProfilePhotoEditPressed,
     required this.onViewPerspectivePressed,
   });
 
@@ -446,30 +442,6 @@ class NodeProfile extends StatelessWidget {
                           child: const Binoculars(),
                         ),
                       ),
-                    Positioned(
-                      right: 0,
-                      top: 4,
-                      child: IgnorePointer(
-                        ignoring: !showProfilePhotoEdit,
-                        child: AnimatedOpacity(
-                          duration: const Duration(milliseconds: 200),
-                          opacity: showProfilePhotoEdit ? 1.0 : 0.0,
-                          child: FilledButton(
-                            onPressed: onProfilePhotoEditPressed,
-                            style: FilledButton.styleFrom(
-                              fixedSize: const Size.square(44),
-                              backgroundColor:
-                                  const Color.fromRGBO(0x00, 0x00, 0x00, 0.6),
-                              shape: const CircleBorder(),
-                            ),
-                            child: const Icon(
-                              Icons.camera_alt,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
                     if (person.ownedBy != null)
                       const Positioned(
                         right: -16,

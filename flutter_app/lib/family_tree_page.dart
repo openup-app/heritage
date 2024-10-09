@@ -431,19 +431,7 @@ class FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
                                         data, relatedness),
                                 child: NodeProfile(
                                   person: data,
-                                  showProfilePhotoEdit:
-                                      canEditPhoto && overlaying,
                                   showViewPerspective: canViewPerspectiveBool,
-                                  onProfilePhotoEditPressed: () async {
-                                    final photo = await pickPhotoWithCropper(
-                                        outerContext);
-                                    if (photo != null && mounted) {
-                                      final notifier =
-                                          ref.read(graphProvider.notifier);
-                                      notifier.updateProfile(data.id,
-                                          data.profile.copyWith(photo: photo));
-                                    }
-                                  },
                                   onViewPerspectivePressed: () {
                                     widget.onDismissSelected();
                                     context.pushNamed(
