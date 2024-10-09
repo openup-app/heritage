@@ -351,6 +351,7 @@ class FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
       spouse: 30,
       sibling: 50,
     );
+    final outerContext = context;
     return Center(
       child: Overlay.wrap(
         child: Opacity(
@@ -434,8 +435,8 @@ class FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
                                       canEditPhoto && overlaying,
                                   showViewPerspective: canViewPerspectiveBool,
                                   onProfilePhotoEditPressed: () async {
-                                    final photo =
-                                        await pickPhotoWithCropper(context);
+                                    final photo = await pickPhotoWithCropper(
+                                        outerContext);
                                     if (photo != null && mounted) {
                                       final notifier =
                                           ref.read(graphProvider.notifier);
