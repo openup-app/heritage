@@ -11,7 +11,7 @@ export class Database {
     this.firestore = getFirestore();
   }
 
-  public async addConnection(sourceId: Id, firstName: string, lastName: string, gender: Gender, relationship: Relationship, takeOwnership: boolean, creatorId: Id): Promise<{ id: Id, people: Person[] } | undefined> {
+  public async addConnection(sourceId: Id, relationship: Relationship, creatorId: Id): Promise<{ id: Id, people: Person[] } | undefined> {
     return this.firestore.runTransaction(async (t: Transaction) => {
       const sourceRef = this.personRef(sourceId);
       const sourceDoc = await t.get(sourceRef);
@@ -33,13 +33,7 @@ export class Database {
 
       // TODO: Don't allow adding of any spouse's family
 
-      const newPerson = this.newEmptyPerson(gender, creatorId);
-      newPerson.profile.firstName = firstName;
-      newPerson.profile.lastName = lastName;
-      if (takeOwnership) {
-        newPerson.ownedBy = creatorId;
-        newPerson.ownedAt = newPerson.createdAt;
-      }
+      const newPerson = this.newEmptyPerson("male", creatorId);
       createdPeople.push(newPerson);
 
       if (relationship == "parent") {

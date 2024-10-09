@@ -28,7 +28,7 @@ export function router(auth: Auth, database: Database, storage: Storage): Router
     }
 
     try {
-      const result = await database.addConnection(sourceId, body.firstName, body.lastName, body.gender, body.relationship, body.takeOwnership, creatorId);
+      const result = await database.addConnection(sourceId, body.relationship, creatorId);
       if (!result) {
         return res.sendStatus(400);
       }
@@ -290,11 +290,7 @@ function normalizeFields(fields: formidable.Fields) {
 
 
 const addConnectionSchema = z.object({
-  firstName: z.string(),
-  lastName: z.string(),
-  gender: genderSchema,
   relationship: relationshipSchema,
-  takeOwnership: z.boolean(),
 });
 
 const createRootSchema = z.object({
