@@ -1487,7 +1487,7 @@ class _ProfileDisplayState extends ConsumerState<_ProfileDisplay> {
               Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
-                  'Add photos for others to see, this is not your photo on the tree',
+                  'Add photos for your family to see',
                   style: Theme.of(context).textTheme.labelLarge,
                 ),
               ),
