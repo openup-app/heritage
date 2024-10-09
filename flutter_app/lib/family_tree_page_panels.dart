@@ -105,7 +105,7 @@ class _PanelsState extends ConsumerState<Panels> {
                 const LogoText(width: 250),
                 if (widget.viewHistory.perspectiveUserId != null)
                   _PerspectiveTitle(
-                      firstName: widget.focalPerson.profile.firstName),
+                      fullName: widget.focalPerson.profile.fullName),
               ],
             ),
           ),
@@ -204,7 +204,7 @@ class _PanelsState extends ConsumerState<Panels> {
                   const LogoText(),
                   if (widget.viewHistory.perspectiveUserId != null)
                     _PerspectiveTitle(
-                      firstName: widget.focalPerson.profile.firstName,
+                      fullName: widget.focalPerson.profile.fullName,
                     ),
                 ],
               ),
@@ -1732,7 +1732,7 @@ class _ProfileDisplayState extends ConsumerState<_ProfileDisplay> {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                    'View ${ref.watch(profileUpdateProvider.select((s) => s.firstName))}\'s tree'),
+                    'View ${ref.watch(profileUpdateProvider.select((s) => s.fullName))}\'s tree'),
               ],
             ),
           ),
@@ -2262,10 +2262,10 @@ class _GalleryViewState extends State<GalleryView> {
 }
 
 class _PerspectiveTitle extends StatelessWidget {
-  final String firstName;
+  final String fullName;
   const _PerspectiveTitle({
     super.key,
-    required this.firstName,
+    required this.fullName,
   });
 
   @override
@@ -2296,7 +2296,7 @@ class _PerspectiveTitle extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           Text(
-            '$firstName\'s Tree',
+            '$fullName\'s Tree',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
