@@ -371,20 +371,20 @@ class _HoverPersonDisplayState extends State<HoverPersonDisplay> {
   }
 }
 
-enum BadgeType { viewPerspective, editPhoto, none }
-
 class NodeProfile extends StatelessWidget {
   final Person person;
-  final BadgeType badgeType;
-  final bool showBadge;
-  final VoidCallback? onBadgePressed;
+  final bool showProfilePhotoEdit;
+  final bool showViewPerspective;
+  final VoidCallback? onProfilePhotoEditPressed;
+  final VoidCallback? onViewPerspectivePressed;
 
   const NodeProfile({
     super.key,
     required this.person,
-    required this.badgeType,
-    required this.showBadge,
-    required this.onBadgePressed,
+    required this.showProfilePhotoEdit,
+    required this.showViewPerspective,
+    required this.onProfilePhotoEditPressed,
+    required this.onViewPerspectivePressed,
   });
 
   @override
@@ -431,35 +431,45 @@ class NodeProfile extends StatelessWidget {
                         child: ProfileImage(person.profile.photo),
                       ),
                     ),
-                    if (badgeType != BadgeType.none)
+                    if (showViewPerspective)
                       Positioned(
-                        right: 0,
+                        left: 0,
                         top: 4,
-                        child: IgnorePointer(
-                          ignoring: !showBadge,
-                          child: AnimatedOpacity(
-                            duration: const Duration(milliseconds: 200),
-                            opacity: showBadge ? 1.0 : 0.0,
-                            child: FilledButton(
-                              onPressed: onBadgePressed,
-                              style: FilledButton.styleFrom(
-                                fixedSize: const Size.square(44),
-                                backgroundColor:
-                                    const Color.fromRGBO(0x00, 0x00, 0x00, 0.6),
-                                shape: const CircleBorder(),
-                              ),
-                              child: switch (badgeType) {
-                                BadgeType.editPhoto => const Icon(
-                                    Icons.camera_alt,
-                                    color: Colors.white,
-                                  ),
-                                BadgeType.viewPerspective => const Binoculars(),
-                                BadgeType.none => const SizedBox.shrink(),
-                              },
+                        child: FilledButton(
+                          onPressed: onViewPerspectivePressed,
+                          style: FilledButton.styleFrom(
+                            fixedSize: const Size.square(44),
+                            backgroundColor:
+                                const Color.fromRGBO(0x00, 0x00, 0x00, 0.6),
+                            shape: const CircleBorder(),
+                          ),
+                          child: const Binoculars(),
+                        ),
+                      ),
+                    Positioned(
+                      right: 0,
+                      top: 4,
+                      child: IgnorePointer(
+                        ignoring: !showProfilePhotoEdit,
+                        child: AnimatedOpacity(
+                          duration: const Duration(milliseconds: 200),
+                          opacity: showProfilePhotoEdit ? 1.0 : 0.0,
+                          child: FilledButton(
+                            onPressed: onProfilePhotoEditPressed,
+                            style: FilledButton.styleFrom(
+                              fixedSize: const Size.square(44),
+                              backgroundColor:
+                                  const Color.fromRGBO(0x00, 0x00, 0x00, 0.6),
+                              shape: const CircleBorder(),
+                            ),
+                            child: const Icon(
+                              Icons.camera_alt,
+                              color: Colors.white,
                             ),
                           ),
                         ),
                       ),
+                    ),
                     if (person.ownedBy != null)
                       const Positioned(
                         right: -16,

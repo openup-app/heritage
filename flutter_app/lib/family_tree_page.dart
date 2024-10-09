@@ -409,45 +409,50 @@ class FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
                         isSibling: relatedness.isSibling,
                         isOwned: data.ownedBy != null,
                       );
-                      final badgeType = canEditPhoto
-                          ? BadgeType.editPhoto
-                          : canViewPerspectiveBool
-                              ? BadgeType.viewPerspective
-                              : BadgeType.none;
                       return HoverableNodeProfile(
                         key: key,
                         person: data,
                         enabled: enabled,
                         forceHover: widget.selectedPerson?.id == data.id,
-                        badgeType: badgeType,
-                        onTap: !enabled
-                            ? null
-                            : () => widget.onProfileSelected(data, relatedness),
-                        onBadgePressed: () async {
-                          switch (badgeType) {
-                            case BadgeType.editPhoto:
-                              final photo = await pickPhotoWithCropper(context);
-                              if (photo != null && mounted) {
-                                final notifier =
-                                    ref.read(graphProvider.notifier);
-                                notifier.updateProfile(data.id,
-                                    data.profile.copyWith(photo: photo));
-                              }
-                              break;
-                            case BadgeType.viewPerspective:
-                              widget.onDismissSelected();
-                              context.pushNamed(
-                                'view',
-                                extra: ViewHistory(
-                                  primaryUserId:
-                                      widget.viewHistory.primaryUserId,
-                                  perspectiveUserId: data.id,
-                                ),
-                              );
-                              break;
-                            case BadgeType.none:
-                              break;
-                          }
+                        builder: (context, overlaying) {
+                          return MouseRegion(
+                            cursor: enabled
+                                ? SystemMouseCursors.click
+                                : MouseCursor.defer,
+                            child: GestureDetector(
+                              onTap: !enabled
+                                  ? null
+                                  : () => widget.onProfileSelected(
+                                      data, relatedness),
+                              child: NodeProfile(
+                                person: data,
+                                showProfilePhotoEdit:
+                                    canEditPhoto && overlaying,
+                                showViewPerspective: canViewPerspectiveBool,
+                                onProfilePhotoEditPressed: () async {
+                                  final photo =
+                                      await pickPhotoWithCropper(context);
+                                  if (photo != null && mounted) {
+                                    final notifier =
+                                        ref.read(graphProvider.notifier);
+                                    notifier.updateProfile(data.id,
+                                        data.profile.copyWith(photo: photo));
+                                  }
+                                },
+                                onViewPerspectivePressed: () {
+                                  widget.onDismissSelected();
+                                  context.pushNamed(
+                                    'view',
+                                    extra: ViewHistory(
+                                      primaryUserId:
+                                          widget.viewHistory.primaryUserId,
+                                      perspectiveUserId: data.id,
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          );
                         },
                       );
                     },
@@ -526,18 +531,14 @@ class HoverableNodeProfile extends StatelessWidget {
   final Person person;
   final bool enabled;
   final bool forceHover;
-  final BadgeType badgeType;
-  final VoidCallback? onTap;
-  final VoidCallback? onBadgePressed;
+  final Widget Function(BuildContext context, bool overlaying) builder;
 
   const HoverableNodeProfile({
     super.key,
     required this.person,
     this.enabled = true,
     this.forceHover = false,
-    required this.badgeType,
-    this.onTap,
-    this.onBadgePressed,
+    required this.builder,
   });
 
   @override
@@ -545,21 +546,7 @@ class HoverableNodeProfile extends StatelessWidget {
     return MouseOverlay(
       enabled: enabled,
       forceOverlay: forceHover,
-      builder: (context, overlay) {
-        return MouseRegion(
-          cursor: enabled ? SystemMouseCursors.click : MouseCursor.defer,
-          child: GestureDetector(
-            onTap: onTap,
-            child: NodeProfile(
-              person: person,
-              badgeType: badgeType,
-              showBadge: badgeType == BadgeType.viewPerspective ||
-                  badgeType == BadgeType.editPhoto && overlay,
-              onBadgePressed: onBadgePressed,
-            ),
-          ),
-        );
-      },
+      builder: builder,
     );
   }
 }
