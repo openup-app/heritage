@@ -70,6 +70,7 @@ class _LandingPageContent extends StatelessWidget {
           'assets/images/logo.json',
           width: 86,
           height: 86,
+          animate: false,
         ),
         const SizedBox(height: 16),
         const LogoText(
@@ -130,7 +131,7 @@ class _InviteOnlyText extends StatelessWidget {
       style: TextStyle(
         fontSize: 14,
         fontWeight: FontWeight.w400,
-        color: const Color.fromRGBO(0x9E, 0x9E, 0x9E, 1.0),
+        color: Color.fromRGBO(0x9E, 0x9E, 0x9E, 1.0),
       ),
     );
   }
