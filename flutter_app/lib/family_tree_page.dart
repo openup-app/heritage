@@ -136,12 +136,25 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
           viewHistory: widget.viewHistory,
           panelPopupState: _panelPopupState,
           onDismissPanelPopup: _onDismissSelected,
-          onAddConnectionPressed: (relationship) {
-            final person = _selectedPerson;
-            if (person != null) {
+          onAddConnectionPressed: (relationship) async {
+            final selectedPerson = _selectedPerson;
+            if (selectedPerson == null) {
+              return;
+            }
+            final graphNotifier = ref.read(graphProvider.notifier);
+            final addConnectionFuture = graphNotifier.addConnection(
+              source: selectedPerson.id,
+              relationship: relationship,
+            );
+            final newId = await showBlockingModal(context, addConnectionFuture);
+            if (!mounted) {
+              return;
+            }
+
+            if (newId != null) {
               setState(() {
                 _panelPopupState = PanelPopupStateAddConnection(
-                  person: person,
+                  newConnectionId: newId,
                   relationship: relationship,
                 );
               });
@@ -667,12 +680,12 @@ class AddConnectionDisplay extends ConsumerStatefulWidget {
   final Relationship relationship;
   final void Function(
           String firstName, String lastName, Gender gender, bool takeOwnership)
-      onSave;
+      onSaveAndShareOrTakeOwnership;
 
   const AddConnectionDisplay({
     super.key,
     required this.relationship,
-    required this.onSave,
+    required this.onSaveAndShareOrTakeOwnership,
   });
 
   @override
@@ -746,7 +759,8 @@ class _AddConnectionDisplayState extends ConsumerState<AddConnectionDisplay> {
     if (_firstName.isEmpty || _lastName.isEmpty) {
       return;
     }
-    widget.onSave(_firstName, _lastName, _gender, takeOwnership);
+    widget.onSaveAndShareOrTakeOwnership(
+        _firstName, _lastName, _gender, takeOwnership);
   }
 }
 

@@ -286,17 +286,21 @@ class _PanelsState extends ConsumerState<Panels> {
                         ),
                       ),
                     PanelPopupStateAddConnection(
-                      :final person,
+                      :final newConnectionId,
                       :final relationship
                     ) =>
                       _SidePanelContainer(
                         key: Key('connection_${relationship.name}'),
                         child: AddConnectionDisplay(
                           relationship: relationship,
-                          onSave: (firstName, lastName, gender,
-                              takeOwnership) async {
-                            await _saveNewConnection(firstName, lastName,
-                                gender, person, relationship, takeOwnership);
+                          onSaveAndShareOrTakeOwnership: (firstName, lastName,
+                              gender, takeOwnership) async {
+                            await _onSaveAndShareOrTakeOwnership(
+                                newConnectionId,
+                                firstName,
+                                lastName,
+                                gender,
+                                takeOwnership);
                             if (mounted) {
                               widget.onDismissPanelPopup();
                             }
@@ -310,8 +314,8 @@ class _PanelsState extends ConsumerState<Panels> {
                           person: person,
                           onAddConnectionPressed: null,
                           onSaveAndShare: (firstName, lastName, gender) async {
-                            await _onSaveAndShare(
-                                person.id, firstName, lastName, gender);
+                            await _onSaveAndShareOrTakeOwnership(
+                                person.id, firstName, lastName, gender, false);
                             if (mounted) {
                               widget.onDismissPanelPopup();
                             }
@@ -423,10 +427,13 @@ class _PanelsState extends ConsumerState<Panels> {
           case PanelPopupStateProfile():
             // Displayed in build() by bottom panel
             break;
-          case PanelPopupStateAddConnection(:final person, :final relationship):
+          case PanelPopupStateAddConnection(
+              :final newConnectionId,
+              :final relationship
+            ):
             WidgetsBinding.instance.endOfFrame.then((_) {
               if (mounted) {
-                _showAddConnectionModal(person, relationship);
+                _showAddConnectionModal(newConnectionId, relationship);
               }
             });
           case PanelPopupStateWaitingForApproval(
@@ -522,7 +529,8 @@ class _PanelsState extends ConsumerState<Panels> {
           person: person,
           onAddConnectionPressed: onAddConnectionPressed,
           onSaveAndShare: (firstName, lastName, gender) async {
-            await _onSaveAndShare(person.id, firstName, lastName, gender);
+            await _onSaveAndShareOrTakeOwnership(
+                person.id, firstName, lastName, gender, false);
             if (context.mounted) {
               Navigator.of(context).pop(true);
             }
@@ -545,15 +553,17 @@ class _PanelsState extends ConsumerState<Panels> {
     }
   }
 
-  void _showAddConnectionModal(Person person, Relationship relationship) async {
+  void _showAddConnectionModal(
+      Id newConnectionId, Relationship relationship) async {
     final shouldDismiss = await showScrollableModalBottomSheet<bool>(
       context: context,
       builder: (context) {
         return AddConnectionDisplay(
           relationship: relationship,
-          onSave: (firstName, lastName, gender, takeOwnership) async {
-            await _saveNewConnection(firstName, lastName, gender, person,
-                relationship, takeOwnership);
+          onSaveAndShareOrTakeOwnership:
+              (firstName, lastName, gender, takeOwnership) async {
+            await _onSaveAndShareOrTakeOwnership(
+                newConnectionId, firstName, lastName, gender, takeOwnership);
             if (context.mounted) {
               Navigator.of(context).pop(true);
             }
@@ -566,45 +576,13 @@ class _PanelsState extends ConsumerState<Panels> {
     }
   }
 
-  Future<void> _saveNewConnection(
+  Future<void> _onSaveAndShareOrTakeOwnership(
+    Id id,
     String firstName,
     String lastName,
     Gender gender,
-    Person person,
-    Relationship relationship,
     bool takeOwnership,
   ) async {
-    final graphNotifier = ref.read(graphProvider.notifier);
-    final addConnectionFuture = graphNotifier.addConnection(
-      source: person.id,
-      firstName: firstName,
-      lastName: lastName,
-      gender: gender,
-      relationship: relationship,
-      takeOwnership: takeOwnership,
-    );
-    final newId = await showBlockingModal(context, addConnectionFuture);
-    if (!mounted) {
-      return;
-    }
-    if (newId != null && !takeOwnership) {
-      final focalPerson = ref.read(graphProvider).focalPerson;
-      final type = await shareInvite(
-        targetId: newId,
-        targetName: firstName,
-        senderName: focalPerson.profile.firstName,
-      );
-      if (!mounted) {
-        return;
-      }
-    }
-    if (newId != null) {
-      showProfileUpdateSuccess(context: context);
-    }
-  }
-
-  Future<void> _onSaveAndShare(
-      Id id, String firstName, String lastName, Gender gender) async {
     final graph = ref.read(graphProvider);
     final person = graph.people[id];
     if (person == null) {
@@ -622,11 +600,13 @@ class _PanelsState extends ConsumerState<Panels> {
           gender: gender,
         ),
       );
-      await showBlockingModal(context, updateFuture);
-      if (!mounted) {
-        return;
-      }
-      showProfileUpdateSuccess(context: context);
+      // Unawaited: share caused by user interaction ("transient activation")
+      showBlockingModal(context, updateFuture).then((_) {
+        if (!mounted) {
+          return;
+        }
+        showProfileUpdateSuccess(context: context);
+      });
     }
 
     final focalPerson = ref.read(graphProvider).focalPerson;
@@ -2152,21 +2132,21 @@ class PanelPopupStateProfile implements PanelPopupState {
 }
 
 class PanelPopupStateAddConnection implements PanelPopupState {
-  final Person person;
+  final Id newConnectionId;
   final Relationship relationship;
 
   PanelPopupStateAddConnection({
-    required this.person,
+    required this.newConnectionId,
     required this.relationship,
   });
 
   @override
-  int get hashCode => Object.hash(person, relationship);
+  int get hashCode => Object.hash(newConnectionId, relationship);
 
   @override
   bool operator ==(Object other) {
     return other is PanelPopupStateAddConnection &&
-        other.person == person &&
+        other.newConnectionId == newConnectionId &&
         other.relationship == relationship;
   }
 }

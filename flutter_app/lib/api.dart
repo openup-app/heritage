@@ -47,22 +47,14 @@ class Api {
 
   Future<Either<Error, (Id id, List<Person> people)>> addConnection({
     required Id sourceId,
-    required String firstName,
-    required String lastName,
-    required Gender gender,
     required Relationship relationship,
-    bool takeOwnership = false,
   }) {
     return _makeRequest(
       request: () => http.post(
         Uri.parse('$_baseUrl/v1/people/$sourceId/connections'),
         headers: _headers,
         body: jsonEncode({
-          'firstName': firstName,
-          'lastName': lastName,
-          'gender': gender.name,
           'relationship': relationship.name,
-          'takeOwnership': takeOwnership,
         }),
       ),
       handleResponse: (response) {
