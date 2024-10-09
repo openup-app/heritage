@@ -271,7 +271,9 @@ class _PanelsState extends ConsumerState<Panels> {
                                   ? widget.onViewPerspective
                                   : null,
                               onShareLoginLink:
-                                  !relatedness.isDirectRelativeOrSpouse
+                                  (widget.viewHistory.perspectiveUserId !=
+                                              null ||
+                                          !relatedness.isDirectRelativeOrSpouse)
                                       ? null
                                       : () => _onShareLoginLink(person),
                               onDeleteManagedUser: canDeletePerson(person)
@@ -994,7 +996,11 @@ class _DraggableSheetState extends State<_DraggableSheet> {
                             hasDifferentOwner: widget.selectedPerson.ownedBy !=
                                 widget.selectedPerson.id,
                             onViewPerspective: widget.onViewPerspective,
-                            onShareLoginLink: widget.onShareLoginLink,
+                            onShareLoginLink: (widget.isPerspectiveMode ||
+                                    !widget
+                                        .relatedness.isDirectRelativeOrSpouse)
+                                ? null
+                                : widget.onShareLoginLink,
                             onDeleteManagedUser:
                                 widget.onDeleteManagedUser == null
                                     ? null
