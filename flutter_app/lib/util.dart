@@ -83,9 +83,8 @@ Future<ShareType> shareInvite({
   required String senderName,
 }) async {
   final data = ShareData(
-    title: '$targetName\'s family tree invite!',
     text:
-        '$targetName has been invited by $senderName! Your family is waiting!',
+        '$targetName has been invited by $senderName!\nJoin your family tree now!\n',
     url: 'https://stitchfam.com/invite/$targetId',
   );
 
