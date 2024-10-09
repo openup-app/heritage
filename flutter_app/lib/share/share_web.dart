@@ -61,7 +61,7 @@ Future<void> shareContent(ShareData data) async {
     await navigator
         ?.share(
           _ShareOptions(
-            url: data.url,
+            text: data.url,
           ),
         )
         .toDart;
