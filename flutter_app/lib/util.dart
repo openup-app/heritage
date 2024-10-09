@@ -97,7 +97,7 @@ enum ShareType { share, clipboard }
 void launchEmail() {
   final uri = Uri(
     scheme: 'mailto',
-    path: 'tarloksinghfilms@gmail.com',
+    path: 'support@stitchfam.com',
     queryParameters: {
       'subject': 'Stitchfam',
     },
