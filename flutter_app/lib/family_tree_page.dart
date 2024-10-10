@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:heritage/api.dart';
+import 'package:heritage/debouncer.dart';
 import 'package:heritage/family_tree_page_panels.dart';
 import 'package:heritage/graph.dart';
 import 'package:heritage/graph_provider.dart';
@@ -111,8 +112,16 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
   PanelPopupState _panelPopupState = const PanelPopupStateNone();
   final _viewRectNotifier = ValueNotifier(Rect.zero);
 
-  final _savingNotifier = ValueNotifier(false);
-  final _profileEditor = ValueNotifier<Profile?>(null);
+  final _savingNotifier = ValueNotifier<Id?>(null);
+  final _debouncer = Debouncer(
+    delay: const Duration(seconds: 2),
+  );
+
+  @override
+  void dispose() {
+    _debouncer.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -196,9 +205,7 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
           onViewRectUpdated: (rect) => _viewRectNotifier.value = rect,
           onRecenter: () => _familyTreeViewKey.currentState
               ?.centerOnPersonWithId(graph.focalPerson.id),
-          onEdit: (profile) {
-            _profileEditor.value = profile;
-          },
+          onSaveProfile: _onDebounceAutosave,
         ),
         Positioned(
           top: 16,
@@ -210,7 +217,7 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
             builder: (context, saving, child) {
               return AnimatedOpacity(
                 duration: const Duration(milliseconds: 200),
-                opacity: saving ? 1.0 : 0.0,
+                opacity: saving != null ? 1.0 : 0.0,
                 child: child,
               );
             },
@@ -224,6 +231,11 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
   }
 
   void _onProfileSelected(Person person, Relatedness relatedness) {
+    // Don'000t open profiles that are in the middle of saving
+    if (_savingNotifier.value == person.id) {
+      return;
+    }
+
     _familyTreeViewKey.currentState?.centerOnPersonWithId(person.id);
     setState(() {
       _selectedPerson = person;
@@ -239,26 +251,32 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
   }
 
   void _onDismissSelected() {
-    final updatedProfile = _profileEditor.value;
-    final selectedPersonId = _selectedPerson?.id;
-    if (updatedProfile != null && selectedPersonId != null) {
-      _applyProfileUpdate(selectedPersonId, updatedProfile);
-    }
+    // Force any pending auto save
+    _debouncer.flush();
+
     setState(() {
       _panelPopupState = const PanelPopupStateNone();
       _selectedPerson = null;
       _relatedness = null;
-      _profileEditor.value = null;
     });
+  }
+
+  void _onDebounceAutosave(Profile update) {
+    final selectedPersonId = _selectedPerson?.id;
+    if (selectedPersonId != null) {
+      _debouncer.afterDelay(() {
+        _applyProfileUpdate(selectedPersonId, update);
+      });
+    }
   }
 
   void _applyProfileUpdate(Id id, Profile update) async {
     // Desktop
     final notifier = ref.read(graphProvider.notifier);
-    _savingNotifier.value = true;
+    _savingNotifier.value = id;
     await notifier.updateProfile(id, update);
     if (mounted) {
-      _savingNotifier.value = false;
+      _savingNotifier.value = null;
       showProfileUpdateSuccess(context: context);
     }
   }
@@ -351,7 +369,6 @@ class FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
       spouse: 30,
       sibling: 50,
     );
-    final outerContext = context;
     return Center(
       child: Overlay.wrap(
         child: Opacity(
@@ -402,9 +419,6 @@ class FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
                       final isSelectedPerson = widget.selectedPerson == null ||
                           widget.selectedPerson?.id == data.id;
                       final enabled = isSelectedPerson && !isGhost;
-                      final canEditPhoto =
-                          widget.viewHistory.perspectiveUserId == null &&
-                              data.ownedBy == widget.focalPerson.id;
                       final canViewPerspectiveBool = canViewPerspective(
                         id: data.id,
                         primaryUserId: widget.viewHistory.primaryUserId,

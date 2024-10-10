@@ -34,7 +34,7 @@ class Panels extends ConsumerStatefulWidget {
   final VoidCallback onViewPerspective;
   final void Function(Rect rect) onViewRectUpdated;
   final VoidCallback onRecenter;
-  final void Function(Profile profile) onEdit;
+  final void Function(Profile update) onSaveProfile;
 
   const Panels({
     super.key,
@@ -49,7 +49,7 @@ class Panels extends ConsumerStatefulWidget {
     required this.onViewPerspective,
     required this.onViewRectUpdated,
     required this.onRecenter,
-    required this.onEdit,
+    required this.onSaveProfile,
   });
 
   @override
@@ -186,7 +186,7 @@ class _PanelsState extends ConsumerState<Panels> {
                   onDeleteManagedUser: canDeletePerson(selectedPerson)
                       ? () => _onDeleteManagedUser(selectedPerson.id)
                       : null,
-                  onEdit: widget.onEdit,
+                  onSaveProfile: widget.onSaveProfile,
                 );
               },
             ),
@@ -282,7 +282,7 @@ class _PanelsState extends ConsumerState<Panels> {
                                       widget.onDismissPanelPopup();
                                     }
                                   : null,
-                              onEdit: widget.onEdit,
+                              onSaveProfile: widget.onSaveProfile,
                             ),
                           ],
                         ),
@@ -829,7 +829,7 @@ class _DraggableSheet extends StatefulWidget {
   final VoidCallback? onViewPerspective;
   final VoidCallback? onShareLoginLink;
   final VoidCallback? onDeleteManagedUser;
-  final void Function(Profile profile) onEdit;
+  final void Function(Profile update) onSaveProfile;
 
   const _DraggableSheet({
     super.key,
@@ -844,7 +844,7 @@ class _DraggableSheet extends StatefulWidget {
     required this.onViewPerspective,
     required this.onShareLoginLink,
     required this.onDeleteManagedUser,
-    required this.onEdit,
+    required this.onSaveProfile,
   });
 
   @override
@@ -1009,7 +1009,7 @@ class _DraggableSheetState extends State<_DraggableSheet> {
                                         widget.onDismissPanelPopup();
                                         widget.onDeleteManagedUser?.call();
                                       },
-                            onEdit: widget.onEdit,
+                            onSaveProfile: widget.onSaveProfile,
                           );
                         },
                       ),
@@ -1356,7 +1356,7 @@ class ProfileDisplay extends StatelessWidget {
   final VoidCallback? onViewPerspective;
   final VoidCallback? onShareLoginLink;
   final VoidCallback? onDeleteManagedUser;
-  final void Function(Profile profile) onEdit;
+  final void Function(Profile profile) onSaveProfile;
 
   const ProfileDisplay({
     super.key,
@@ -1368,7 +1368,7 @@ class ProfileDisplay extends StatelessWidget {
     required this.onViewPerspective,
     required this.onShareLoginLink,
     required this.onDeleteManagedUser,
-    required this.onEdit,
+    required this.onSaveProfile,
   });
 
   @override
@@ -1386,7 +1386,7 @@ class ProfileDisplay extends StatelessWidget {
         onViewPerspective: onViewPerspective,
         onShareLoginLink: onShareLoginLink,
         onDeleteManagedUser: onDeleteManagedUser,
-        onEdit: onEdit,
+        onSaveProfile: onSaveProfile,
       ),
     );
   }
@@ -1400,7 +1400,7 @@ class _ProfileDisplay extends ConsumerStatefulWidget {
   final VoidCallback? onViewPerspective;
   final VoidCallback? onShareLoginLink;
   final VoidCallback? onDeleteManagedUser;
-  final void Function(Profile profile) onEdit;
+  final void Function(Profile profile) onSaveProfile;
 
   const _ProfileDisplay({
     super.key,
@@ -1411,7 +1411,7 @@ class _ProfileDisplay extends ConsumerStatefulWidget {
     required this.onViewPerspective,
     required this.onShareLoginLink,
     required this.onDeleteManagedUser,
-    required this.onEdit,
+    required this.onSaveProfile,
   });
 
   @override
@@ -1444,7 +1444,11 @@ class _ProfileDisplayState extends ConsumerState<_ProfileDisplay> {
     _birthdayController.text = birthday == null ? '' : formatDate(birthday);
     _deathdayController.text = deathday == null ? '' : formatDate(deathday);
 
-    ref.listenManual(profileUpdateProvider, (_, next) => widget.onEdit(next));
+    ref.listenManual(profileUpdateProvider, (previous, next) {
+      if (previous != next) {
+        widget.onSaveProfile(next);
+      }
+    });
   }
 
   @override
@@ -1752,7 +1756,7 @@ class _ProfileDisplayState extends ConsumerState<_ProfileDisplay> {
                   onChanged: ref.read(profileUpdateProvider.notifier).gallery,
                   onProfilePhotoChanged: (photo) {
                     ref.read(profileUpdateProvider.notifier).photo(photo);
-                    widget.onEdit(ref.read(profileUpdateProvider));
+                    widget.onSaveProfile(ref.read(profileUpdateProvider));
                   },
                 ),
               ),
