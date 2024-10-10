@@ -691,7 +691,7 @@ class _AddConnectionDisplayState extends ConsumerState<AddConnectionDisplay> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Invite\na ${widget.relationship.name}',
+          'Add\na ${widget.relationship.name}',
           style: const TextStyle(
             fontSize: 48,
             fontWeight: FontWeight.w800,
@@ -733,9 +733,9 @@ class _AddConnectionDisplayState extends ConsumerState<AddConnectionDisplay> {
                       context: context,
                       builder: (context) {
                         return AlertDialog(
-                          title: const Text('Take ownership?'),
+                          title: const Text('Manage Profile?'),
                           content: const Text(
-                              '\nCompleting someone else\'s profile should only be done if they can\'t do it themself.\n\nExample: child or deceased'),
+                              '\nCompleting someone else\'s profile should only be done if they can\'t do it themself.\n\nExample: child, disabled, or deceased'),
                           actions: [
                             TextButton(
                               onPressed: Navigator.of(context).pop,
@@ -756,11 +756,9 @@ class _AddConnectionDisplayState extends ConsumerState<AddConnectionDisplay> {
                     }
                   },
             style: TextButton.styleFrom(
-              foregroundColor: const Color.fromRGBO(0xB9, 0xB9, 0xB9, 1.0),
+              foregroundColor: const Color.fromRGBO(0xFF, 0x47, 0x47, 1.0),
             ),
-            child: const Text(
-              'I will complete this profile',
-            ),
+            child: const Text('Child, disabled or deceased?'),
           ),
         ),
       ],

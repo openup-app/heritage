@@ -926,7 +926,7 @@ class _DraggableSheetState extends State<_DraggableSheet> {
                                     ),
                                   ),
                                   Text(
-                                    'Invite a...',
+                                    'Add ${widget.selectedPerson.profile.firstName}\'s...',
                                     style:
                                         Theme.of(context).textTheme.titleLarge,
                                   ),
@@ -1988,120 +1988,116 @@ class _WaitingForApprovalDisplayState extends State<WaitingForApprovalDisplay> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return Stack(
       children: [
-        Text(
-          'Invite\n$_firstName',
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(
-            fontSize: 48,
-            fontWeight: FontWeight.w800,
-            color: Color.fromRGBO(0x3C, 0x3C, 0x3C, 1.0),
-          ),
-        ),
-        const SizedBox(height: 16),
-        Text(
-          'Share with $_firstName only, so they can verify their profile and join the tree',
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          style: Theme.of(context)
-              .textTheme
-              .bodyMedium
-              ?.copyWith(color: const Color.fromRGBO(0x51, 0x51, 0x51, 1.0)),
-        ),
-        const SizedBox(height: 8),
-        ShareLinkButton(
-          firstName: _firstName,
-          onPressed: () =>
-              widget.onSaveAndShare(_firstName, _lastName, _gender),
-        ),
-        const SizedBox(height: 24),
-        const Divider(height: 1),
-        const SizedBox(height: 24),
-        MinimalProfileEditor(
-          initialFirstName: widget.person.profile.firstName,
-          initialLastName: widget.person.profile.lastName,
-          initialGender: widget.person.profile.gender,
-          onUpdate: (firstName, lastName, gender) {
-            setState(() {
-              _firstName = firstName;
-              _lastName = lastName;
-              _gender = gender;
-            });
-          },
-        ),
-        const SizedBox(height: 16),
-        Center(
-          child: TextButton(
-            onPressed: (_firstName.isEmpty || _lastName.isEmpty)
-                ? null
-                : () async {
-                    final takeOwnership = await showDialog(
-                      context: context,
-                      builder: (context) {
-                        return AlertDialog(
-                          title: const Text('Take ownership?'),
-                          content: const Text(
-                              '\nCompleting someone else\'s profile should only be done if they can\'t do it themself.\n\nExample: child or deceased'),
-                          actions: [
-                            TextButton(
-                              onPressed: Navigator.of(context).pop,
-                              style: TextButton.styleFrom(
-                                  foregroundColor: Colors.black),
-                              child: const Text('Cancel'),
-                            ),
-                            TextButton(
-                              onPressed: () => Navigator.of(context).pop(true),
-                              child: const Text('Proceed'),
-                            ),
-                          ],
-                        );
-                      },
-                    );
-                    if (takeOwnership == true) {
-                      widget.onTakeOwnership();
-                    }
-                  },
-            style: TextButton.styleFrom(
-              foregroundColor: const Color.fromRGBO(0xB9, 0xB9, 0xB9, 1.0),
-            ),
-            child: const Text('I will complete this profile'),
-          ),
-        ),
-        const SizedBox(height: 16),
-        if (widget.onAddConnectionPressed == null)
-          Center(
-            child: TextButton(
-              onPressed: widget.onDeletePressed == null
-                  ? null
-                  : () => _onDeletePressed(),
-              style: TextButton.styleFrom(
-                foregroundColor: const Color.fromRGBO(0xFF, 0x00, 0x00, 1.0),
+        Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Invite\n$_firstName',
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 48,
+                fontWeight: FontWeight.w800,
+                color: Color.fromRGBO(0x3C, 0x3C, 0x3C, 1.0),
               ),
-              child: const Text('Delete relative'),
             ),
-          )
-        else
-          Row(
-            children: [
-              TextButton(
-                onPressed: widget.onDeletePressed == null
+            const SizedBox(height: 24),
+            MinimalProfileEditor(
+              initialFirstName: widget.person.profile.firstName,
+              initialLastName: widget.person.profile.lastName,
+              initialGender: widget.person.profile.gender,
+              onUpdate: (firstName, lastName, gender) {
+                setState(() {
+                  _firstName = firstName;
+                  _lastName = lastName;
+                  _gender = gender;
+                });
+              },
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'Share with $_firstName only, so they can verify their profile and join the tree',
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: const Color.fromRGBO(0x51, 0x51, 0x51, 1.0)),
+            ),
+            const SizedBox(height: 8),
+            ShareLinkButton(
+              firstName: _firstName,
+              onPressed: () =>
+                  widget.onSaveAndShare(_firstName, _lastName, _gender),
+            ),
+            const SizedBox(height: 16),
+            Center(
+              child: TextButton(
+                onPressed: (_firstName.isEmpty || _lastName.isEmpty)
                     ? null
-                    : () => _onDeletePressed(),
+                    : () async {
+                        final takeOwnership = await showDialog(
+                          context: context,
+                          builder: (context) {
+                            return AlertDialog(
+                              title: const Text('Manage Profile?'),
+                              content: const Text(
+                                  '\nCompleting someone else\'s profile should only be done if they can\'t do it themself.\n\nExample: child, disabled, or deceased'),
+                              actions: [
+                                TextButton(
+                                  onPressed: Navigator.of(context).pop,
+                                  style: TextButton.styleFrom(
+                                      foregroundColor: Colors.black),
+                                  child: const Text('Cancel'),
+                                ),
+                                TextButton(
+                                  onPressed: () =>
+                                      Navigator.of(context).pop(true),
+                                  child: const Text('Proceed'),
+                                ),
+                              ],
+                            );
+                          },
+                        );
+                        if (takeOwnership == true) {
+                          widget.onTakeOwnership();
+                        }
+                      },
                 style: TextButton.styleFrom(
-                  foregroundColor: const Color.fromRGBO(0xFF, 0x00, 0x00, 1.0),
+                  foregroundColor: const Color.fromRGBO(0xFF, 0x47, 0x47, 1.0),
                 ),
-                child: const Text('Delete relative'),
+                child: const Text('Child, disabled or deceased?'),
               ),
-              const Spacer(),
-              TextButton(
-                onPressed: widget.onAddConnectionPressed,
-                child: const Text('Attach a relative'),
-              ),
-            ],
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
+        if (widget.onAddConnectionPressed != null ||
+            widget.onDeletePressed != null)
+          Align(
+            alignment: Alignment.topRight,
+            child: PopupMenuButton(
+              itemBuilder: (context) {
+                return [
+                  if (widget.onAddConnectionPressed != null)
+                    PopupMenuItem(
+                      onTap: widget.onAddConnectionPressed,
+                      child: const Text('Add another relative'),
+                    ),
+                  if (widget.onDeletePressed != null)
+                    PopupMenuItem(
+                      onTap: _onDeletePressed,
+                      child: const Text(
+                        'Delete relative',
+                        style: TextStyle(
+                          color: Color.fromRGBO(0xFF, 0x00, 0x00, 1.0),
+                        ),
+                      ),
+                    ),
+                ];
+              },
+            ),
           ),
       ],
     );
