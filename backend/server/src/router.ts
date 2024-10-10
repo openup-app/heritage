@@ -1,5 +1,5 @@
 import { Request, Response, Router } from "express";
-import { Database, Person, Profile, genderSchema, profileSchema, relationshipSchema } from "./database.js";
+import { Database, Person, Profile, genderSchema, relationshipSchema } from "./database.js";
 import { Storage } from "./storage/storage.js";
 import { Auth } from "./auth.js";
 import { z } from "zod";
@@ -51,7 +51,7 @@ export function router(auth: Auth, database: Database, storage: Storage): Router
     }
 
     try {
-      const person = await database.createRootPerson(body.firstName, body.lastName, body.gender);
+      const person = await database.createRootPerson(body.firstName, body.lastName);
       return res.json({
         'person': constructPerson(person, storage),
       })
@@ -193,7 +193,7 @@ function applyProfileUpdates(currentProfile: Profile, profileUpdate: ProfileUpda
   return {
     firstName: profileUpdate.firstName ?? currentProfile.firstName,
     lastName: profileUpdate.lastName ?? currentProfile.lastName,
-    gender: profileUpdate.gender ?? currentProfile.gender,
+    gender: profileUpdate.gender,
     photoKey: photoKey ?? (photoKey === null ? null : currentProfile.photoKey),
     galleryKeys: galleryKeys ?? currentProfile.galleryKeys,
     birthday: profileUpdate.birthday,
@@ -310,7 +310,6 @@ const addConnectionSchema = z.object({
 const createRootSchema = z.object({
   firstName: z.string(),
   lastName: z.string(),
-  gender: genderSchema,
 });
 
 const photoUpdateSchema = z.object({

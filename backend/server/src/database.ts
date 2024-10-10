@@ -33,11 +33,11 @@ export class Database {
 
       // TODO: Don't allow adding of any spouse's family
 
-      const newPerson = this.newEmptyPerson("male", creatorId);
+      const newPerson = this.newEmptyPerson(null, creatorId);
       createdPeople.push(newPerson);
 
       if (relationship == "parent") {
-        const spouse = this.newEmptyPerson(newPerson.profile.gender === "male" ? "female" : "male", creatorId, "Parent");
+        const spouse = this.newEmptyPerson(this.oppositeGender(newPerson.profile.gender), creatorId, "Parent");
         createdPeople.push(spouse);
 
         spouse.spouses.push(newPerson.id);
@@ -91,7 +91,7 @@ export class Database {
         var didCreateSpouse = false;
         if (source.spouses.length === 0) {
           didCreateSpouse = true;
-          spouse = this.newEmptyPerson(source.profile.gender === "male" ? "female" : "male", creatorId, "Parent");
+          spouse = this.newEmptyPerson(this.oppositeGender(source.profile.gender), creatorId, "Parent");
           createdPeople.push(spouse);
 
           spouse.spouses.push(sourceId);
@@ -127,8 +127,8 @@ export class Database {
     });
   }
 
-  public async createRootPerson(firstName: string, lastName: string, gender: Gender): Promise<Person> {
-    const person = this.newEmptyPerson(gender, "root");
+  public async createRootPerson(firstName: string, lastName: string): Promise<Person> {
+    const person = this.newEmptyPerson(null, "root");
     person.profile.firstName = firstName;
     person.profile.lastName = lastName;
     person.ownedBy = person.id;
@@ -346,6 +346,10 @@ export class Database {
     }
   }
 
+  private oppositeGender(gender: Gender): Gender {
+    return !gender ? null : (gender === "male" ? "female" : "male")
+  }
+
   private personRef(id: Id): DocumentReference {
     return this.firestore.collection("people").doc(id);
   }
@@ -362,7 +366,7 @@ function arrayRemove<T>(array: T[], key: T): boolean {
 
 const idSchema = z.string();
 
-export const genderSchema = z.enum(["male", "female"]);
+export const genderSchema = z.enum(["male", "female"]).nullable();
 
 export const relationshipSchema = z.enum(["parent", "sibling", "spouse", "child"]);
 
