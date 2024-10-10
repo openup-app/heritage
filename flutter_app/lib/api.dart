@@ -69,7 +69,6 @@ class Api {
   Future<Either<Error, Person>> createRoot({
     required String firstName,
     required String lastName,
-    required Gender gender,
   }) {
     return _makeRequest(
       request: () => http.post(
@@ -78,7 +77,6 @@ class Api {
         body: jsonEncode({
           'firstName': firstName,
           'lastName': lastName,
-          'gender': gender.name,
         }),
       ),
       handleResponse: (response) {
@@ -313,7 +311,7 @@ class Profile with _$Profile {
   const factory Profile({
     required String firstName,
     required String lastName,
-    required Gender gender,
+    required Gender? gender,
     required Photo photo,
     required List<Photo> gallery,
     required DateTime? birthday,

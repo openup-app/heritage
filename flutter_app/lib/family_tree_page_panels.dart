@@ -301,7 +301,6 @@ class _PanelsState extends ConsumerState<Panels> {
                                 newConnectionId,
                                 firstName,
                                 lastName,
-                                gender,
                                 takeOwnership);
                             if (mounted) {
                               widget.onDismissPanelPopup();
@@ -315,9 +314,9 @@ class _PanelsState extends ConsumerState<Panels> {
                         child: WaitingForApprovalDisplay(
                           person: person,
                           onAddConnectionPressed: null,
-                          onSaveAndShare: (firstName, lastName, gender) async {
+                          onSaveAndShare: (firstName, lastName) async {
                             await _onSaveAndShareOrTakeOwnership(
-                                person.id, firstName, lastName, gender, false);
+                                person.id, firstName, lastName, false);
                             if (mounted) {
                               widget.onDismissPanelPopup();
                             }
@@ -530,9 +529,9 @@ class _PanelsState extends ConsumerState<Panels> {
           key: _modalKey,
           person: person,
           onAddConnectionPressed: onAddConnectionPressed,
-          onSaveAndShare: (firstName, lastName, gender) async {
+          onSaveAndShare: (firstName, lastName) async {
             await _onSaveAndShareOrTakeOwnership(
-                person.id, firstName, lastName, gender, false);
+                person.id, firstName, lastName, false);
             if (context.mounted) {
               Navigator.of(context).pop(true);
             }
@@ -565,7 +564,7 @@ class _PanelsState extends ConsumerState<Panels> {
           onSaveAndShareOrTakeOwnership:
               (firstName, lastName, gender, takeOwnership) async {
             await _onSaveAndShareOrTakeOwnership(
-                newConnectionId, firstName, lastName, gender, takeOwnership);
+                newConnectionId, firstName, lastName, takeOwnership);
             if (context.mounted) {
               Navigator.of(context).pop(true);
             }
@@ -582,7 +581,6 @@ class _PanelsState extends ConsumerState<Panels> {
     Id id,
     String firstName,
     String lastName,
-    Gender gender,
     bool takeOwnership,
   ) async {
     final graph = ref.read(graphProvider);
@@ -591,15 +589,13 @@ class _PanelsState extends ConsumerState<Panels> {
       return;
     }
     if (person.profile.firstName != firstName ||
-        person.profile.lastName != lastName ||
-        person.profile.gender != gender) {
+        person.profile.lastName != lastName) {
       final graphNotifier = ref.read(graphProvider.notifier);
       final updateFuture = graphNotifier.updateProfile(
         id,
         person.profile.copyWith(
           firstName: firstName,
           lastName: lastName,
-          gender: gender,
         ),
       );
       // Unawaited because share needs "transient activation"
@@ -1966,8 +1962,7 @@ class InputLabel extends StatelessWidget {
 class WaitingForApprovalDisplay extends StatefulWidget {
   final Person person;
   final VoidCallback? onAddConnectionPressed;
-  final void Function(String firstName, String lastName, Gender gender)
-      onSaveAndShare;
+  final void Function(String firstName, String lastName) onSaveAndShare;
   final VoidCallback onTakeOwnership;
   final VoidCallback? onDeletePressed;
 
@@ -1988,7 +1983,6 @@ class WaitingForApprovalDisplay extends StatefulWidget {
 class _WaitingForApprovalDisplayState extends State<WaitingForApprovalDisplay> {
   late String _firstName = widget.person.profile.firstName;
   late String _lastName = widget.person.profile.lastName;
-  late Gender _gender = widget.person.profile.gender;
 
   @override
   Widget build(BuildContext context) {
@@ -2012,12 +2006,10 @@ class _WaitingForApprovalDisplayState extends State<WaitingForApprovalDisplay> {
             MinimalProfileEditor(
               initialFirstName: widget.person.profile.firstName,
               initialLastName: widget.person.profile.lastName,
-              initialGender: widget.person.profile.gender,
-              onUpdate: (firstName, lastName, gender) {
+              onUpdate: (firstName, lastName) {
                 setState(() {
                   _firstName = firstName;
                   _lastName = lastName;
-                  _gender = gender;
                 });
               },
             ),
@@ -2032,8 +2024,7 @@ class _WaitingForApprovalDisplayState extends State<WaitingForApprovalDisplay> {
             const SizedBox(height: 8),
             ShareLinkButton(
               firstName: _firstName,
-              onPressed: () =>
-                  widget.onSaveAndShare(_firstName, _lastName, _gender),
+              onPressed: () => widget.onSaveAndShare(_firstName, _lastName),
             ),
             const SizedBox(height: 16),
             Center(

@@ -718,11 +718,10 @@ class _AddConnectionDisplayState extends ConsumerState<AddConnectionDisplay> {
         ),
         const SizedBox(height: 16),
         MinimalProfileEditor(
-          onUpdate: (firstName, lastName, gender) {
+          onUpdate: (firstName, lastName) {
             setState(() {
               _firstName = firstName;
               _lastName = lastName;
-              _gender = gender;
             });
           },
         ),
@@ -794,7 +793,7 @@ class _AddConnectionDisplayState extends ConsumerState<AddConnectionDisplay> {
 
 class CreateRootDisplay extends ConsumerStatefulWidget {
   final EdgeInsets padding;
-  final void Function(String firstName, String lastName, Gender gender) onDone;
+  final void Function(String firstName, String lastName) onDone;
 
   const CreateRootDisplay({
     super.key,
@@ -809,7 +808,6 @@ class CreateRootDisplay extends ConsumerStatefulWidget {
 class _CreateRootDisplayState extends ConsumerState<CreateRootDisplay> {
   String _firstName = '';
   String _lastName = '';
-  Gender _gender = Gender.male;
 
   @override
   Widget build(BuildContext context) {
@@ -824,11 +822,10 @@ class _CreateRootDisplayState extends ConsumerState<CreateRootDisplay> {
         children: [
           const SizedBox(height: 16),
           MinimalProfileEditor(
-            onUpdate: (firstName, lastName, gender) {
+            onUpdate: (firstName, lastName) {
               setState(() {
                 _firstName = firstName;
                 _lastName = lastName;
-                _gender = gender;
               });
             },
           ),
@@ -849,22 +846,19 @@ class _CreateRootDisplayState extends ConsumerState<CreateRootDisplay> {
     if (_firstName.isEmpty || _lastName.isEmpty) {
       return;
     }
-    widget.onDone(_firstName, _lastName, _gender);
+    widget.onDone(_firstName, _lastName);
   }
 }
 
 class MinimalProfileEditor extends StatefulWidget {
   final String? initialFirstName;
   final String? initialLastName;
-  final Gender? initialGender;
-  final void Function(String firstName, String lastName, Gender gender)
-      onUpdate;
+  final void Function(String firstName, String lastName) onUpdate;
 
   const MinimalProfileEditor({
     super.key,
     this.initialFirstName,
     this.initialLastName,
-    this.initialGender,
     required this.onUpdate,
   });
 
@@ -875,7 +869,6 @@ class MinimalProfileEditor extends StatefulWidget {
 class _MinimalProfileEditorState extends State<MinimalProfileEditor> {
   late final TextEditingController _firstNameController;
   late final TextEditingController _lastNameController;
-  late Gender _gender;
 
   @override
   void initState() {
@@ -884,7 +877,6 @@ class _MinimalProfileEditorState extends State<MinimalProfileEditor> {
         TextEditingController(text: widget.initialFirstName ?? '');
     _lastNameController =
         TextEditingController(text: widget.initialLastName ?? '');
-    _gender = widget.initialGender ?? Gender.male;
   }
 
   @override
@@ -904,8 +896,8 @@ class _MinimalProfileEditorState extends State<MinimalProfileEditor> {
             controller: _firstNameController,
             textCapitalization: TextCapitalization.words,
             textInputAction: TextInputAction.next,
-            onChanged: (text) => widget.onUpdate(
-                text.trim(), _lastNameController.text.trim(), _gender),
+            onChanged: (text) =>
+                widget.onUpdate(text.trim(), _lastNameController.text.trim()),
           ),
         ),
         InputLabel(
@@ -914,8 +906,8 @@ class _MinimalProfileEditorState extends State<MinimalProfileEditor> {
             controller: _lastNameController,
             textCapitalization: TextCapitalization.words,
             textInputAction: TextInputAction.done,
-            onChanged: (text) => widget.onUpdate(
-                _firstNameController.text.trim(), text.trim(), _gender),
+            onChanged: (text) =>
+                widget.onUpdate(_firstNameController.text.trim(), text.trim()),
           ),
         ),
       ],
