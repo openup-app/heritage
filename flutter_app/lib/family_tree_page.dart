@@ -404,6 +404,9 @@ class FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
                                 idToKey: _idToKey,
                                 idToNode: nodes,
                                 focalPersonId: widget.focalPerson.id,
+                                isPrimaryPerson:
+                                    widget.viewHistory.perspectiveUserId ==
+                                        null,
                                 spacing: spacing,
                                 transform: value,
                                 child: child,
@@ -963,6 +966,7 @@ class Edges extends StatefulWidget {
   final Map<Id, GlobalKey> idToKey;
   final Map<Id, LinkedNode<Person>> idToNode;
   final Id focalPersonId;
+  final bool isPrimaryPerson;
   final Spacing spacing;
   final Matrix4 transform;
   final Widget child;
@@ -972,6 +976,7 @@ class Edges extends StatefulWidget {
     required this.idToKey,
     required this.idToNode,
     required this.focalPersonId,
+    required this.isPrimaryPerson,
     required this.spacing,
     required this.transform,
     required this.child,
@@ -1037,6 +1042,7 @@ class _EdgesState extends State<Edges> {
       key: _parentKey,
       painter: _EdgePainter(
         focalPerson: widget.idToNode[widget.focalPersonId],
+        isPrimaryPerson: widget.isPrimaryPerson,
         nodeRects: Map.of(_nodeRects),
         spacing: widget.spacing,
       ),
@@ -1047,11 +1053,13 @@ class _EdgesState extends State<Edges> {
 
 class _EdgePainter extends CustomPainter {
   final LinkedNode<Person>? focalPerson;
+  final bool isPrimaryPerson;
   final Map<Id, (LinkedNode<Person>, Rect)> nodeRects;
   final Spacing spacing;
 
   _EdgePainter({
     required this.focalPerson,
+    required this.isPrimaryPerson,
     required this.nodeRects,
     required this.spacing,
   });
@@ -1071,12 +1079,14 @@ class _EdgePainter extends CustomPainter {
         topCenter: rect.bottomCenter + const Offset(0, 16),
         maxWidth: rect.width,
       );
-      final birthYear = person.profile.birthday?.year.toString();
-      final deathYear = person.profile.deathday?.year.toString();
       if (focalPerson == null) {
         continue;
       }
-      final relatedness = relatednessDescription(focalPerson!, node);
+      final relatedness = relatednessDescription(
+        focalPerson!,
+        node,
+        useFocalName: !isPrimaryPerson,
+      );
       _paintText(
         canvas: canvas,
         text: relatedness,

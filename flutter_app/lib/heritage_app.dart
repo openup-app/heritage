@@ -271,6 +271,8 @@ class _RouterBuilderState extends State<_RouterBuilder> {
                           idToKey: Map.fromEntries(
                               nodeKeys.map((e) => MapEntry(e.$1.id, e.$2))),
                           idToNode: nodes,
+                          focalPersonId: focalPerson.id,
+                          isPrimaryPerson: true,
                           spacing: spacing,
                           transform: Matrix4.identity(),
                           child: child,
