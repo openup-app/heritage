@@ -1059,21 +1059,6 @@ class _EdgePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     for (final (node, rect) in nodeRects.values) {
-      final person = node.data;
-      final bottom = _paintText(
-        canvas: canvas,
-        text: person.profile.fullName,
-        style: const TextStyle(
-          color: Color.fromRGBO(0x37, 0x37, 0x37, 1),
-          fontSize: 19,
-          fontWeight: FontWeight.w800,
-        ),
-        topCenter: rect.bottomCenter + const Offset(0, 16),
-        maxWidth: rect.width,
-      );
-      if (focalPerson == null) {
-        continue;
-      }
       final relatedness = relatednessDescription(
         focalPerson!,
         node,
@@ -1084,10 +1069,10 @@ class _EdgePainter extends CustomPainter {
         text: relatedness,
         style: const TextStyle(
           color: Color.fromRGBO(0x37, 0x37, 0x37, 1),
-          fontSize: 17,
+          fontSize: 24,
           fontWeight: FontWeight.w800,
         ),
-        topCenter: Offset(rect.bottomCenter.dx, bottom),
+        offset: rect.topLeft + const Offset(0, -16),
         maxWidth: rect.width,
       );
     }
@@ -1104,7 +1089,7 @@ class _EdgePainter extends CustomPainter {
           : !node.isBloodRelative;
     });
 
-    final topOffset = min(70, spacing.level);
+    final topOffset = min(20, spacing.level);
     for (final (fromNode, fromRect) in leftNodeInCouples) {
       final path = Path();
       for (final toNode in fromNode.children) {
@@ -1118,7 +1103,7 @@ class _EdgePainter extends CustomPainter {
           ..moveTo(s.dx, s.dy + topOffset)
           ..lineTo(s.dx, s.dy + spacing.level / 2)
           ..lineTo(e.dx, s.dy + spacing.level / 2)
-          ..lineTo(e.dx, e.dy);
+          ..lineTo(e.dx, e.dy - 80);
       }
 
       final dashedPath = path_drawing.dashPath(
@@ -1147,64 +1132,20 @@ class _EdgePainter extends CustomPainter {
     required Canvas canvas,
     required String text,
     required TextStyle style,
-    required Offset topCenter,
+    required Offset offset,
     required double maxWidth,
   }) {
     final textSpan = TextSpan(text: text, style: style);
     final textPainter = TextPainter(
       text: textSpan,
       textDirection: TextDirection.ltr,
-      maxLines: 1,
+      maxLines: 2,
       ellipsis: '...',
     );
     textPainter.layout(maxWidth: maxWidth);
-    final lineMetrics = textPainter.computeLineMetrics().first;
-    textPainter.paint(canvas, topCenter - Offset(lineMetrics.width / 2, 0));
-    return topCenter.dy + lineMetrics.height;
-  }
-}
-
-class ShareLinkButton extends StatelessWidget {
-  final String firstName;
-  final VoidCallback? onPressed;
-
-  const ShareLinkButton({
-    super.key,
-    required this.firstName,
-    required this.onPressed,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return FilledButton(
-      onPressed: onPressed,
-      style: FilledButton.styleFrom(
-        foregroundColor: Colors.white,
-        backgroundColor: primaryColor,
-        fixedSize: const Size.fromHeight(64),
-      ),
-      child: Stack(
-        children: [
-          const Align(
-            alignment: Alignment.centerLeft,
-            child: Padding(
-              padding: EdgeInsets.only(left: 25),
-              child: Icon(CupertinoIcons.share),
-            ),
-          ),
-          Center(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 54.0),
-              child: Text(
-                'Share with $firstName ONLY',
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
+    final lineMetrics = textPainter.computeLineMetrics();
+    final height = lineMetrics.fold(0.0, (p, e) => p + e.height);
+    textPainter.paint(canvas, offset - Offset(0, height));
+    return offset.dy + height;
   }
 }
