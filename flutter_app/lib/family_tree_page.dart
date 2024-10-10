@@ -403,6 +403,7 @@ class FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
                               return Edges(
                                 idToKey: _idToKey,
                                 idToNode: nodes,
+                                focalPersonId: widget.focalPerson.id,
                                 spacing: spacing,
                                 transform: value,
                                 child: child,
@@ -900,8 +901,8 @@ class _MinimalProfileEditorState extends State<MinimalProfileEditor> {
             controller: _firstNameController,
             textCapitalization: TextCapitalization.words,
             textInputAction: TextInputAction.next,
-            onChanged: (text) =>
-                widget.onUpdate(text, _lastNameController.text, _gender),
+            onChanged: (text) => widget.onUpdate(
+                text.trim(), _lastNameController.text.trim(), _gender),
           ),
         ),
         InputLabel(
@@ -910,8 +911,8 @@ class _MinimalProfileEditorState extends State<MinimalProfileEditor> {
             controller: _lastNameController,
             textCapitalization: TextCapitalization.words,
             textInputAction: TextInputAction.done,
-            onChanged: (text) =>
-                widget.onUpdate(_firstNameController.text, text, _gender),
+            onChanged: (text) => widget.onUpdate(
+                _firstNameController.text.trim(), text.trim(), _gender),
           ),
         ),
       ],
@@ -961,6 +962,7 @@ class OwnershipDialog extends StatelessWidget {
 class Edges extends StatefulWidget {
   final Map<Id, GlobalKey> idToKey;
   final Map<Id, LinkedNode<Person>> idToNode;
+  final Id focalPersonId;
   final Spacing spacing;
   final Matrix4 transform;
   final Widget child;
@@ -969,6 +971,7 @@ class Edges extends StatefulWidget {
     super.key,
     required this.idToKey,
     required this.idToNode,
+    required this.focalPersonId,
     required this.spacing,
     required this.transform,
     required this.child,
@@ -1033,6 +1036,7 @@ class _EdgesState extends State<Edges> {
     return CustomPaint(
       key: _parentKey,
       painter: _EdgePainter(
+        focalPerson: widget.idToNode[widget.focalPersonId],
         nodeRects: Map.of(_nodeRects),
         spacing: widget.spacing,
       ),
@@ -1042,10 +1046,12 @@ class _EdgesState extends State<Edges> {
 }
 
 class _EdgePainter extends CustomPainter {
+  final LinkedNode<Person>? focalPerson;
   final Map<Id, (LinkedNode<Person>, Rect)> nodeRects;
   final Spacing spacing;
 
   _EdgePainter({
+    required this.focalPerson,
     required this.nodeRects,
     required this.spacing,
   });
@@ -1067,19 +1073,21 @@ class _EdgePainter extends CustomPainter {
       );
       final birthYear = person.profile.birthday?.year.toString();
       final deathYear = person.profile.deathday?.year.toString();
-      if (birthYear != null) {
-        _paintText(
-          canvas: canvas,
-          text: deathYear == null ? birthYear : '$birthYear - $deathYear',
-          style: const TextStyle(
-            color: Color.fromRGBO(0x37, 0x37, 0x37, 1),
-            fontSize: 17,
-            fontWeight: FontWeight.w800,
-          ),
-          topCenter: Offset(rect.bottomCenter.dx, bottom),
-          maxWidth: rect.width,
-        );
+      if (focalPerson == null) {
+        continue;
       }
+      final relatedness = relatednessDescription(focalPerson!, node);
+      _paintText(
+        canvas: canvas,
+        text: relatedness,
+        style: const TextStyle(
+          color: Color.fromRGBO(0x37, 0x37, 0x37, 1),
+          fontSize: 17,
+          fontWeight: FontWeight.w800,
+        ),
+        topCenter: Offset(rect.bottomCenter.dx, bottom),
+        maxWidth: rect.width,
+      );
     }
 
     // Only the left node in nodes with spouses

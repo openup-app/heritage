@@ -17,9 +17,10 @@ class ProfileUpdateNotifier extends StateNotifier<Profile> {
     required this.initialProfile,
   }) : super(initialProfile);
 
-  void firstName(String value) => state = state.copyWith(firstName: value);
+  void firstName(String value) =>
+      state = state.copyWith(firstName: value.trim());
 
-  void lastName(String value) => state = state.copyWith(lastName: value);
+  void lastName(String value) => state = state.copyWith(lastName: value.trim());
 
   void gender(Gender gender) => state = state.copyWith(gender: gender);
 
@@ -55,11 +56,13 @@ class ProfileUpdateNotifier extends StateNotifier<Profile> {
   void deathdayObject(DateTime value) =>
       state = state.copyWith(deathday: value);
 
-  void birthplace(String value) => state = state.copyWith(birthplace: value);
+  void birthplace(String value) =>
+      state = state.copyWith(birthplace: value.trim());
 
-  void occupation(String value) => state = state.copyWith(occupation: value);
+  void occupation(String value) =>
+      state = state.copyWith(occupation: value.trim());
 
-  void hobbies(String value) => state = state.copyWith(hobbies: value);
+  void hobbies(String value) => state = state.copyWith(hobbies: value.trim());
 }
 
 DateTime _clampDateAndRemoveTime(DateTime date) => date.isBefore(firstDate)
