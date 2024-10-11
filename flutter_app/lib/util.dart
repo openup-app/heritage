@@ -120,24 +120,6 @@ void launchEmail() {
   launchUrl(uri);
 }
 
-Future<void> showProfileUpdateSuccess({required BuildContext context}) async {
-  final textStyle = Theme.of(context).textTheme.bodyMedium ?? const TextStyle();
-  final overlay = Overlay.of(context);
-  late OverlayEntry overlayEntry;
-  overlayEntry = OverlayEntry(
-    builder: (context) => Center(
-      child: DefaultTextStyle(
-        style: textStyle,
-        child: _AnimatedSuccessPopup(
-          onDone: overlayEntry.remove,
-        ),
-      ),
-    ),
-  );
-
-  overlay.insert(overlayEntry);
-}
-
 Future<T> showBlockingModal<T>(BuildContext context, Future<T> future) async {
   final modalKey = GlobalKey();
   final displayCompleter = Completer<void>();
@@ -407,88 +389,6 @@ String _relatednessDescriptionImpl(
       }
     }
     return parts.join(' ');
-  }
-}
-
-class _AnimatedSuccessPopup extends StatefulWidget {
-  final VoidCallback onDone;
-
-  const _AnimatedSuccessPopup({
-    super.key,
-    required this.onDone,
-  });
-
-  @override
-  State<_AnimatedSuccessPopup> createState() => _AnimatedSuccessPopupState();
-}
-
-class _AnimatedSuccessPopupState extends State<_AnimatedSuccessPopup>
-    with SingleTickerProviderStateMixin {
-  late final _controller = AnimationController(vsync: this)
-    ..duration = const Duration(milliseconds: 150);
-
-  @override
-  void initState() {
-    super.initState();
-    _controller.forward();
-    Future.delayed(const Duration(seconds: 1)).then((_) {
-      _controller.reverse().then((_) {
-        widget.onDone();
-      });
-    });
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return FadeTransition(
-      opacity: _controller,
-      child: const _SuccessPopup(),
-    );
-  }
-}
-
-class _SuccessPopup extends StatelessWidget {
-  const _SuccessPopup({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const IgnorePointer(
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.all(
-            Radius.circular(10),
-          ),
-          color: Color.fromRGBO(0x07, 0xCA, 0x35, 1.0),
-          boxShadow: [
-            BoxShadow(
-              offset: Offset(0, 5),
-              blurRadius: 15,
-              color: Color.fromRGBO(0x00, 0x00, 0x00, 0.3),
-            ),
-          ],
-        ),
-        child: SizedBox(
-          width: 150,
-          height: 32,
-          child: Center(
-            child: Text(
-              'Profile Saved',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-                color: Colors.white,
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
   }
 }
 

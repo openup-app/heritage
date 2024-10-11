@@ -312,7 +312,7 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
           onSaveProfile: _onDebounceAutosave,
         ),
         Positioned(
-          top: 16,
+          top: 32,
           right: 16,
           width: 48,
           height: 128,
@@ -436,7 +436,6 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
     await notifier.updateProfile(id, update);
     if (mounted) {
       _savingNotifier.value = null;
-      showProfileUpdateSuccess(context: context);
     }
   }
 }

@@ -5,7 +5,7 @@
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#00AEFF",
-    "description": "Create a family tree with your family!",
+    "description": "A tree built together!",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

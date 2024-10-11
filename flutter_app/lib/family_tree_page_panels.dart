@@ -650,9 +650,6 @@ class _PanelsState extends ConsumerState<Panels> {
       context,
       notifier.deletePerson(id),
     );
-    if (mounted) {
-      showProfileUpdateSuccess(context: context);
-    }
   }
 }
 

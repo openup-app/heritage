@@ -19,15 +19,8 @@ class LoadingPage extends StatelessWidget {
                 children: [
                   Lottie.asset(
                     'assets/images/logo.json',
-                    width: 180,
-                    height: 180,
-                  ),
-                  const SizedBox(
-                    width: 350,
-                    height: 98,
-                    child: LogoText(
-                      width: 350,
-                    ),
+                    width: 80,
+                    height: 80,
                   ),
                   SizedBox(
                     width: 240,
