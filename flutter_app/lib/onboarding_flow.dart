@@ -252,22 +252,20 @@ class _PhotoStepState extends State<_PhotoStep> {
           ),
           const SizedBox(height: 24),
           const SizedBox(height: 24),
-          Flexible(
-            child: OutlinedButton(
-              clipBehavior: Clip.antiAlias,
-              onPressed: () async {
-                final photo = await pickPhotoWithCropper(context);
-                if (context.mounted && photo != null) {
-                  setState(() => _photo = photo);
-                }
-              },
-              style: OutlinedButton.styleFrom(
-                minimumSize: const Size.fromWidth(124),
-                backgroundColor: const Color.fromRGBO(0xEA, 0xF8, 0xFF, 1.0),
-              ),
-              child: ImageAspect(
-                child: FittedBox(
-                  fit: BoxFit.cover,
+          Expanded(
+            child: Center(
+              child: OutlinedButton(
+                clipBehavior: Clip.antiAlias,
+                onPressed: () async {
+                  final photo = await pickPhotoWithCropper(context);
+                  if (context.mounted && photo != null) {
+                    setState(() => _photo = photo);
+                  }
+                },
+                style: OutlinedButton.styleFrom(
+                  backgroundColor: const Color.fromRGBO(0xEA, 0xF8, 0xFF, 1.0),
+                ),
+                child: ImageAspect(
                   child: switch (photo) {
                     NetworkPhoto(:final url) => Image.network(
                         url,
@@ -278,7 +276,7 @@ class _PhotoStepState extends State<_PhotoStep> {
                         fit: BoxFit.cover,
                       ),
                     _ => Padding(
-                        padding: const EdgeInsets.all(20.0),
+                        padding: const EdgeInsets.all(16.0),
                         child: SvgPicture.asset(
                           'assets/images/add_photo_2.svg',
                         ),
