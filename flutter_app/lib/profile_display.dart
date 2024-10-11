@@ -373,88 +373,109 @@ class _HoverPersonDisplayState extends State<HoverPersonDisplay> {
 
 class NodeProfile extends StatelessWidget {
   final Person person;
+  final String relatednessDescription;
   final bool showViewPerspective;
   final VoidCallback? onViewPerspectivePressed;
 
   const NodeProfile({
     super.key,
     required this.person,
+    required this.relatednessDescription,
     required this.showViewPerspective,
     required this.onViewPerspectivePressed,
   });
 
   @override
   Widget build(BuildContext context) {
-    return DefaultTextStyle(
-      style: const TextStyle(
-        color: Colors.black,
-        shadows: [
-          Shadow(
-            offset: Offset(0, 5),
-            blurRadius: 4.8,
-            color: Color.fromRGBO(0x00, 0x00, 0x00, 0.25),
-          ),
-        ],
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          SizedBox(
-            width: 180,
-            child: Center(
-              child: ImageAspect(
-                child: Stack(
-                  fit: StackFit.expand,
-                  clipBehavior: Clip.none,
-                  children: [
-                    _DashedBorder(
-                      radius: const Radius.circular(20),
-                      child: Container(
-                        clipBehavior: Clip.hardEdge,
-                        decoration: const BoxDecoration(
-                          borderRadius: BorderRadius.all(
-                            Radius.circular(20),
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              offset: Offset(0, 10),
-                              blurRadius: 44,
-                              spreadRadius: -11,
-                              color: Color.fromRGBO(0x00, 0x00, 0x00, 0.4),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(
+          width: 180,
+          child: Stack(
+            children: [
+              Center(
+                child: ImageAspect(
+                  child: Stack(
+                    fit: StackFit.expand,
+                    clipBehavior: Clip.none,
+                    children: [
+                      _DashedBorder(
+                        radius: const Radius.circular(20),
+                        child: Container(
+                          clipBehavior: Clip.hardEdge,
+                          decoration: const BoxDecoration(
+                            borderRadius: BorderRadius.all(
+                              Radius.circular(20),
                             ),
-                          ],
+                            boxShadow: [
+                              BoxShadow(
+                                offset: Offset(0, 10),
+                                blurRadius: 44,
+                                spreadRadius: -11,
+                                color: Color.fromRGBO(0x00, 0x00, 0x00, 0.4),
+                              ),
+                            ],
+                          ),
+                          child: ProfileImage(person.profile.photo),
                         ),
-                        child: ProfileImage(person.profile.photo),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                height: 96,
+                child: Container(
+                  clipBehavior: Clip.hardEdge,
+                  decoration: const BoxDecoration(
+                    borderRadius: BorderRadius.only(
+                      bottomLeft: Radius.circular(20),
+                      bottomRight: Radius.circular(20),
+                    ),
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.transparent,
+                        Color.fromRGBO(0x00, 0x00, 0x00, 0.32),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                bottom: 12,
+                left: 12,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      relatednessDescription,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
-                    if (showViewPerspective)
-                      Positioned(
-                        left: 0,
-                        top: 4,
-                        child: FilledButton(
-                          onPressed: onViewPerspectivePressed,
-                          style: FilledButton.styleFrom(
-                            fixedSize: const Size.square(44),
-                            backgroundColor:
-                                const Color.fromRGBO(0x00, 0x00, 0x00, 0.6),
-                            shape: const CircleBorder(),
-                          ),
-                          child: const Binoculars(),
-                        ),
+                    Text(
+                      person.profile.firstName,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 19,
+                        fontWeight: FontWeight.w700,
                       ),
-                    if (person.ownedBy != null)
-                      const Positioned(
-                        right: -16,
-                        bottom: -46,
-                        child: VerifiedBadge(),
-                      ),
+                    ),
                   ],
                 ),
               ),
-            ),
+            ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

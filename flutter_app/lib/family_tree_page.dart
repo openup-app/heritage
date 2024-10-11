@@ -522,7 +522,7 @@ class FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
     const spacing = Spacing(
       level: 240,
       spouse: 30,
-      sibling: 50,
+      sibling: 70,
     );
     return Center(
       child: Overlay.wrap(
@@ -585,6 +585,26 @@ class FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
                         isSibling: node.isSibling,
                         isOwned: data.ownedBy != null,
                       );
+                      final focalNode = _graphKey.currentState
+                          ?.linkedNodeForId(widget.focalPerson.id);
+                      final relatedness = Relatedness(
+                        isBloodRelative: node.isBloodRelative,
+                        isDirectRelativeOrSpouse: node.isDirectRelativeOrSpouse,
+                        isAncestor: node.isAncestor,
+                        isSibling: node.isSibling,
+                        relativeLevel: node.relativeLevel,
+                        description: focalNode == null
+                            ? ''
+                            : relatednessDescription(
+                                focalNode,
+                                node,
+                                pov:
+                                    widget.viewHistory.perspectiveUserId == null
+                                        ? PointOfView.first
+                                        : PointOfView.third,
+                                capitalizeWords: true,
+                              ),
+                      );
                       return HoverableNodeProfile(
                         key: key,
                         person: data,
@@ -601,35 +621,13 @@ class FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
                                 onTap: !enabled
                                     ? null
                                     : () {
-                                        final focalNode = _graphKey.currentState
-                                            ?.linkedNodeForId(
-                                                widget.focalPerson.id);
-                                        if (focalNode == null) {
-                                          return;
-                                        }
-                                        final relatedness = Relatedness(
-                                          isBloodRelative: node.isBloodRelative,
-                                          isDirectRelativeOrSpouse:
-                                              node.isDirectRelativeOrSpouse,
-                                          isAncestor: node.isAncestor,
-                                          isSibling: node.isSibling,
-                                          relativeLevel: node.relativeLevel,
-                                          description: relatednessDescription(
-                                            focalNode,
-                                            node,
-                                            pov: widget.viewHistory
-                                                        .perspectiveUserId ==
-                                                    null
-                                                ? PointOfView.first
-                                                : PointOfView.third,
-                                            capitalizeWords: true,
-                                          ),
-                                        );
                                         widget.onProfileSelected(
                                             data, relatedness);
                                       },
                                 child: NodeProfile(
                                   person: data,
+                                  relatednessDescription:
+                                      relatedness.description,
                                   showViewPerspective: canViewPerspectiveBool,
                                   onViewPerspectivePressed: () {
                                     widget.onDismissSelected();
@@ -1062,26 +1060,6 @@ class _EdgePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    for (final (node, rect) in nodeRects.values) {
-      final relatedness = relatednessDescription(
-        focalPerson!,
-        node,
-        pov: isPrimaryPerson ? PointOfView.first : PointOfView.third,
-        capitalizeWords: true,
-      );
-      _paintText(
-        canvas: canvas,
-        text: relatedness,
-        style: const TextStyle(
-          color: Color.fromRGBO(0x37, 0x37, 0x37, 1),
-          fontSize: 24,
-          fontWeight: FontWeight.w800,
-        ),
-        offset: rect.topLeft + const Offset(0, -16),
-        maxWidth: rect.width,
-      );
-    }
-
     // Only the left node in nodes with spouses
     final leftNodeInCouples = nodeRects.values.where((e) {
       final node = e.$1;
@@ -1106,9 +1084,9 @@ class _EdgePainter extends CustomPainter {
         final e = toRect.topCenter;
         path
           ..moveTo(s.dx, s.dy + topOffset)
-          ..lineTo(s.dx, s.dy + spacing.level / 2 - 40)
-          ..lineTo(e.dx, s.dy + spacing.level / 2 - 40)
-          ..lineTo(e.dx, e.dy - 80);
+          ..lineTo(s.dx, s.dy + spacing.level / 2 - 20)
+          ..lineTo(e.dx, s.dy + spacing.level / 2 - 20)
+          ..lineTo(e.dx, e.dy - 20);
       }
 
       final dashedPath = path_drawing.dashPath(
