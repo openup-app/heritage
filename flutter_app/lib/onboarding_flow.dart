@@ -82,6 +82,7 @@ class _OnboardingFlowState extends ConsumerState<OnboardingFlow> {
                   onDone: () => setState(() => _step++),
                 ),
               2 => _NameStep(
+                  title: 'Your name',
                   onDone: (firstName, lastName) {
                     setState(() {
                       _firstName = firstName;
@@ -91,6 +92,7 @@ class _OnboardingFlowState extends ConsumerState<OnboardingFlow> {
                   },
                 ),
               3 => _PhotoStep(
+                  title: 'Add Your Photo',
                   onDone: _uploading
                       ? null
                       : (photo) async {
@@ -176,10 +178,12 @@ class _IntroStep extends StatelessWidget {
 }
 
 class _NameStep extends StatefulWidget {
+  final String title;
   final void Function(String firstName, String lastName) onDone;
 
   const _NameStep({
     super.key,
+    required this.title,
     required this.onDone,
   });
 
@@ -201,7 +205,7 @@ class _NameStepState extends State<_NameStep> {
             icon: SvgPicture.asset(
               'assets/images/id_card.svg',
             ),
-            label: 'Your name',
+            label: widget.title,
           ),
           const Spacer(),
           MinimalProfileEditor(
@@ -226,9 +230,12 @@ class _NameStepState extends State<_NameStep> {
 }
 
 class _PhotoStep extends StatefulWidget {
+  final String title;
   final void Function(Photo photo)? onDone;
+
   const _PhotoStep({
     super.key,
+    required this.title,
     required this.onDone,
   });
 
@@ -246,9 +253,9 @@ class _PhotoStepState extends State<_PhotoStep> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const _Title(
-            icon: Icon(Icons.photo),
-            label: 'Add your photo',
+          _Title(
+            icon: const Icon(Icons.photo),
+            label: widget.title,
           ),
           const SizedBox(height: 24),
           const SizedBox(height: 24),
@@ -373,6 +380,92 @@ class _ExitStepState extends State<_ExitStep> {
         ),
       ),
     );
+  }
+}
+
+class ManagePersonFlow extends ConsumerStatefulWidget {
+  final LinkedNode<Person> targetPerson;
+  final String description;
+  final Future<void> Function(Profile profile) onSave;
+  final void Function() onDone;
+
+  const ManagePersonFlow({
+    super.key,
+    required this.targetPerson,
+    required this.description,
+    required this.onSave,
+    required this.onDone,
+  });
+
+  @override
+  ConsumerState<ManagePersonFlow> createState() => _ManagePersonFlowState();
+}
+
+class _ManagePersonFlowState extends ConsumerState<ManagePersonFlow> {
+  int _step = 0;
+  String _firstName = '';
+  String _lastName = '';
+  Photo? _photo;
+  bool _uploading = false;
+
+  @override
+  void initState() {
+    super.initState();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        Material(
+          type: MaterialType.transparency,
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 300),
+            child: switch (_step) {
+              0 => _NameStep(
+                  title: '${widget.description}\'s Name',
+                  onDone: (firstName, lastName) {
+                    setState(() {
+                      _firstName = firstName;
+                      _lastName = lastName;
+                      _step++;
+                    });
+                  },
+                ),
+              1 => _PhotoStep(
+                  title: 'Add ${widget.description}\'s Photo',
+                  onDone: _uploading
+                      ? null
+                      : (photo) async {
+                          setState(() => _photo = photo);
+                          await _upload();
+                        },
+                ),
+              _ => const SizedBox.shrink()
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _upload() async {
+    final photo = _photo;
+    if (photo == null) {
+      return;
+    }
+    final profile = widget.targetPerson.data.profile.copyWith(
+      firstName: _firstName,
+      lastName: _lastName,
+      photo: photo,
+    );
+    setState(() => _uploading = true);
+    await widget.onSave(profile);
+    if (!mounted) {
+      return;
+    }
+    widget.onDone();
   }
 }
 

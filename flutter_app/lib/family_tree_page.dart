@@ -130,46 +130,6 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
     _maybeOnboard();
   }
 
-  void _maybeOnboard() async {
-    await WidgetsBinding.instance.endOfFrame;
-    if (!mounted) {
-      return;
-    }
-
-    final graph = ref.read(graphProvider);
-    final focalPersonId = graph.focalPerson.id;
-    final referrerId = widget.referrerId;
-    if (referrerId == null) {
-      return;
-    }
-    final notifier = ref.read(graphProvider.notifier);
-    final nodes = graph.people.values.toList();
-    final linkedNodes = buildLinkedTree(nodes, referrerId);
-    final focalPerson = linkedNodes[focalPersonId];
-    final referrer = linkedNodes[referrerId];
-    if (focalPerson == null || referrer == null) {
-      return;
-    }
-    await showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) {
-        return OnboardingFlow(
-          person: focalPerson,
-          referral: referrer,
-          onSave: (profile) async {
-            await notifier.takeOwnership(focalPersonId);
-            await notifier.updateProfile(focalPerson.id, profile);
-          },
-          onDone: Navigator.of(context).pop,
-        );
-      },
-    );
-    if (mounted) {
-      _selectPerson(focalPersonId);
-    }
-  }
-
   @override
   void dispose() {
     _debouncer.cancel();
@@ -281,15 +241,7 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
             final selectedPerson = _selectedPerson;
             final relatedness = _relatedness;
             if (selectedPerson != null && relatedness != null) {
-              final ownershipFuture = ref
-                  .read(graphProvider.notifier)
-                  .takeOwnership(selectedPerson.id);
-              await showBlockingModal(context, ownershipFuture);
-              // Wait for graph to update
-              await WidgetsBinding.instance.endOfFrame;
-              if (mounted) {
-                _selectPerson(selectedPerson.id);
-              }
+              _showManagePersonFlow(selectedPerson.id);
             }
           },
           onViewPerspective: () {
@@ -437,6 +389,92 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
     if (mounted) {
       _savingNotifier.value = null;
     }
+  }
+
+  void _maybeOnboard() async {
+    await WidgetsBinding.instance.endOfFrame;
+    if (!mounted) {
+      return;
+    }
+
+    final graph = ref.read(graphProvider);
+    final focalPersonId = graph.focalPerson.id;
+    final referrerId = widget.referrerId;
+    if (referrerId == null) {
+      return;
+    }
+    final notifier = ref.read(graphProvider.notifier);
+    final nodes = graph.people.values.toList();
+    final linkedNodes = buildLinkedTree(nodes, referrerId);
+    final focalPerson = linkedNodes[focalPersonId];
+    final referrer = linkedNodes[referrerId];
+    if (focalPerson == null || referrer == null) {
+      return;
+    }
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return OnboardingFlow(
+          person: focalPerson,
+          referral: referrer,
+          onSave: (profile) async {
+            await notifier.takeOwnership(focalPersonId);
+            await notifier.updateProfile(focalPerson.id, profile);
+          },
+          onDone: Navigator.of(context).pop,
+        );
+      },
+    );
+    if (mounted) {
+      _selectPerson(focalPersonId);
+    }
+  }
+
+  void _showManagePersonFlow(Id targetId) async {
+    final graph = ref.read(graphProvider);
+    final focalPersonId = graph.focalPerson.id;
+    final notifier = ref.read(graphProvider.notifier);
+    final nodes = graph.people.values.toList();
+    final linkedNodes = buildLinkedTree(nodes, focalPersonId);
+    final focalPerson = linkedNodes[focalPersonId];
+    final targetPerson = linkedNodes[targetId];
+    if (focalPerson == null || targetPerson == null) {
+      return;
+    }
+
+    final description = relatednessDescription(
+      focalPerson,
+      targetPerson,
+      pov: PointOfView.first,
+      capitalizeWords: true,
+    );
+    _onDismissSelected();
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return ManagePersonFlow(
+          targetPerson: targetPerson,
+          description: description,
+          onSave: (profile) async {
+            await notifier.takeOwnership(targetId);
+            await notifier.updateProfile(targetId, profile);
+          },
+          onDone: Navigator.of(context).pop,
+        );
+      },
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    // Wait for node to be added to graph
+    await WidgetsBinding.instance.endOfFrame;
+    if (!context.mounted) {
+      return;
+    }
+    _selectPerson(targetId);
   }
 }
 

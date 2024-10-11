@@ -2181,7 +2181,7 @@ class TakeOwnershipButton extends StatelessWidget {
         return AlertDialog(
           title: const Text('Manage Profile?'),
           content: const Text(
-              'Finishing someone else\'s profile should only be done if they can\'t do it themself.\n\nExample: child, disabled, or deceased'),
+              'Manage a profile only if the person is unable to, such as children, disabled or deceased relatives.'),
           actions: [
             TextButton(
               onPressed: Navigator.of(context).pop,
@@ -2190,6 +2190,7 @@ class TakeOwnershipButton extends StatelessWidget {
             ),
             TextButton(
               onPressed: () => Navigator.of(context).pop(true),
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
               child: const Text('Proceed'),
             ),
           ],
