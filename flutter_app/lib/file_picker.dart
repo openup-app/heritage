@@ -1,27 +1,26 @@
 import 'dart:math';
 import 'dart:ui' as ui;
 
-import 'package:cross_file/cross_file.dart';
-import 'package:file_picker/file_picker.dart' as fp;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:image/image.dart' as img;
 
 Future<XFile?> pickFile(String title) async {
-  final result = await fp.FilePicker.platform.pickFiles(
-    dialogTitle: title,
-    allowMultiple: false,
+  final imagePicker = ImagePicker();
+  final result = await imagePicker.pickImage(
+    source: ImageSource.gallery,
+    maxWidth: 1000,
+    maxHeight: 1000,
   );
-  final file = result?.xFiles.firstOrNull;
-  if (file == null) {
-    return null;
-  }
-  return file;
+  return result;
 }
 
 Future<(Uint8List? bytes, Size size)> getFirstFrameAndSize(
     Uint8List image) async {
   final decodedImage = await decodeImageFromList(image);
+  print(
+      'SIZE is ${decodedImage.width.toDouble()}, ${decodedImage.height.toDouble()}');
   final byteData =
       await decodedImage.toByteData(format: ui.ImageByteFormat.png);
   // Disposing decodedImage here throws "This image has been disposed" on web
