@@ -417,33 +417,38 @@ class NodeProfile extends StatelessWidget {
                               ),
                             ],
                           ),
-                          child: ProfileImage(person.profile.photo),
+                          child: Stack(
+                            children: [
+                              Positioned.fill(
+                                child: ProfileImage(person.profile.photo),
+                              ),
+                              const Positioned(
+                                left: 0,
+                                right: 0,
+                                bottom: 0,
+                                height: 72,
+                                child: DecoratedBox(
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.only(
+                                      bottomLeft: Radius.circular(20),
+                                      bottomRight: Radius.circular(20),
+                                    ),
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topCenter,
+                                      end: Alignment.bottomCenter,
+                                      colors: [
+                                        Colors.transparent,
+                                        Color.fromRGBO(0x00, 0x00, 0x00, 0.40),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ],
-                  ),
-                ),
-              ),
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 0,
-                height: 96,
-                child: Container(
-                  clipBehavior: Clip.hardEdge,
-                  decoration: const BoxDecoration(
-                    borderRadius: BorderRadius.only(
-                      bottomLeft: Radius.circular(20),
-                      bottomRight: Radius.circular(20),
-                    ),
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.transparent,
-                        Color.fromRGBO(0x00, 0x00, 0x00, 0.32),
-                      ],
-                    ),
                   ),
                 ),
               ),
