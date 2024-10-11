@@ -228,8 +228,7 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
                   return;
                 }
 
-                _familyTreeViewKey.currentState
-                    ?.centerOnPersonWithId(selectedPerson.id, animate: false);
+                _selectPerson(newId);
                 final linkedNode = targetNode;
                 setState(() {
                   _selectedPerson = targetNode.data;

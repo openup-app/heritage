@@ -583,6 +583,7 @@ class _PanelsState extends ConsumerState<Panels> {
   }) async {
     final poppedManually = await showModalBottomSheet<bool>(
       context: context,
+      barrierColor: Colors.transparent,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.only(
           topLeft: Radius.circular(10),
@@ -663,6 +664,7 @@ Future<T?> showModalBottomSheetWithDragHandle<T>({
     context: context,
     useSafeArea: true,
     isScrollControlled: true,
+    barrierColor: Colors.transparent,
     showDragHandle: true,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.only(
