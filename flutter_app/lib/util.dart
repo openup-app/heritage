@@ -196,40 +196,40 @@ bool canDeletePerson(Person person) {
 }
 
 String _genderedParent(Gender? gender) => gender == null
-    ? 'Parent'
+    ? 'parent'
     : gender == Gender.male
-        ? 'Father'
-        : 'Mother';
+        ? 'father'
+        : 'mother';
 
 String _genderedSibling(Gender? gender) => gender == null
-    ? 'Sibling'
+    ? 'sibling'
     : gender == Gender.male
-        ? 'Brother'
-        : 'Sister';
+        ? 'brother'
+        : 'sister';
 
 String _genderedChild(Gender? gender) => gender == null
-    ? 'Child'
+    ? 'child'
     : gender == Gender.male
-        ? 'Son'
-        : 'Daughter';
+        ? 'son'
+        : 'daughter';
 
 String _genderedParentSibling(Gender? gender) => gender == null
-    ? 'Uncle/Aunt'
+    ? 'uncle/aunt'
     : gender == Gender.male
-        ? 'Uncle'
-        : 'Aunt';
+        ? 'uncle'
+        : 'aunt';
 
 String _genderedGrandparent(Gender? gender) => gender == null
-    ? 'Grandparent'
+    ? 'grandparent'
     : gender == Gender.male
-        ? 'Grandfather'
-        : 'Grandmother';
+        ? 'grandfather'
+        : 'grandmother';
 
 String _genderedGrandchild(Gender? gender) => gender == null
-    ? 'Grandchild'
+    ? 'grandchild'
     : gender == Gender.male
-        ? 'Grandson'
-        : 'Granddaughter';
+        ? 'grandson'
+        : 'granddaughter';
 
 enum PointOfView { first, second, third }
 
@@ -237,17 +237,37 @@ String relatednessDescription(
   LinkedNode<Person> focal,
   LinkedNode<Person> target, {
   required PointOfView pov,
+  bool capitalizeWords = false,
 }) {
+  final description = _relatednessDescriptionImpl(focal, target, pov);
+  if (!capitalizeWords) {
+    return description;
+  }
+
+  final buffer = StringBuffer();
+  bool newWord = true;
+  for (var i = 0; i < description.length; i++) {
+    buffer.write(newWord ? (description[i].toUpperCase()) : description[i]);
+    newWord = description[i] == ' ' || description[i] == '/';
+  }
+  return buffer.toString();
+}
+
+String _relatednessDescriptionImpl(
+  LinkedNode<Person> focal,
+  LinkedNode<Person> target,
+  PointOfView pov,
+) {
   if (focal.id == target.id) {
     return switch (pov) {
-      PointOfView.first || PointOfView.second => 'Me',
+      PointOfView.first || PointOfView.second => 'me',
       PointOfView.third => focal.data.profile.firstName,
     };
   } else if (target.id == focal.spouse?.id) {
     return switch (pov) {
-      PointOfView.first => 'Partner',
-      PointOfView.second => 'Their Partner',
-      PointOfView.third => '${focal.data.profile.firstName}\'s Partner',
+      PointOfView.first => 'partner',
+      PointOfView.second => 'their partner',
+      PointOfView.third => '${focal.data.profile.firstName}\'s partner',
     };
   }
 
@@ -262,26 +282,26 @@ String relatednessDescription(
   if (isSibling) {
     return switch (pov) {
       PointOfView.first => targetGenderedRelationship,
-      PointOfView.second => 'Their $targetGenderedRelationship',
+      PointOfView.second => 'their $targetGenderedRelationship',
       PointOfView.third =>
         '${focal.data.profile.firstName}\'s $targetGenderedRelationship',
     };
   } else if (relativeLevel == 0) {
     if (isBloodRelative) {
       return switch (pov) {
-        PointOfView.first => 'Cousin',
-        PointOfView.second => 'Their Cousin',
-        PointOfView.third => '${focal.data.profile.firstName}\'s Cousin',
+        PointOfView.first => 'cousin',
+        PointOfView.second => 'their cousin',
+        PointOfView.third => '${focal.data.profile.firstName}\'s cousin',
       };
     } else {
-      return '${target.spouses.firstOrNull?.data.profile.firstName}\'s Partner';
+      return '${target.spouses.firstOrNull?.data.profile.firstName}\'s partner';
     }
   }
 
   if (relativeLevel <= 0) {
     final parts = switch (pov) {
       PointOfView.first => [],
-      PointOfView.second => ['Their'],
+      PointOfView.second => ['their'],
       PointOfView.third => ['${focal.data.profile.firstName}\'s'],
     };
     if (relativeLevel == -1) {
@@ -292,7 +312,7 @@ String relatednessDescription(
           parts.add(_genderedParentSibling(target.data.profile.gender));
         } else {
           parts.add(
-              '${_genderedParentSibling(target.data.profile.gender)}\'s Partner');
+              '${_genderedParentSibling(target.data.profile.gender)}\'s partner');
         }
       }
     } else if (relativeLevel == -2) {
@@ -308,12 +328,12 @@ String relatednessDescription(
         } else {
           final spouse = target.spouse;
           parts.add(
-              '$lineageString\'s ${_genderedSibling(spouse?.data.profile.gender)}\'s Partner');
+              '$lineageString\'s ${_genderedSibling(spouse?.data.profile.gender)}\'s partner');
         }
       }
     } else {
       final greatCount = relativeLevel.abs() - 2;
-      final greatString = List.generate(greatCount, (_) => 'Great').join(' ');
+      final greatString = List.generate(greatCount, (_) => 'great').join(' ');
       final ancestorAtLevel = target.ancestorOnLevel;
       final lineageString =
           '$greatString ${_genderedGrandparent(ancestorAtLevel?.data.profile.gender)}';
@@ -326,7 +346,7 @@ String relatednessDescription(
         } else {
           final spouse = target.spouse;
           parts.add(
-              '$lineageString\'s ${_genderedSibling(spouse?.data.profile.gender)}\'s Partner');
+              '$lineageString\'s ${_genderedSibling(spouse?.data.profile.gender)}\'s partner');
         }
       }
     }
@@ -336,14 +356,14 @@ String relatednessDescription(
     if (!target.isBloodRelative) {
       final spouse = target.spouses.firstWhereOrNull((e) => e.isBloodRelative);
       if (spouse == null) {
-        return 'Unknown';
+        return 'relative';
       }
       rootNode = spouse;
     }
     while (rootNode.relativeLevel > 0) {
       final parent = rootNode.parents.firstOrNull;
       if (parent == null) {
-        return 'Unknown';
+        return 'relative';
       }
       rootNode = parent;
     }
@@ -355,7 +375,7 @@ String relatednessDescription(
 
     final parts = switch (pov) {
       PointOfView.first => [],
-      PointOfView.second => ['Their'],
+      PointOfView.second => ['their'],
       PointOfView.third => ['${rootNode.data.profile.firstName}\'s'],
     };
     if (target.relativeLevel == 1) {
@@ -363,7 +383,7 @@ String relatednessDescription(
         parts.add(_genderedChild(target.data.profile.gender));
       } else {
         final spouse = target.spouse;
-        parts.add('${_genderedChild(spouse?.data.profile.gender)}\'s Partner');
+        parts.add('${_genderedChild(spouse?.data.profile.gender)}\'s partner');
       }
     } else if (target.relativeLevel == 2) {
       if (isBloodRelative) {
@@ -371,11 +391,11 @@ String relatednessDescription(
       } else {
         final spouse = target.spouse;
         parts.add(
-            '${_genderedGrandchild(spouse?.data.profile.gender)}\'s Partner');
+            '${_genderedGrandchild(spouse?.data.profile.gender)}\'s partner');
       }
     } else {
       final greatCount = relativeLevel - 2;
-      final greatString = List.generate(greatCount, (_) => 'Great').join(' ');
+      final greatString = List.generate(greatCount, (_) => 'great').join(' ');
       final lineageString = greatString;
       if (isBloodRelative) {
         parts.add(
@@ -383,7 +403,7 @@ String relatednessDescription(
       } else {
         final spouse = target.spouse;
         parts.add(
-            '$lineageString ${_genderedGrandchild(spouse?.data.profile.gender)}\'s Partner');
+            '$lineageString ${_genderedGrandchild(spouse?.data.profile.gender)}\'s partner');
       }
     }
     return parts.join(' ');

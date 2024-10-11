@@ -2028,7 +2028,7 @@ class _PendingProfiledDisplayState extends State<PendingProfiledDisplay> {
               ),
             ),
             const SizedBox(height: 16),
-            const Text('Waiting on them to join and add their details'),
+            const Text('Waiting for them to join and finish their profile'),
             const SizedBox(height: 16),
             ShareButton(
               sourceFirstName: widget.focalNode.data.profile.firstName,

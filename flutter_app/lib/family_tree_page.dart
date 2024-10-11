@@ -288,6 +288,7 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
                   .read(graphProvider.notifier)
                   .takeOwnership(selectedPerson.id);
               await showBlockingModal(context, ownershipFuture);
+              // Wait for graph to update
               await WidgetsBinding.instance.endOfFrame;
               if (mounted) {
                 _selectPerson(selectedPerson.id);
@@ -340,27 +341,28 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
     final graph = ref.read(graphProvider);
     final focalNode =
         _familyTreeViewKey.currentState?.linkedNodeForId(graph.focalPerson.id);
-    final linkedNode = _familyTreeViewKey.currentState?.linkedNodeForId(id);
-    if (focalNode == null || linkedNode == null) {
+    final selectedNode = _familyTreeViewKey.currentState?.linkedNodeForId(id);
+    if (focalNode == null || selectedNode == null) {
       return;
     }
-    final person = linkedNode.data;
+
+    final person = selectedNode.data;
     final relatedness = Relatedness(
-      isBloodRelative: linkedNode.isBloodRelative,
-      isDirectRelativeOrSpouse: linkedNode.isDirectRelativeOrSpouse,
-      isAncestor: linkedNode.isAncestor,
-      isSibling: linkedNode.isSibling,
-      relativeLevel: linkedNode.relativeLevel,
+      isBloodRelative: selectedNode.isBloodRelative,
+      isDirectRelativeOrSpouse: selectedNode.isDirectRelativeOrSpouse,
+      isAncestor: selectedNode.isAncestor,
+      isSibling: selectedNode.isSibling,
+      relativeLevel: selectedNode.relativeLevel,
       description: relatednessDescription(
         focalNode,
-        linkedNode,
+        selectedNode,
         pov: PointOfView.first,
       ),
     );
     _onProfileSelected(person, relatedness);
   }
 
-  void _onProfileSelected(Person person, Relatedness relatedness) {
+  void _onProfileSelected(Person person, Relatedness relatedness) async {
     // Don't open profiles that are in the middle of saving
     if (_savingNotifier.value == person.id) {
       return;
@@ -373,6 +375,13 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
         _familyTreeViewKey.currentState?.linkedNodeForId(graph.focalPerson.id);
     final targetNode =
         _familyTreeViewKey.currentState?.linkedNodeForId(person.id);
+
+    if (focalNode != null &&
+        targetNode != null &&
+        targetNode.data.ownedBy == null) {
+      final notifier = ref.read(graphProvider.notifier);
+      notifier.addInvite(focalNode, targetNode);
+    }
 
     if (person.ownedBy == null) {
       if (focalNode == null || targetNode == null) {
@@ -1061,6 +1070,7 @@ class _EdgePainter extends CustomPainter {
         focalPerson!,
         node,
         pov: isPrimaryPerson ? PointOfView.first : PointOfView.third,
+        capitalizeWords: true,
       );
       _paintText(
         canvas: canvas,

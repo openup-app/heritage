@@ -48,6 +48,7 @@ class Api {
   Future<Either<Error, (Id id, List<Person> people)>> addConnection({
     required Id sourceId,
     required Relationship relationship,
+    required String? inviteText,
   }) {
     return _makeRequest(
       request: () => http.post(
@@ -55,6 +56,7 @@ class Api {
         headers: _headers,
         body: jsonEncode({
           'relationship': relationship.name,
+          'inviteText': inviteText,
         }),
       ),
       handleResponse: (response) {
@@ -203,6 +205,25 @@ class Api {
         final json = jsonDecode(response.body);
         return right(Person.fromJson(json['person']));
       },
+    );
+  }
+
+  Future<Either<Error, Null>> addInvite(
+    Id focalNodeId,
+    Id targetNodeId,
+    String inviteText,
+  ) {
+    return _makeRequest(
+      request: () => http.post(
+        Uri.parse('$_baseUrl/v1/invites/'),
+        headers: _headers,
+        body: jsonEncode({
+          'focalNodeId': focalNodeId,
+          'targetNodeId': targetNodeId,
+          'inviteText': inviteText,
+        }),
+      ),
+      handleResponse: (_) => const Right(null),
     );
   }
 

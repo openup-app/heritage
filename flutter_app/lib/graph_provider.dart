@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:heritage/api.dart';
+import 'package:heritage/graph.dart';
+import 'package:heritage/util.dart';
 
 final focalPersonIdProvider =
     StateProvider<Id>((ref) => throw 'Uninitialized provider');
@@ -85,9 +87,19 @@ class GraphNotifier extends StateNotifier<Graph> {
     required Id source,
     required Relationship relationship,
   }) async {
+    final output = _createTempLinkGraphWithNewPerson(
+        state.focalPerson.id, source, relationship);
+    final focalNode = output?.focalNode;
+    final targetNode = output?.targetNode;
+    String? inviteText;
+    if (focalNode != null && targetNode != null) {
+      inviteText = _createTempInviteText(focalNode, targetNode);
+    }
+
     final result = await api.addConnection(
       sourceId: source,
       relationship: relationship,
+      inviteText: inviteText,
     );
     if (!mounted) {
       return null;
@@ -173,6 +185,92 @@ class GraphNotifier extends StateNotifier<Graph> {
       },
     );
   }
+
+  Future<void> addInvite(
+      LinkedNode<Person> focalNode, LinkedNode<Person> targetNode) async {
+    final inviteText = _createTempInviteText(focalNode, targetNode);
+    await api.addInvite(focalNode.id, targetNode.id, inviteText);
+  }
+
+  ({LinkedNode<Person> focalNode, LinkedNode<Person> targetNode})?
+      _createTempLinkGraphWithNewPerson(
+          Id focalPersonId, Id sourceId, Relationship relationship) {
+    final sourcePerson = state.people[sourceId];
+    if (sourcePerson == null) {
+      return null;
+    }
+
+    // Modifiy collection, so deep clone
+    final people = Map.fromEntries(
+        state.people.values.map((e) => MapEntry(e.id, e.copyWith())));
+
+    final newPerson = _tempPerson('tempPerson');
+    people[newPerson.id] = newPerson;
+    switch (relationship) {
+      case Relationship.parent:
+        newPerson.children.add(sourceId);
+        sourcePerson.parents.add(newPerson.id);
+      case Relationship.spouse:
+        newPerson.spouses.add(sourceId);
+        sourcePerson.spouses.add(newPerson.id);
+      case Relationship.sibling:
+        Person parent;
+        if (sourcePerson.parents.isEmpty) {
+          parent = _tempPerson('parent');
+          parent.children.add(sourceId);
+          sourcePerson.parents.add(parent.id);
+          people[parent.id] = parent;
+        } else {
+          parent = people[sourcePerson.parents.first]!;
+        }
+        parent.children.add(newPerson.id);
+        newPerson.parents.add(parent.id);
+      case Relationship.child:
+        sourcePerson.children.add(newPerson.id);
+        newPerson.parents.add(sourceId);
+    }
+    final linkedNodes = buildLinkedTree(people.values, focalPersonId);
+    final targetNode = linkedNodes[newPerson.id];
+    final focalNode = linkedNodes[focalPersonId];
+    if (targetNode == null || focalNode == null) {
+      return null;
+    }
+    return (focalNode: focalNode, targetNode: targetNode);
+  }
+}
+
+String _createTempInviteText(
+    LinkedNode<Person> focalNode, LinkedNode<Person> targetNode) {
+  final relatedness = relatednessDescription(
+    focalNode,
+    targetNode,
+    pov: PointOfView.second,
+  );
+  return '${focalNode.data.profile.firstName} wants to add you as $relatedness';
+}
+
+Person _tempPerson(String id) {
+  return Person(
+    id: id,
+    parents: [],
+    spouses: [],
+    children: [],
+    addedBy: '',
+    ownedBy: '',
+    createdAt: DateTime.now(),
+    profile: const Profile(
+      firstName: '',
+      lastName: '',
+      gender: null,
+      photo: Photo.network(key: '', url: ''),
+      gallery: [],
+      birthday: null,
+      deathday: null,
+      birthplace: '',
+      occupation: '',
+      hobbies: '',
+    ),
+  );
 }
 
 class Graph {
