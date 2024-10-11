@@ -20,7 +20,7 @@ import 'package:heritage/profile_display.dart';
 import 'package:heritage/profile_update.dart';
 import 'package:heritage/util.dart';
 
-const _kMinPanelHeight = 240.0;
+const _kMinPanelHeight = 200.0;
 
 class Panels extends ConsumerStatefulWidget {
   final Person? selectedPerson;
@@ -131,7 +131,7 @@ class _PanelsState extends ConsumerState<Panels> {
             ),
           Positioned(
             left: 16,
-            bottom: 256,
+            bottom: 216,
             width: 48,
             height: 48,
             child: AnimatedOpacity(
@@ -835,7 +835,7 @@ class _DraggableSheetState extends State<_DraggableSheet> {
   Widget build(BuildContext context) {
     // Clamped in case of narrow, but extremely tall/short windows
     final windowSize = MediaQuery.of(context).size;
-    final maxPanelHeight = windowSize.height - 10.0;
+    final maxPanelHeight = windowSize.height - 68.0;
     final minPanelRatio =
         (_kMinPanelHeight / windowSize.height).clamp(0.05, 1.0);
     final maxPanelRatio = (maxPanelHeight / windowSize.height).clamp(0.05, 1.0);
@@ -903,7 +903,9 @@ class _DraggableSheetState extends State<_DraggableSheet> {
                                     ),
                                   ),
                                   Text(
-                                    'Add ${widget.selectedPerson.profile.firstName}\'s...',
+                                    widget.isFocalUser
+                                        ? 'I need to add my...'
+                                        : 'Add ${widget.selectedPerson.profile.firstName}\'s...',
                                     style:
                                         Theme.of(context).textTheme.titleLarge,
                                   ),
@@ -1478,6 +1480,29 @@ class _ProfileDisplayState extends ConsumerState<_ProfileDisplay> {
             ),
           ),
         ],
+        if (widget.onViewPerspective != null) ...[
+          const SizedBox(height: 18),
+          FilledButton(
+            onPressed: widget.onViewPerspective,
+            style: FilledButton.styleFrom(
+              fixedSize: const Size.fromHeight(44),
+              foregroundColor: Colors.white,
+              backgroundColor: primaryColor,
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Binoculars(
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                    'View ${ref.watch(profileUpdateProvider.select((s) => s.fullName))}\'s tree'),
+              ],
+            ),
+          ),
+        ],
         const SizedBox(height: 24),
         Text(
           'Details',
@@ -1740,34 +1765,6 @@ class _ProfileDisplayState extends ConsumerState<_ProfileDisplay> {
             ],
           ],
         ),
-        if (widget.onViewPerspective != null) ...[
-          const SizedBox(height: 24),
-          Text(
-            'View Tree',
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-          const SizedBox(height: 8),
-          FilledButton(
-            onPressed: widget.onViewPerspective,
-            style: FilledButton.styleFrom(
-              fixedSize: const Size.fromHeight(44),
-              foregroundColor: Colors.white,
-              backgroundColor: primaryColor,
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Binoculars(
-                  size: 20,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                    'View ${ref.watch(profileUpdateProvider.select((s) => s.fullName))}\'s tree'),
-              ],
-            ),
-          ),
-        ],
         const SizedBox(height: 16),
         if (widget.onShareLoginLink != null) ...[
           Text(

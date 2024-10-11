@@ -50,17 +50,21 @@ flutter:
 
   assets:
     - assets/images/add_photo.svg
+    - assets/images/add_photo_2.svg
     - assets/images/badge.svg
     - assets/images/binoculars.png
     - assets/images/connection_child.svg
     - assets/images/connection_parent.svg
     - assets/images/connection_sibling.svg
     - assets/images/connection_spouse.svg
+    - assets/images/id_card.svg
+    - assets/images/link.json
     - assets/images/logo_text.png
     - assets/images/logo.json
     - assets/images/perspective_portal.png
     - assets/images/tagline.png
-    - assets/images/tree_background.png
+    - assets/images/tree_background.png   
+    - assets/images/tree.json
 
   fonts:
     - family: SF Pro Display

@@ -154,16 +154,14 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
       context: context,
       barrierDismissible: false,
       builder: (context) {
-        return Center(
-          child: OnboardingFlow(
-            person: focalPerson,
-            referral: referrer,
-            onSave: (profile) async {
-              await notifier.takeOwnership(focalPersonId);
-              await notifier.updateProfile(focalPerson.id, profile);
-            },
-            onDone: Navigator.of(context).pop,
-          ),
+        return OnboardingFlow(
+          person: focalPerson,
+          referral: referrer,
+          onSave: (profile) async {
+            await notifier.takeOwnership(focalPersonId);
+            await notifier.updateProfile(focalPerson.id, profile);
+          },
+          onDone: Navigator.of(context).pop,
         );
       },
     );
@@ -626,6 +624,7 @@ class FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
                                                     null
                                                 ? PointOfView.first
                                                 : PointOfView.third,
+                                            capitalizeWords: true,
                                           ),
                                         );
                                         widget.onProfileSelected(
@@ -1109,8 +1108,8 @@ class _EdgePainter extends CustomPainter {
         final e = toRect.topCenter;
         path
           ..moveTo(s.dx, s.dy + topOffset)
-          ..lineTo(s.dx, s.dy + spacing.level / 2)
-          ..lineTo(e.dx, s.dy + spacing.level / 2)
+          ..lineTo(s.dx, s.dy + spacing.level / 2 - 40)
+          ..lineTo(e.dx, s.dy + spacing.level / 2 - 40)
           ..lineTo(e.dx, e.dy - 80);
       }
 

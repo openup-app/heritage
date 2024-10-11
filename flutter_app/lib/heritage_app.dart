@@ -101,6 +101,9 @@ class HeritageApp extends StatelessWidget {
                         foregroundColor: primaryColor,
                         textStyle: subtitleStyle,
                         padding: EdgeInsets.zero,
+                        side: const BorderSide(
+                          color: Color.fromRGBO(0x2A, 0xBB, 0xFF, 1.0),
+                        ),
                         shape: const RoundedRectangleBorder(
                           borderRadius: BorderRadius.all(
                             Radius.circular(10),

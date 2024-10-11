@@ -100,7 +100,7 @@ class ZoomablePannableViewportState extends State<ZoomablePannableViewport>
     final viewport = viewRect ?? Offset.zero & MediaQuery.of(context).size;
     final localOffset = targetRect.shift(-childRect.topLeft);
 
-    const maxScale = 0.6;
+    const maxScale = 0.5;
     _targetMatrix = Matrix4.identity()
       ..translate(viewport.center.dx, viewport.center.dy)
       ..scale(maxScale)

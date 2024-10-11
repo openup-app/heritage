@@ -3,12 +3,14 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:heritage/api.dart';
 import 'package:heritage/family_tree_page.dart';
 import 'package:heritage/graph.dart';
 import 'package:heritage/heritage_app.dart';
 import 'package:heritage/profile_display.dart';
 import 'package:heritage/util.dart';
+import 'package:lottie/lottie.dart';
 
 class OnboardingFlow extends ConsumerStatefulWidget {
   final LinkedNode<Person> person;
@@ -39,7 +41,7 @@ class _OnboardingFlowState extends ConsumerState<OnboardingFlow> {
   @override
   void initState() {
     super.initState();
-    _timer = Timer(const Duration(seconds: 2), () {
+    _timer = Timer(const Duration(seconds: 3), () {
       if (mounted) {
         setState(() => _step++);
       }
@@ -54,40 +56,56 @@ class _OnboardingFlowState extends ConsumerState<OnboardingFlow> {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      type: MaterialType.transparency,
-      child: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 300),
-        child: switch (_step) {
-          0 => const SizedBox.shrink(),
-          1 => _IntroStep(
-              person: widget.person,
-              referral: widget.referral,
-              onDone: () => setState(() => _step++),
-            ),
-          2 => _NameStep(
-              onDone: (firstName, lastName) {
-                setState(() {
-                  _firstName = firstName;
-                  _lastName = lastName;
-                  _step++;
-                });
-              },
-            ),
-          3 => _PhotoStep(
-              onDone: _uploading
-                  ? null
-                  : (photo) async {
-                      setState(() => _photo = photo);
-                      await _upload();
-                    },
-            ),
-          4 => _ExitStep(
-              onDone: widget.onDone,
-            ),
-          _ => const SizedBox.shrink()
-        },
-      ),
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        ModalBarrier(
+          dismissible: false,
+          color: _step == 0
+              ? const Color.fromRGBO(0x00, 0x00, 0x00, 0.1)
+              : const Color.fromRGBO(0x00, 0x00, 0x00, 0.5),
+        ),
+        Material(
+          type: MaterialType.transparency,
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 300),
+            child: switch (_step) {
+              0 => Center(
+                  child: Lottie.asset(
+                    'assets/images/logo.json',
+                    width: 60,
+                  ),
+                ),
+              1 => _IntroStep(
+                  person: widget.person,
+                  referral: widget.referral,
+                  onDone: () => setState(() => _step++),
+                ),
+              2 => _NameStep(
+                  onDone: (firstName, lastName) {
+                    setState(() {
+                      _firstName = firstName;
+                      _lastName = lastName;
+                      _step++;
+                    });
+                  },
+                ),
+              3 => _PhotoStep(
+                  onDone: _uploading
+                      ? null
+                      : (photo) async {
+                          setState(() => _photo = photo);
+                          await _upload();
+                        },
+                ),
+              4 => _ExitStep(
+                  onDone: widget.onDone,
+                ),
+              _ => const SizedBox.shrink()
+            },
+          ),
+        ),
+      ],
     );
   }
 
@@ -135,14 +153,18 @@ class _IntroStep extends StatelessWidget {
     return _Container(
       child: Column(
         children: [
-          const Spacer(),
+          const SizedBox(height: 0),
+          LottieBuilder.asset(
+            'assets/images/link.json',
+            height: 108,
+          ),
           Center(
             child: _Title(
                 icon: null,
                 label:
-                    '${referral.data.profile.firstName} wants to add you\nas $description!'),
+                    '${referral.data.profile.firstName} wants to add you\nas $description on the tree!'),
           ),
-          const SizedBox(height: 80),
+          const SizedBox(height: 100),
           _Button(
             onPressed: onDone,
             child: const Text('Okay'),
@@ -175,8 +197,10 @@ class _NameStepState extends State<_NameStep> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const _Title(
-            icon: Icon(Icons.person),
+          _Title(
+            icon: SvgPicture.asset(
+              'assets/images/id_card.svg',
+            ),
             label: 'Your name',
           ),
           const Spacer(),
@@ -242,17 +266,25 @@ class _PhotoStepState extends State<_PhotoStep> {
                 backgroundColor: const Color.fromRGBO(0xEA, 0xF8, 0xFF, 1.0),
               ),
               child: ImageAspect(
-                child: switch (photo) {
-                  NetworkPhoto(:final url) => Image.network(
-                      url,
-                      fit: BoxFit.cover,
-                    ),
-                  MemoryPhoto(:final Uint8List bytes) => Image.memory(
-                      bytes,
-                      fit: BoxFit.cover,
-                    ),
-                  _ => const Icon(Icons.photo),
-                },
+                child: FittedBox(
+                  fit: BoxFit.cover,
+                  child: switch (photo) {
+                    NetworkPhoto(:final url) => Image.network(
+                        url,
+                        fit: BoxFit.cover,
+                      ),
+                    MemoryPhoto(:final Uint8List bytes) => Image.memory(
+                        bytes,
+                        fit: BoxFit.cover,
+                      ),
+                    _ => Padding(
+                        padding: const EdgeInsets.all(20.0),
+                        child: SvgPicture.asset(
+                          'assets/images/add_photo_2.svg',
+                        ),
+                      ),
+                  },
+                ),
               ),
             ),
           ),
@@ -302,7 +334,7 @@ class _ExitStepState extends State<_ExitStep> {
   @override
   void initState() {
     super.initState();
-    _timer = Timer(const Duration(seconds: 3), () {
+    _timer = Timer(const Duration(seconds: 5), () {
       if (mounted) {
         setState(() => _show = false);
       }
@@ -321,20 +353,23 @@ class _ExitStepState extends State<_ExitStep> {
       duration: const Duration(milliseconds: 300),
       opacity: _show ? 1.0 : 0.0,
       onEnd: widget.onDone,
-      child: const _Container(
+      child: _Container(
+        backgroundColor: primaryColor,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            SizedBox(height: 48),
-            _Title(
+            const SizedBox(height: 48),
+            const _Title(
+              color: Colors.white,
               icon: null,
-              label: 'Build the tree by\nadding family anytime',
+              label: 'The tree is built together!\nAdd anyone, anytime.',
             ),
             Expanded(
               child: Center(
-                  child: Icon(
-                Icons.add,
-              )),
+                child: Lottie.asset(
+                  'assets/images/tree.json',
+                ),
+              ),
             ),
           ],
         ),
@@ -344,11 +379,13 @@ class _ExitStepState extends State<_ExitStep> {
 }
 
 class _Title extends StatelessWidget {
+  final Color? color;
   final Widget? icon;
   final String label;
 
   const _Title({
     super.key,
+    this.color,
     required this.icon,
     required this.label,
   });
@@ -363,7 +400,10 @@ class _Title extends StatelessWidget {
           const SizedBox(width: 4),
         ],
         DefaultTextStyle.merge(
-          style: Theme.of(context).textTheme.titleLarge,
+          style: Theme.of(context)
+              .textTheme
+              .titleLarge
+              ?.copyWith(fontSize: 18, color: color),
           textAlign: TextAlign.center,
           child: Text(label),
         ),
@@ -373,10 +413,12 @@ class _Title extends StatelessWidget {
 }
 
 class _Container extends StatelessWidget {
+  final Color backgroundColor;
   final Widget child;
 
   const _Container({
     super.key,
+    this.backgroundColor = Colors.white,
     required this.child,
   });
 
@@ -387,12 +429,12 @@ class _Container extends StatelessWidget {
       height: 348,
       clipBehavior: Clip.antiAlias,
       padding: const EdgeInsets.all(24),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.all(
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: const BorderRadius.all(
           Radius.circular(24),
         ),
-        boxShadow: [
+        boxShadow: const [
           BoxShadow(
             offset: Offset(0, -7),
             blurRadius: 32,

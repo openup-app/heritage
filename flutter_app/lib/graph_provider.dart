@@ -246,7 +246,7 @@ String _createTempInviteText(
     targetNode,
     pov: PointOfView.second,
   );
-  return '${focalNode.data.profile.firstName} wants to add you as $relatedness';
+  return '${focalNode.data.profile.firstName} wants to add you as $relatedness on the family tree';
 }
 
 Person _tempPerson(String id) {
