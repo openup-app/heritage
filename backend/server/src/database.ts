@@ -123,7 +123,7 @@ export class Database {
         t.create(this.personRef(person.id), person);
       }
 
-      t.create(this.inviteRef(creatorId, newPerson.id), this.newInvite(creatorId, newPerson.id, inviteText));
+      t.set(this.inviteRef(creatorId, newPerson.id), this.newInvite(creatorId, newPerson.id, inviteText));
 
 
       return { id: newPerson.id, people: [...createdPeople, ...updatedPeople] };
@@ -335,7 +335,7 @@ export class Database {
 
   public async addInvite(focalNodeId: Id, targetNodeId: Id, inviteText: string): Promise<void> {
     const inviteRef = this.inviteRef(focalNodeId, targetNodeId);
-    await inviteRef.create(this.newInvite(focalNodeId, targetNodeId, inviteText))
+    await inviteRef.set(this.newInvite(focalNodeId, targetNodeId, inviteText))
   }
 
   private newInvite(focalNodeId: Id, targetNodeId: Id, inviteText: string) {
