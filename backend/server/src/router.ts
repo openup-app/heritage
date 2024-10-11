@@ -205,7 +205,7 @@ export function router(auth: Auth, database: Database, storage: Storage): Router
   router.post('/invites', async (req: Request, res: Response) => {
     try {
       const addInvite = addInviteSchema.parse(req.body);
-      await database.addInvite(addInvite.focalNodeId, addInvite.targetNodeId, addInvite.inviteText);
+      await database.addInvite(addInvite.fromId, addInvite.toId, addInvite.inviteText);
       return res.sendStatus(200);
     } catch (e) {
       console.log(e);
@@ -359,8 +359,8 @@ const profileUpdateSchema = z.object({
 });
 
 const addInviteSchema = z.object({
-  focalNodeId: z.string(),
-  targetNodeId: z.string(),
+  fromId: z.string(),
+  toId: z.string(),
   inviteText: z.string(),
 });
 

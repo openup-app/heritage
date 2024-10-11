@@ -333,9 +333,9 @@ export class Database {
     return undefined;
   }
 
-  public async addInvite(focalNodeId: Id, targetNodeId: Id, inviteText: string): Promise<void> {
-    const inviteRef = this.inviteRef(focalNodeId, targetNodeId);
-    await inviteRef.set(this.newInvite(focalNodeId, targetNodeId, inviteText))
+  public async addInvite(fromId: Id, toId: Id, inviteText: string): Promise<void> {
+    const inviteRef = this.inviteRef(fromId, toId);
+    await inviteRef.set(this.newInvite(fromId, toId, inviteText))
   }
 
   private newInvite(focalNodeId: Id, targetNodeId: Id, inviteText: string) {
@@ -376,8 +376,8 @@ export class Database {
     return !gender ? null : (gender === "male" ? "female" : "male")
   }
 
-  private inviteRef(focalNodeId: Id, targetNodeId: Id): DocumentReference {
-    return this.firestore.collection("invites").doc(`${targetNodeId}:${focalNodeId}`);
+  private inviteRef(fromId: Id, toId: Id): DocumentReference {
+    return this.firestore.collection("invites").doc(`${toId}:${fromId}`);
   }
 
   private personRef(id: Id): DocumentReference {
