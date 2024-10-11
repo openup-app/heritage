@@ -6,7 +6,6 @@ import 'package:flutter/rendering.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:heritage/api.dart';
 import 'package:heritage/graph.dart';
-import 'package:heritage/util.dart';
 
 part 'graph_view.freezed.dart';
 
@@ -16,8 +15,8 @@ class GraphView<T extends GraphNode> extends StatefulWidget {
   final Spacing spacing;
   final Widget Function(
       BuildContext context, Map<Id, LinkedNode<T>> nodes, Widget child) builder;
-  final Widget Function(BuildContext context, T data, LinkedNode<T> node,
-      Key key, Relatedness relatedness) nodeBuilder;
+  final Widget Function(
+      BuildContext context, T data, LinkedNode<T> node, Key key) nodeBuilder;
 
   const GraphView({
     super.key,
@@ -103,18 +102,6 @@ class GraphViewState<T extends GraphNode> extends State<GraphView<T>> {
                           node.data,
                           node,
                           key,
-                          Relatedness(
-                            isBloodRelative: node.isBloodRelative,
-                            isDirectRelativeOrSpouse:
-                                node.isDirectRelativeOrSpouse,
-                            isAncestor: node.isAncestor,
-                            isSibling: node.isSibling,
-                            relativeLevel: node.relativeLevel,
-                            // TODO: Caller should construct relatedness
-                            description: relatednessDescription(
-                                _focalCouple.node as LinkedNode<Person>,
-                                node as LinkedNode<Person>),
-                          ),
                         ),
                       );
                     },
@@ -142,18 +129,6 @@ class GraphViewState<T extends GraphNode> extends State<GraphView<T>> {
                         node.data,
                         node,
                         key,
-                        Relatedness(
-                          isBloodRelative: node.isBloodRelative,
-                          isDirectRelativeOrSpouse:
-                              node.isDirectRelativeOrSpouse,
-                          isAncestor: node.isAncestor,
-                          isSibling: node.isSibling,
-                          relativeLevel: node.relativeLevel,
-                          // TODO: Caller should construct relatedness
-                          description: relatednessDescription(
-                              _focalCouple.node as LinkedNode<Person>,
-                              node as LinkedNode<Person>),
-                        ),
                       ),
                     );
                   },

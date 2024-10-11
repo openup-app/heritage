@@ -31,7 +31,6 @@ class Debouncer {
 
   /// Stops the pending callback being fired, if any.
   void cancel() {
-    print('Cancel');
     _delayTimer?.cancel();
     _savedCallback = null;
   }

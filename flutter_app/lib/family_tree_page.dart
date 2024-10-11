@@ -2,7 +2,6 @@ import 'dart:math';
 import 'dart:ui' as ui;
 
 import 'package:collection/collection.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -162,30 +161,80 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
             }
 
             if (newId != null) {
-              setState(() {
-                _panelPopupState = PanelPopupStateAddConnection(
-                  newConnectionId: newId,
-                  relationship: relationship,
-                );
+              // Wait for node to be added to graph
+              WidgetsBinding.instance.endOfFrame.then((_) {
+                if (!mounted) {
+                  return;
+                }
+                final focalNode = _familyTreeViewKey.currentState
+                    ?.linkedNodeForId(graph.focalPerson.id);
+                final targetNode =
+                    _familyTreeViewKey.currentState?.linkedNodeForId(newId);
+                if (focalNode == null || targetNode == null) {
+                  return;
+                }
+
+                _familyTreeViewKey.currentState
+                    ?.centerOnPersonWithId(selectedPerson.id, animate: false);
+                final linkedNode = targetNode;
+                setState(() {
+                  _selectedPerson = targetNode.data;
+                  _relatedness = Relatedness(
+                    isBloodRelative: linkedNode.isBloodRelative,
+                    isDirectRelativeOrSpouse:
+                        linkedNode.isDirectRelativeOrSpouse,
+                    isAncestor: linkedNode.isAncestor,
+                    isSibling: linkedNode.isSibling,
+                    relativeLevel: linkedNode.relativeLevel,
+                    description: relatednessDescription(
+                      focalNode,
+                      linkedNode,
+                      pov: PointOfView.first,
+                    ),
+                  );
+                  _panelPopupState = PanelPopupStateAddConnection(
+                    targetNode: targetNode,
+                    focalNode: focalNode,
+                    relationship: relationship,
+                  );
+                });
               });
             }
           },
-          onSelectPerson: (id) {
+          onSelectPerson: _selectPerson,
+          onShare: () async {
+            final selectedPerson = _selectedPerson;
+            if (selectedPerson == null) {
+              return;
+            }
             final focalNode = _familyTreeViewKey.currentState
                 ?.linkedNodeForId(graph.focalPerson.id);
-            final linkedNode =
-                _familyTreeViewKey.currentState?.linkedNodeForId(id);
-            if (focalNode != null && linkedNode != null) {
-              final person = linkedNode.data;
-              final relatedness = Relatedness(
-                isBloodRelative: linkedNode.isBloodRelative,
-                isDirectRelativeOrSpouse: linkedNode.isDirectRelativeOrSpouse,
-                isAncestor: linkedNode.isAncestor,
-                isSibling: linkedNode.isSibling,
-                relativeLevel: linkedNode.relativeLevel,
-                description: relatednessDescription(focalNode, linkedNode),
-              );
-              _onProfileSelected(person, relatedness);
+            final targetNode = _familyTreeViewKey.currentState
+                ?.linkedNodeForId(selectedPerson.id);
+            if (focalNode == null || targetNode == null) {
+              return;
+            }
+            await shareInvite(
+              targetId: selectedPerson.id,
+              targetName: targetNode.data.profile.firstName,
+              focalName: focalNode.data.profile.firstName,
+            );
+            if (mounted) {
+              _onDismissSelected();
+            }
+          },
+          onTakeOwnership: () async {
+            final selectedPerson = _selectedPerson;
+            final relatedness = _relatedness;
+            if (selectedPerson != null && relatedness != null) {
+              final ownershipFuture = ref
+                  .read(graphProvider.notifier)
+                  .takeOwnership(selectedPerson.id);
+              await showBlockingModal(context, ownershipFuture);
+              await WidgetsBinding.instance.endOfFrame;
+              if (mounted) {
+                _selectPerson(selectedPerson.id);
+              }
             }
           },
           onViewPerspective: () {
@@ -230,29 +279,76 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
     );
   }
 
+  void _selectPerson(Id id) {
+    final graph = ref.read(graphProvider);
+    final focalNode =
+        _familyTreeViewKey.currentState?.linkedNodeForId(graph.focalPerson.id);
+    final linkedNode = _familyTreeViewKey.currentState?.linkedNodeForId(id);
+    if (focalNode == null || linkedNode == null) {
+      return;
+    }
+    final person = linkedNode.data;
+    final relatedness = Relatedness(
+      isBloodRelative: linkedNode.isBloodRelative,
+      isDirectRelativeOrSpouse: linkedNode.isDirectRelativeOrSpouse,
+      isAncestor: linkedNode.isAncestor,
+      isSibling: linkedNode.isSibling,
+      relativeLevel: linkedNode.relativeLevel,
+      description: relatednessDescription(
+        focalNode,
+        linkedNode,
+        pov: PointOfView.first,
+      ),
+    );
+    _onProfileSelected(person, relatedness);
+  }
+
   void _onProfileSelected(Person person, Relatedness relatedness) {
-    // Don'000t open profiles that are in the middle of saving
+    // Don't open profiles that are in the middle of saving
     if (_savingNotifier.value == person.id) {
       return;
     }
 
     _familyTreeViewKey.currentState?.centerOnPersonWithId(person.id);
-    setState(() {
-      _selectedPerson = person;
-      _relatedness = relatedness;
-      if (person.ownedBy == null) {
-        _panelPopupState = PanelPopupStateWaitingForApproval(
-            person: person, relatedness: relatedness);
-      } else {
+
+    final graph = ref.read(graphProvider);
+    final focalNode =
+        _familyTreeViewKey.currentState?.linkedNodeForId(graph.focalPerson.id);
+    final targetNode =
+        _familyTreeViewKey.currentState?.linkedNodeForId(person.id);
+
+    if (person.ownedBy == null) {
+      if (focalNode == null || targetNode == null) {
+        return;
+      }
+      setState(() {
+        _selectedPerson = person;
+        _relatedness = relatedness;
+        _panelPopupState = PanelPopupStatePendingProfile(
+            targetNode: targetNode,
+            focalNode: focalNode,
+            relatedness: relatedness);
+      });
+    } else {
+      setState(() {
+        _selectedPerson = person;
+        _relatedness = relatedness;
         _panelPopupState =
             PanelPopupStateProfile(person: person, relatedness: relatedness);
-      }
-    });
+      });
+    }
   }
 
   void _onDismissSelected() {
     // Force any pending auto save
     _debouncer.flush();
+
+    final selectedPerson = _selectedPerson;
+    if (selectedPerson != null) {
+      if (selectedPerson.ownedBy == null) {
+        // TODO: Maybe delete here
+      }
+    }
 
     setState(() {
       _panelPopupState = const PanelPopupStateNone();
@@ -416,7 +512,7 @@ class FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
                         ],
                       );
                     },
-                    nodeBuilder: (context, data, node, key, relatedness) {
+                    nodeBuilder: (context, data, node, key) {
                       final isGhost =
                           widget.viewHistory.perspectiveUserId != null &&
                               data.ownedBy == null;
@@ -427,7 +523,7 @@ class FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
                         id: data.id,
                         primaryUserId: widget.viewHistory.primaryUserId,
                         focalPersonId: widget.focalPerson.id,
-                        isSibling: relatedness.isSibling,
+                        isSibling: node.isSibling,
                         isOwned: data.ownedBy != null,
                       );
                       return HoverableNodeProfile(
@@ -445,8 +541,33 @@ class FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
                               child: GestureDetector(
                                 onTap: !enabled
                                     ? null
-                                    : () => widget.onProfileSelected(
-                                        data, relatedness),
+                                    : () {
+                                        final focalNode = _graphKey.currentState
+                                            ?.linkedNodeForId(
+                                                widget.focalPerson.id);
+                                        if (focalNode == null) {
+                                          return;
+                                        }
+                                        final relatedness = Relatedness(
+                                          isBloodRelative: node.isBloodRelative,
+                                          isDirectRelativeOrSpouse:
+                                              node.isDirectRelativeOrSpouse,
+                                          isAncestor: node.isAncestor,
+                                          isSibling: node.isSibling,
+                                          relativeLevel: node.relativeLevel,
+                                          description: relatednessDescription(
+                                            focalNode,
+                                            node,
+                                            pov: widget.viewHistory
+                                                        .perspectiveUserId ==
+                                                    null
+                                                ? PointOfView.first
+                                                : PointOfView.third,
+                                          ),
+                                        );
+                                        widget.onProfileSelected(
+                                            data, relatedness);
+                                      },
                                 child: NodeProfile(
                                   person: data,
                                   showViewPerspective: canViewPerspectiveBool,
@@ -676,119 +797,6 @@ class _TilePainter extends CustomPainter {
       !tile.isCloneOf(oldDelegate.tile) ||
       transform != oldDelegate.transform ||
       oldDelegate.tint != tint;
-}
-
-class AddConnectionDisplay extends ConsumerStatefulWidget {
-  final Relationship relationship;
-  final void Function(
-          String firstName, String lastName, Gender gender, bool takeOwnership)
-      onSaveAndShareOrTakeOwnership;
-
-  const AddConnectionDisplay({
-    super.key,
-    required this.relationship,
-    required this.onSaveAndShareOrTakeOwnership,
-  });
-
-  @override
-  ConsumerState<AddConnectionDisplay> createState() =>
-      _AddConnectionDisplayState();
-}
-
-class _AddConnectionDisplayState extends ConsumerState<AddConnectionDisplay> {
-  String _firstName = '';
-  String _lastName = '';
-  Gender _gender = Gender.male;
-
-  @override
-  Widget build(BuildContext context) {
-    final canSubmit = _firstName.isNotEmpty && _lastName.isNotEmpty;
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      mainAxisAlignment: MainAxisAlignment.center,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Add\na ${widget.relationship.name}',
-          style: const TextStyle(
-            fontSize: 48,
-            fontWeight: FontWeight.w800,
-            color: Color.fromRGBO(0x3C, 0x3C, 0x3C, 1.0),
-          ),
-        ),
-        const SizedBox(height: 16),
-        MinimalProfileEditor(
-          onUpdate: (firstName, lastName) {
-            setState(() {
-              _firstName = firstName;
-              _lastName = lastName;
-            });
-          },
-        ),
-        const SizedBox(height: 24),
-        Text(
-          'Share with $_firstName only, so they can verify their profile and join the tree',
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          style: Theme.of(context)
-              .textTheme
-              .bodyMedium
-              ?.copyWith(color: const Color.fromRGBO(0x51, 0x51, 0x51, 1.0)),
-        ),
-        const SizedBox(height: 8),
-        ShareLinkButton(
-          firstName: _firstName,
-          onPressed: !canSubmit ? null : () => _done(takeOwnership: false),
-        ),
-        const SizedBox(height: 16),
-        Center(
-          child: TextButton(
-            onPressed: !canSubmit
-                ? null
-                : () async {
-                    final takeOwnership = await showDialog(
-                      context: context,
-                      builder: (context) {
-                        return AlertDialog(
-                          title: const Text('Manage Profile?'),
-                          content: const Text(
-                              '\nCompleting someone else\'s profile should only be done if they can\'t do it themself.\n\nExample: child, disabled, or deceased'),
-                          actions: [
-                            TextButton(
-                              onPressed: Navigator.of(context).pop,
-                              style: TextButton.styleFrom(
-                                  foregroundColor: Colors.black),
-                              child: const Text('Cancel'),
-                            ),
-                            TextButton(
-                              onPressed: () => Navigator.of(context).pop(true),
-                              child: const Text('Proceed'),
-                            ),
-                          ],
-                        );
-                      },
-                    );
-                    if (mounted && takeOwnership == true) {
-                      _done(takeOwnership: true);
-                    }
-                  },
-            style: TextButton.styleFrom(
-              foregroundColor: const Color.fromRGBO(0xFF, 0x47, 0x47, 1.0),
-            ),
-            child: const Text('Child, disabled or deceased?'),
-          ),
-        ),
-      ],
-    );
-  }
-
-  void _done({required bool takeOwnership}) {
-    if (_firstName.isEmpty || _lastName.isEmpty) {
-      return;
-    }
-    widget.onSaveAndShareOrTakeOwnership(
-        _firstName, _lastName, _gender, takeOwnership);
-  }
 }
 
 class CreateRootDisplay extends ConsumerStatefulWidget {
@@ -1062,7 +1070,7 @@ class _EdgePainter extends CustomPainter {
       final relatedness = relatednessDescription(
         focalPerson!,
         node,
-        useFocalName: !isPrimaryPerson,
+        pov: isPrimaryPerson ? PointOfView.first : PointOfView.third,
       );
       _paintText(
         canvas: canvas,

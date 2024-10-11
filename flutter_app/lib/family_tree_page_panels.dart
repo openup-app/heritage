@@ -9,7 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:heritage/api.dart';
 import 'package:heritage/date.dart';
-import 'package:heritage/family_tree_page.dart';
+import 'package:heritage/graph.dart';
 import 'package:heritage/graph_provider.dart';
 import 'package:heritage/graph_view.dart';
 import 'package:heritage/help.dart';
@@ -31,6 +31,8 @@ class Panels extends ConsumerStatefulWidget {
   final VoidCallback onDismissPanelPopup;
   final void Function(Relationship relationship) onAddConnectionPressed;
   final void Function(Id id) onSelectPerson;
+  final VoidCallback? onShare;
+  final VoidCallback? onTakeOwnership;
   final VoidCallback onViewPerspective;
   final void Function(Rect rect) onViewRectUpdated;
   final VoidCallback onRecenter;
@@ -46,6 +48,8 @@ class Panels extends ConsumerStatefulWidget {
     required this.onDismissPanelPopup,
     required this.onAddConnectionPressed,
     required this.onSelectPerson,
+    required this.onShare,
+    required this.onTakeOwnership,
     required this.onViewPerspective,
     required this.onViewRectUpdated,
     required this.onRecenter,
@@ -60,6 +64,7 @@ class _PanelsState extends ConsumerState<Panels> {
   bool _hadInitialLayout = false;
   late LayoutType _layout;
   final _modalKey = GlobalKey();
+  final _modalKey2 = GlobalKey();
 
   @override
   void didChangeDependencies() {
@@ -288,45 +293,46 @@ class _PanelsState extends ConsumerState<Panels> {
                         ),
                       ),
                     PanelPopupStateAddConnection(
-                      :final newConnectionId,
+                      :final targetNode,
+                      :final focalNode,
                       :final relationship
                     ) =>
                       _SidePanelContainer(
                         key: Key('connection_${relationship.name}'),
                         child: AddConnectionDisplay(
+                          targetNode: targetNode,
+                          focalNode: focalNode,
                           relationship: relationship,
-                          onSaveAndShareOrTakeOwnership: (firstName, lastName,
-                              gender, takeOwnership) async {
-                            await _onSaveAndShareOrTakeOwnership(
-                                newConnectionId,
-                                firstName,
-                                lastName,
-                                takeOwnership);
-                            if (mounted) {
-                              widget.onDismissPanelPopup();
-                            }
-                          },
+                          onShare: widget.onShare,
+                          onTakeOwnership: widget.onTakeOwnership,
                         ),
                       ),
-                    PanelPopupStateWaitingForApproval(:final person) =>
+                    PanelPopupStatePendingProfile(
+                      :final targetNode,
+                      :final focalNode
+                    ) =>
                       _SidePanelContainer(
-                        key: Key('approval_${person.id}'),
-                        child: WaitingForApprovalDisplay(
-                          person: person,
-                          onAddConnectionPressed: null,
-                          onSaveAndShare: (firstName, lastName) async {
-                            await _onSaveAndShareOrTakeOwnership(
-                                person.id, firstName, lastName, false);
+                        key: Key('approval_${targetNode.id}'),
+                        child: PendingProfiledDisplay(
+                          targetNode: targetNode,
+                          focalNode: focalNode,
+                          onShare: () async {
+                            await shareInvite(
+                              targetId: targetNode.id,
+                              targetName: targetNode.data.profile.firstName,
+                              focalName: focalNode.data.profile.firstName,
+                            );
                             if (mounted) {
                               widget.onDismissPanelPopup();
                             }
                           },
-                          onTakeOwnership: _takeOwnership,
-                          onDeletePressed: !canDeletePerson(person)
+                          onTakeOwnership: widget.onTakeOwnership,
+                          onAddConnectionPressed: null,
+                          onDeletePressed: !canDeletePerson(targetNode.data)
                               ? null
                               : () {
                                   widget.onDismissPanelPopup();
-                                  _onDelete(person);
+                                  _onDelete(targetNode.data);
                                 },
                         ),
                       ),
@@ -392,6 +398,10 @@ class _PanelsState extends ConsumerState<Panels> {
         if (context != null) {
           Navigator.of(context).pop();
         }
+        final context2 = _modalKey2.currentContext;
+        if (context2 != null) {
+          Navigator.of(context2).pop();
+        }
     }
   }
 
@@ -423,86 +433,53 @@ class _PanelsState extends ConsumerState<Panels> {
       case LayoutType.small:
         switch (widget.panelPopupState) {
           case PanelPopupStateNone():
-            // TODO: Possibly declaratively dismiss popup
+            // Ignore
             break;
           case PanelPopupStateProfile():
             // Displayed in build() by bottom panel
             break;
           case PanelPopupStateAddConnection(
-              :final newConnectionId,
+              :final targetNode,
+              :final focalNode,
               :final relationship
             ):
             WidgetsBinding.instance.endOfFrame.then((_) {
               if (mounted) {
-                _showAddConnectionModal(newConnectionId, relationship);
+                _showAddConnectionModal(targetNode, focalNode, relationship);
               }
             });
-          case PanelPopupStateWaitingForApproval(
-              :final person,
+          case PanelPopupStatePendingProfile(
+              :final targetNode,
+              :final focalNode,
               :final relatedness
             ):
-            final owned = person.ownedBy != null;
+            final owned = targetNode.data.ownedBy != null;
             if (owned) {
               return;
             }
             WidgetsBinding.instance.endOfFrame.then((_) {
               if (mounted) {
-                _showOwnershipModal(
-                    person: person,
+                _showPendingProfileModal(
+                    targetNode: targetNode,
+                    focalNode: focalNode,
                     onAddConnectionPressed: !canAddRelative(
                             relatedness.isBloodRelative,
                             widget.viewHistory.perspectiveUserId != null)
                         ? null
-                        : () {
-                            Navigator.of(context).pop();
-                            showModalBottomSheet(
+                        : () async {
+                            await WidgetsBinding.instance.endOfFrame;
+                            if (!mounted) {
+                              return;
+                            }
+                            _showMiniAddConnectionModal(
                               context: context,
-                              shape: const RoundedRectangleBorder(
-                                borderRadius: BorderRadius.only(
-                                  topLeft: Radius.circular(10),
-                                  topRight: Radius.circular(10),
-                                ),
-                              ),
-                              builder: (context) {
-                                return Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Align(
-                                      alignment: Alignment.centerLeft,
-                                      child: Padding(
-                                        padding: const EdgeInsets.all(16.0),
-                                        child: Text(
-                                          person.profile.fullName,
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .titleLarge,
-                                        ),
-                                      ),
-                                    ),
-                                    Padding(
-                                      padding: const EdgeInsets.all(16.0),
-                                      child: buildAddConnectionButtons(
-                                        person: person,
-                                        relatedness: relatedness,
-                                        isPerspectiveMode: widget.viewHistory
-                                                .perspectiveUserId !=
-                                            null,
-                                        paddingWidth: 16,
-                                        onAddConnectionPressed: (relationship) {
-                                          Navigator.of(context).pop();
-                                          widget.onAddConnectionPressed(
-                                              relationship);
-                                        },
-                                      ),
-                                    ),
-                                  ],
-                                );
-                              },
+                              selectedPerson: targetNode.data,
+                              relatedness: relatedness,
                             );
                           },
-                    onDeletePressed: !canDeletePerson(person)
+                    onDeletePressed: !canDeletePerson(targetNode.data)
                         ? null
-                        : () => _onDelete(person));
+                        : () => _onDelete(targetNode.data));
               }
             });
         }
@@ -517,126 +494,135 @@ class _PanelsState extends ConsumerState<Panels> {
     }
   }
 
-  void _showOwnershipModal({
-    required Person person,
+  void _showAddConnectionModal(LinkedNode<Person> targetNode,
+      LinkedNode<Person> focalNode, Relationship relationship) async {
+    final poppedManually = await showModalBottomSheetWithDragHandle<bool>(
+      context: context,
+      builder: (context) {
+        final onShare = widget.onShare;
+        final onTakeOwnership = widget.onTakeOwnership;
+        return AddConnectionDisplay(
+          key: _modalKey,
+          targetNode: targetNode,
+          focalNode: focalNode,
+          relationship: relationship,
+          onShare: onShare == null
+              ? null
+              : () {
+                  Navigator.of(context).pop(true);
+                  onShare();
+                },
+          onTakeOwnership: onTakeOwnership == null
+              ? null
+              : () {
+                  Navigator.of(context).pop(true);
+                  onTakeOwnership();
+                },
+        );
+      },
+    );
+    if (mounted && poppedManually != true) {
+      // Panel dismissed, no one knows, so inform this means deselect user
+      widget.onDismissPanelPopup();
+    }
+  }
+
+  void _showPendingProfileModal({
+    required LinkedNode<Person> targetNode,
+    required LinkedNode<Person> focalNode,
     required VoidCallback? onAddConnectionPressed,
     required VoidCallback? onDeletePressed,
   }) async {
-    final shouldDismiss = await showScrollableModalBottomSheet<bool>(
+    final poppedManually = await showModalBottomSheetWithDragHandle<bool>(
       context: context,
       builder: (context) {
-        return WaitingForApprovalDisplay(
+        final onShare = widget.onShare;
+        final onTakeOwnership = widget.onTakeOwnership;
+        return PendingProfiledDisplay(
           key: _modalKey,
-          person: person,
-          onAddConnectionPressed: onAddConnectionPressed,
-          onSaveAndShare: (firstName, lastName) async {
-            await _onSaveAndShareOrTakeOwnership(
-                person.id, firstName, lastName, false);
-            if (context.mounted) {
-              Navigator.of(context).pop(true);
-            }
-          },
-          onTakeOwnership: () {
-            Navigator.of(context).pop();
-            _takeOwnership();
-          },
+          targetNode: targetNode,
+          focalNode: focalNode,
+          onShare: onShare == null
+              ? null
+              : () {
+                  Navigator.of(context).pop(true);
+                  onShare();
+                },
+          onTakeOwnership: onTakeOwnership == null
+              ? null
+              : () {
+                  Navigator.of(context).pop(true);
+                  onTakeOwnership();
+                },
+          onAddConnectionPressed: onAddConnectionPressed == null
+              ? null
+              : () {
+                  Navigator.of(context).pop(true);
+                  onAddConnectionPressed();
+                },
           onDeletePressed: onDeletePressed == null
               ? null
               : () {
-                  Navigator.of(context).pop();
+                  Navigator.of(context).pop(true);
                   onDeletePressed();
                 },
         );
       },
     );
-    if (mounted && shouldDismiss == true) {
+    if (mounted && poppedManually != true) {
+      // Panel dismissed, no one knows, so inform this means deselect user
       widget.onDismissPanelPopup();
     }
   }
 
-  void _showAddConnectionModal(
-      Id newConnectionId, Relationship relationship) async {
-    final shouldDismiss = await showScrollableModalBottomSheet<bool>(
+  void _showMiniAddConnectionModal({
+    required BuildContext context,
+    required Person selectedPerson,
+    required Relatedness relatedness,
+  }) async {
+    final poppedManually = await showModalBottomSheet<bool>(
       context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(10),
+          topRight: Radius.circular(10),
+        ),
+      ),
       builder: (context) {
-        return AddConnectionDisplay(
-          relationship: relationship,
-          onSaveAndShareOrTakeOwnership:
-              (firstName, lastName, gender, takeOwnership) async {
-            await _onSaveAndShareOrTakeOwnership(
-                newConnectionId, firstName, lastName, takeOwnership);
-            if (context.mounted) {
-              Navigator.of(context).pop(true);
-            }
-          },
+        return Column(
+          key: _modalKey2,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Text(
+                  selectedPerson.profile.fullName,
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: buildAddConnectionButtons(
+                person: selectedPerson,
+                relatedness: relatedness,
+                isPerspectiveMode: widget.viewHistory.perspectiveUserId != null,
+                paddingWidth: 16,
+                onAddConnectionPressed: (relationship) {
+                  Navigator.of(context).pop(true);
+                  widget.onAddConnectionPressed(relationship);
+                },
+              ),
+            ),
+          ],
         );
       },
     );
-    if (mounted && shouldDismiss == true) {
+    if (mounted && poppedManually != true) {
+      // Panel dismissed, no one knows, so inform this means deselect user
       widget.onDismissPanelPopup();
-    }
-  }
-
-  Future<void> _onSaveAndShareOrTakeOwnership(
-    Id id,
-    String firstName,
-    String lastName,
-    bool takeOwnership,
-  ) async {
-    final graph = ref.read(graphProvider);
-    final person = graph.people[id];
-    if (person == null) {
-      return;
-    }
-    if (person.profile.firstName != firstName ||
-        person.profile.lastName != lastName) {
-      final graphNotifier = ref.read(graphProvider.notifier);
-      final updateFuture = graphNotifier.updateProfile(
-        id,
-        person.profile.copyWith(
-          firstName: firstName,
-          lastName: lastName,
-        ),
-      );
-      // Unawaited because share needs "transient activation"
-      final blockingModalFuture =
-          showBlockingModal(context, updateFuture).then((_) async {
-        if (mounted && takeOwnership) {
-          await graphNotifier.takeOwnership(id);
-        }
-        if (mounted) {
-          showProfileUpdateSuccess(context: context);
-        }
-      });
-
-      if (takeOwnership) {
-        // Can await here because we won't show share shet
-        await blockingModalFuture;
-      }
-    }
-
-    if (!takeOwnership) {
-      final focalPerson = ref.read(graphProvider).focalPerson;
-      final type = await shareInvite(
-        targetId: id,
-        targetName: firstName,
-        senderName: focalPerson.profile.firstName,
-      );
-    }
-  }
-
-  void _takeOwnership() async {
-    final selectedPerson = widget.selectedPerson;
-    final relatedness = widget.relatedness;
-    if (selectedPerson != null && relatedness != null) {
-      final ownershipFuture =
-          ref.read(graphProvider.notifier).takeOwnership(selectedPerson.id);
-      await showBlockingModal(context, ownershipFuture);
-      // Wait for graph to update
-      await WidgetsBinding.instance.endOfFrame;
-      if (mounted) {
-        widget.onSelectPerson(selectedPerson.id);
-      }
     }
   }
 
@@ -658,7 +644,7 @@ class _PanelsState extends ConsumerState<Panels> {
     shareInvite(
       targetId: person.id,
       targetName: person.profile.firstName,
-      senderName: focalPerson.profile.firstName,
+      focalName: focalPerson.profile.firstName,
     );
   }
 
@@ -674,7 +660,7 @@ class _PanelsState extends ConsumerState<Panels> {
   }
 }
 
-Future<T?> showScrollableModalBottomSheet<T>({
+Future<T?> showModalBottomSheetWithDragHandle<T>({
   required BuildContext context,
   required WidgetBuilder builder,
 }) {
@@ -1959,111 +1945,109 @@ class InputLabel extends StatelessWidget {
   }
 }
 
-class WaitingForApprovalDisplay extends StatefulWidget {
-  final Person person;
+class AddConnectionDisplay extends ConsumerStatefulWidget {
+  final LinkedNode<Person> targetNode;
+  final LinkedNode<Person> focalNode;
+  final Relationship relationship;
+  final VoidCallback? onShare;
+  final VoidCallback? onTakeOwnership;
+
+  const AddConnectionDisplay({
+    super.key,
+    required this.targetNode,
+    required this.focalNode,
+    required this.relationship,
+    required this.onShare,
+    required this.onTakeOwnership,
+  });
+
+  @override
+  ConsumerState<AddConnectionDisplay> createState() =>
+      _AddConnectionDisplayState();
+}
+
+class _AddConnectionDisplayState extends ConsumerState<AddConnectionDisplay> {
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        ShareButton(
+          sourceFirstName: widget.focalNode.data.profile.firstName,
+          relatednessDescription: relatednessDescription(
+            widget.focalNode,
+            widget.targetNode,
+            pov: PointOfView.first,
+          ),
+          onPressed: widget.onShare,
+        ),
+        const SizedBox(height: 16),
+        TakeOwnershipButton(
+          onPressed: widget.onTakeOwnership,
+        ),
+      ],
+    );
+  }
+}
+
+class PendingProfiledDisplay extends StatefulWidget {
+  final LinkedNode<Person> targetNode;
+  final LinkedNode<Person> focalNode;
+  final VoidCallback? onShare;
+  final VoidCallback? onTakeOwnership;
   final VoidCallback? onAddConnectionPressed;
-  final void Function(String firstName, String lastName) onSaveAndShare;
-  final VoidCallback onTakeOwnership;
   final VoidCallback? onDeletePressed;
 
-  const WaitingForApprovalDisplay({
+  const PendingProfiledDisplay({
     super.key,
-    required this.person,
-    required this.onAddConnectionPressed,
-    required this.onSaveAndShare,
+    required this.targetNode,
+    required this.focalNode,
+    required this.onShare,
     required this.onTakeOwnership,
+    required this.onAddConnectionPressed,
     required this.onDeletePressed,
   });
 
   @override
-  State<WaitingForApprovalDisplay> createState() =>
-      _WaitingForApprovalDisplayState();
+  State<PendingProfiledDisplay> createState() => _PendingProfiledDisplayState();
 }
 
-class _WaitingForApprovalDisplayState extends State<WaitingForApprovalDisplay> {
-  late String _firstName = widget.person.profile.firstName;
-  late String _lastName = widget.person.profile.lastName;
-
+class _PendingProfiledDisplayState extends State<PendingProfiledDisplay> {
   @override
   Widget build(BuildContext context) {
     return Stack(
       children: [
         Column(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(
-              'Invite\n$_firstName',
+            const Text(
+              'Pending\nprofile',
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 48,
                 fontWeight: FontWeight.w800,
                 color: Color.fromRGBO(0x3C, 0x3C, 0x3C, 1.0),
               ),
             ),
-            const SizedBox(height: 24),
-            MinimalProfileEditor(
-              initialFirstName: widget.person.profile.firstName,
-              initialLastName: widget.person.profile.lastName,
-              onUpdate: (firstName, lastName) {
-                setState(() {
-                  _firstName = firstName;
-                  _lastName = lastName;
-                });
-              },
-            ),
-            const SizedBox(height: 24),
-            Text(
-              'Share with $_firstName only, so they can verify their profile and join the tree',
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: const Color.fromRGBO(0x51, 0x51, 0x51, 1.0)),
-            ),
-            const SizedBox(height: 8),
-            ShareLinkButton(
-              firstName: _firstName,
-              onPressed: () => widget.onSaveAndShare(_firstName, _lastName),
+            const SizedBox(height: 16),
+            const Text('Waiting on them to join and add their details'),
+            const SizedBox(height: 16),
+            ShareButton(
+              sourceFirstName: widget.focalNode.data.profile.firstName,
+              relatednessDescription: relatednessDescription(
+                widget.focalNode,
+                widget.targetNode,
+                pov: PointOfView.first,
+              ),
+              repeatedShare: true,
+              onPressed: widget.onShare,
             ),
             const SizedBox(height: 16),
-            Center(
-              child: TextButton(
-                onPressed: (_firstName.isEmpty || _lastName.isEmpty)
-                    ? null
-                    : () async {
-                        final takeOwnership = await showDialog(
-                          context: context,
-                          builder: (context) {
-                            return AlertDialog(
-                              title: const Text('Manage Profile?'),
-                              content: const Text(
-                                  '\nCompleting someone else\'s profile should only be done if they can\'t do it themself.\n\nExample: child, disabled, or deceased'),
-                              actions: [
-                                TextButton(
-                                  onPressed: Navigator.of(context).pop,
-                                  style: TextButton.styleFrom(
-                                      foregroundColor: Colors.black),
-                                  child: const Text('Cancel'),
-                                ),
-                                TextButton(
-                                  onPressed: () =>
-                                      Navigator.of(context).pop(true),
-                                  child: const Text('Proceed'),
-                                ),
-                              ],
-                            );
-                          },
-                        );
-                        if (takeOwnership == true) {
-                          widget.onTakeOwnership();
-                        }
-                      },
-                style: TextButton.styleFrom(
-                  foregroundColor: const Color.fromRGBO(0xFF, 0x47, 0x47, 1.0),
-                ),
-                child: const Text('Child, disabled or deceased?'),
-              ),
+            TakeOwnershipButton(
+              onPressed: widget.onTakeOwnership,
             ),
             const SizedBox(height: 16),
           ],
@@ -2084,7 +2068,7 @@ class _WaitingForApprovalDisplayState extends State<WaitingForApprovalDisplay> {
                     PopupMenuItem(
                       onTap: _onDeletePressed,
                       child: const Text(
-                        'Delete relative',
+                        'Delete profile',
                         style: TextStyle(
                           color: Color.fromRGBO(0xFF, 0x00, 0x00, 1.0),
                         ),
@@ -2125,6 +2109,104 @@ class _WaitingForApprovalDisplayState extends State<WaitingForApprovalDisplay> {
     );
     if (mounted && delete == true) {
       widget.onDeletePressed?.call();
+    }
+  }
+}
+
+class ShareButton extends StatelessWidget {
+  final String? sourceFirstName;
+  final String relatednessDescription;
+  final bool repeatedShare;
+  final VoidCallback? onPressed;
+
+  const ShareButton({
+    super.key,
+    required this.sourceFirstName,
+    required this.relatednessDescription,
+    this.repeatedShare = false,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return FilledButton(
+      onPressed: onPressed,
+      style: FilledButton.styleFrom(
+        foregroundColor: Colors.white,
+        backgroundColor: primaryColor,
+        fixedSize: const Size.fromHeight(64),
+      ),
+      child: Stack(
+        children: [
+          const Align(
+            alignment: Alignment.centerLeft,
+            child: Padding(
+              padding: EdgeInsets.only(left: 25),
+              child: Icon(CupertinoIcons.share),
+            ),
+          ),
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 54.0),
+              child: Text(
+                !repeatedShare
+                    ? 'Invite $relatednessDescription\nto complete their profile'
+                    : 'Share link again',
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class TakeOwnershipButton extends StatelessWidget {
+  final VoidCallback? onPressed;
+
+  const TakeOwnershipButton({
+    super.key,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return OutlinedButton(
+      onPressed: () => _onPressed(context),
+      style: OutlinedButton.styleFrom(
+        fixedSize: const Size.fromHeight(64),
+      ),
+      child: const Text('I will finish their profile'),
+    );
+  }
+
+  void _onPressed(BuildContext context) async {
+    final takeOwnership = await showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Manage Profile?'),
+          content: const Text(
+              'Finishing someone else\'s profile should only be done if they can\'t do it themself.\n\nExample: child, disabled, or deceased'),
+          actions: [
+            TextButton(
+              onPressed: Navigator.of(context).pop,
+              style: TextButton.styleFrom(foregroundColor: Colors.black),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Proceed'),
+            ),
+          ],
+        );
+      },
+    );
+    if (context.mounted && takeOwnership == true) {
+      onPressed?.call();
     }
   }
 }
@@ -2180,41 +2262,48 @@ class PanelPopupStateProfile implements PanelPopupState {
 }
 
 class PanelPopupStateAddConnection implements PanelPopupState {
-  final Id newConnectionId;
+  final LinkedNode<Person> targetNode;
+  final LinkedNode<Person> focalNode;
   final Relationship relationship;
 
   PanelPopupStateAddConnection({
-    required this.newConnectionId,
+    required this.targetNode,
+    required this.focalNode,
     required this.relationship,
   });
 
   @override
-  int get hashCode => Object.hash(newConnectionId, relationship);
+  int get hashCode =>
+      Object.hash(targetNode.data, focalNode.data, relationship);
 
   @override
   bool operator ==(Object other) {
     return other is PanelPopupStateAddConnection &&
-        other.newConnectionId == newConnectionId &&
+        other.targetNode.data == targetNode.data &&
+        other.focalNode.data == focalNode.data &&
         other.relationship == relationship;
   }
 }
 
-class PanelPopupStateWaitingForApproval implements PanelPopupState {
-  final Person person;
+class PanelPopupStatePendingProfile implements PanelPopupState {
+  final LinkedNode<Person> targetNode;
+  final LinkedNode<Person> focalNode;
   final Relatedness relatedness;
 
-  PanelPopupStateWaitingForApproval({
-    required this.person,
+  PanelPopupStatePendingProfile({
+    required this.targetNode,
+    required this.focalNode,
     required this.relatedness,
   });
 
   @override
-  int get hashCode => Object.hash(person, relatedness);
+  int get hashCode => Object.hash(targetNode.data, focalNode.data, relatedness);
 
   @override
   bool operator ==(Object other) {
-    return other is PanelPopupStateWaitingForApproval &&
-        other.person == person &&
+    return other is PanelPopupStatePendingProfile &&
+        other.targetNode.data == targetNode.data &&
+        other.focalNode.data == focalNode.data &&
         other.relatedness == relatedness;
   }
 }

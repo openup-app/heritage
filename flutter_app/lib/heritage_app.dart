@@ -96,6 +96,18 @@ class HeritageApp extends StatelessWidget {
                         ),
                       ),
                     ),
+                    outlinedButtonTheme: OutlinedButtonThemeData(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: primaryColor,
+                        textStyle: subtitleStyle,
+                        padding: EdgeInsets.zero,
+                        shape: const RoundedRectangleBorder(
+                          borderRadius: BorderRadius.all(
+                            Radius.circular(10),
+                          ),
+                        ),
+                      ),
+                    ),
                     textButtonTheme: TextButtonThemeData(
                         style: TextButton.styleFrom(
                       textStyle: subtitleStyle,
@@ -280,7 +292,7 @@ class _RouterBuilderState extends State<_RouterBuilder> {
                       ],
                     );
                   },
-                  nodeBuilder: (context, data, node, key, relatedness) {
+                  nodeBuilder: (context, data, node, key) {
                     return Container(
                       key: key,
                       width: 60,
@@ -288,7 +300,7 @@ class _RouterBuilderState extends State<_RouterBuilder> {
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: relatedness.isAncestor
+                        color: node.isAncestor
                             ? Colors.orange.shade300
                             : Colors.blue.shade300,
                       ),
@@ -299,7 +311,7 @@ class _RouterBuilderState extends State<_RouterBuilder> {
                             data.id,
                             style: const TextStyle(fontSize: 24),
                           ),
-                          if (node.shouldBeRightChild && relatedness.isAncestor)
+                          if (node.shouldBeRightChild && node.isAncestor)
                             const Align(
                               alignment: Alignment.centerRight,
                               child: Text(
@@ -307,8 +319,7 @@ class _RouterBuilderState extends State<_RouterBuilder> {
                                 style: TextStyle(fontSize: 12),
                               ),
                             ),
-                          if (!node.shouldBeRightChild &&
-                              relatedness.isAncestor)
+                          if (!node.shouldBeRightChild && node.isAncestor)
                             const Align(
                               alignment: Alignment.centerLeft,
                               child: Text(
