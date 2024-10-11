@@ -142,20 +142,14 @@ class GraphViewState<T extends GraphNode> extends State<GraphView<T>> {
 
   (Couple<T>, Map<Id, Couple<T>>, List<Couple<T>>) _createCouples(
       Iterable<T> unlinkedNodes, Id focalNodeId) {
-    final linkedNodes = linkNodes(unlinkedNodes);
-    _linkedNodes = linkedNodes;
+    final linkedNodes = buildLinkedTree(unlinkedNodes, focalNodeId);
     final focalNode = linkedNodes[focalNodeId];
     if (focalNode == null) {
       throw 'Missing node with focalNodeId';
     }
-    _organizeAncestorSiblings(focalNode);
-    final (focalCouple, idToCouple) = createCoupleTree(focalNode);
-    markRelatives(focalNode);
-    markDirectRelativesAndSpouses(focalNode);
-    markLevelsAndAncestors(focalNode);
-    markClosetAncestors(focalNode);
 
-    // Maintains the child ordering from `_organizeSides`,
+    _linkedNodes = linkedNodes;
+    final (focalCouple, idToCouple) = createCoupleTree(focalNode);
     final downRoots = focalCouple.parents
         .map((e) => e.parents)
         .expand((e) => e)
@@ -184,39 +178,6 @@ class GraphViewState<T extends GraphNode> extends State<GraphView<T>> {
     }
 
     return (focalCouple, idToCouple, downRoots);
-  }
-
-  void _organizeAncestorSiblings(LinkedNode<T> node) {
-    if (node.parents.isEmpty) {
-      return;
-    }
-    if (node.parents.last < node.parents.first) {
-      node.parents.swap(0, 1);
-    }
-    final leftP = node.parents.first;
-    final rightP = node.parents.last;
-    leftP.shouldBeRightChild = true;
-    rightP.shouldBeRightChild = false;
-
-    final leftGPs = leftP.parents;
-    if (leftGPs.isNotEmpty) {
-      // Move sibling to end of siblings
-      leftGPs.first.children.remove(leftP);
-      leftGPs.first.children.add(leftP);
-      leftGPs.last.children.remove(leftP);
-      leftGPs.last.children.add(leftP);
-    }
-    final rightGPs = rightP.parents;
-    if (rightGPs.isNotEmpty) {
-      // Move sibling to beginning of siblings
-      rightGPs.first.children.remove(rightP);
-      rightGPs.first.children.insert(0, rightP);
-      rightGPs.last.children.remove(rightP);
-      rightGPs.last.children.insert(0, rightP);
-    }
-
-    _organizeAncestorSiblings(leftP);
-    _organizeAncestorSiblings(rightP);
   }
 
   LinkedNode<T>? linkedNodeForId(Id id) => _linkedNodes[id];

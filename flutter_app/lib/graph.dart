@@ -92,6 +92,21 @@ class Couple<T extends GraphNode> {
   }
 }
 
+Map<Id, LinkedNode<T>> buildLinkedTree<T extends GraphNode>(
+    Iterable<T> graphNodes, String focalNodeId) {
+  final linkedNodes = linkNodes(graphNodes);
+  final focalNode = linkedNodes[focalNodeId];
+  if (focalNode == null) {
+    throw 'Missing node with focalNodeId';
+  }
+  organizeAncestorSiblings(focalNode);
+  markRelatives(focalNode);
+  markDirectRelativesAndSpouses(focalNode);
+  markLevelsAndAncestors(focalNode);
+  markClosetAncestors(focalNode);
+  return linkedNodes;
+}
+
 Map<Id, LinkedNode<T>> linkNodes<T extends GraphNode>(
     Iterable<T> unlinkedNodes) {
   final nodes = unlinkedNodes.map((t) => _emptyLinkedNode(t.id, t)).toList();
@@ -176,6 +191,39 @@ void markClosetAncestors<T extends GraphNode>(LinkedNode<T> focalNode) {
       node.ancestorOnLevel = node;
     }
   }
+}
+
+void organizeAncestorSiblings<T extends GraphNode>(LinkedNode<T> node) {
+  if (node.parents.isEmpty) {
+    return;
+  }
+  if (node.parents.last < node.parents.first) {
+    node.parents.swap(0, 1);
+  }
+  final leftP = node.parents.first;
+  final rightP = node.parents.last;
+  leftP.shouldBeRightChild = true;
+  rightP.shouldBeRightChild = false;
+
+  final leftGPs = leftP.parents;
+  if (leftGPs.isNotEmpty) {
+    // Move sibling to end of siblings
+    leftGPs.first.children.remove(leftP);
+    leftGPs.first.children.add(leftP);
+    leftGPs.last.children.remove(leftP);
+    leftGPs.last.children.add(leftP);
+  }
+  final rightGPs = rightP.parents;
+  if (rightGPs.isNotEmpty) {
+    // Move sibling to beginning of siblings
+    rightGPs.first.children.remove(rightP);
+    rightGPs.first.children.insert(0, rightP);
+    rightGPs.last.children.remove(rightP);
+    rightGPs.last.children.insert(0, rightP);
+  }
+
+  organizeAncestorSiblings(leftP);
+  organizeAncestorSiblings(rightP);
 }
 
 void markRelatives<T extends GraphNode>(LinkedNode<T> focalNode) {
