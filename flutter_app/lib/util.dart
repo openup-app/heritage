@@ -247,7 +247,7 @@ String _relatednessDescriptionImpl(
     };
   } else if (target.id == focal.spouse?.id) {
     return switch (pov) {
-      PointOfView.first => 'partner',
+      PointOfView.first => 'my partner',
       PointOfView.second => 'their partner',
       PointOfView.third => '${focal.data.profile.firstName}\'s partner',
     };
@@ -263,7 +263,7 @@ String _relatednessDescriptionImpl(
 
   if (isSibling) {
     return switch (pov) {
-      PointOfView.first => targetGenderedRelationship,
+      PointOfView.first => 'my $targetGenderedRelationship',
       PointOfView.second => 'their $targetGenderedRelationship',
       PointOfView.third =>
         '${focal.data.profile.firstName}\'s $targetGenderedRelationship',
@@ -271,7 +271,7 @@ String _relatednessDescriptionImpl(
   } else if (relativeLevel == 0) {
     if (isBloodRelative) {
       return switch (pov) {
-        PointOfView.first => 'cousin',
+        PointOfView.first => 'my cousin',
         PointOfView.second => 'their cousin',
         PointOfView.third => '${focal.data.profile.firstName}\'s cousin',
       };
@@ -282,7 +282,7 @@ String _relatednessDescriptionImpl(
 
   if (relativeLevel <= 0) {
     final parts = switch (pov) {
-      PointOfView.first => [],
+      PointOfView.first => ['my'],
       PointOfView.second => ['their'],
       PointOfView.third => ['${focal.data.profile.firstName}\'s'],
     };
@@ -338,14 +338,22 @@ String _relatednessDescriptionImpl(
     if (!target.isBloodRelative) {
       final spouse = target.spouses.firstWhereOrNull((e) => e.isBloodRelative);
       if (spouse == null) {
-        return 'relative';
+        return switch (pov) {
+          PointOfView.first => 'my relative',
+          PointOfView.second => 'their relative',
+          PointOfView.third => 'relative',
+        };
       }
       rootNode = spouse;
     }
     while (rootNode.relativeLevel > 0) {
       final parent = rootNode.parents.firstOrNull;
       if (parent == null) {
-        return 'relative';
+        return switch (pov) {
+          PointOfView.first => 'my relative',
+          PointOfView.second => 'their relative',
+          PointOfView.third => 'relative',
+        };
       }
       rootNode = parent;
     }
@@ -356,7 +364,7 @@ String _relatednessDescriptionImpl(
     }
 
     final parts = switch (pov) {
-      PointOfView.first => [],
+      PointOfView.first => ['my'],
       PointOfView.second => ['their'],
       PointOfView.third => ['${rootNode.data.profile.firstName}\'s'],
     };
