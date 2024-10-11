@@ -375,6 +375,7 @@ class _RouterBuilderState extends State<_RouterBuilder> {
                 ],
                 child: FamilyTreeLoadingPage(
                   isPerspectiveMode: isPersectiveMode,
+                  isInvite: referrerId != null,
                   onReady: () {
                     if (!isPersectiveMode) {
                       widget.storage.saveUid(focalPersonId);

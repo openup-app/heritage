@@ -23,6 +23,7 @@ import 'package:path_drawing/path_drawing.dart' as path_drawing;
 
 class FamilyTreeLoadingPage extends ConsumerStatefulWidget {
   final bool isPerspectiveMode;
+  final bool isInvite;
   final VoidCallback onReady;
   final VoidCallback onError;
   final Widget child;
@@ -30,6 +31,7 @@ class FamilyTreeLoadingPage extends ConsumerStatefulWidget {
   const FamilyTreeLoadingPage({
     super.key,
     required this.isPerspectiveMode,
+    required this.isInvite,
     required this.onReady,
     required this.onError,
     required this.child,
@@ -53,10 +55,13 @@ class FamilyTreeLoadingPageState extends ConsumerState<FamilyTreeLoadingPage> {
           WidgetsBinding.instance.endOfFrame.then((_) {
             if (mounted) {
               final focalPerson = ref.read(graphProvider).focalPerson;
-              final isOwnedBySomeoneElse = focalPerson.ownedBy != null &&
+              final isManagedUser = focalPerson.ownedBy != null &&
                   focalPerson.ownedBy != focalPerson.id;
-              // Users owned by another can't login (but can view perspective)
-              if (isOwnedBySomeoneElse && !widget.isPerspectiveMode) {
+              final isLoggingInAsManagedUser =
+                  isManagedUser && !widget.isPerspectiveMode;
+              final isInvitedToOwnedUser =
+                  widget.isInvite && focalPerson.ownedBy != null;
+              if (isLoggingInAsManagedUser || isInvitedToOwnedUser) {
                 widget.onError();
               } else {
                 widget.onReady();
