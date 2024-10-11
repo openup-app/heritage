@@ -14,6 +14,7 @@ import 'package:heritage/graph_provider.dart';
 import 'package:heritage/graph_view.dart';
 import 'package:heritage/heritage_app.dart';
 import 'package:heritage/loading_page.dart';
+import 'package:heritage/onboarding_flow.dart';
 import 'package:heritage/profile_display.dart';
 import 'package:heritage/util.dart';
 import 'package:heritage/zoomable_pannable_viewport.dart';
@@ -93,10 +94,12 @@ class FamilyTreeLoadingPageState extends ConsumerState<FamilyTreeLoadingPage> {
 }
 
 class FamilyTreePage extends ConsumerStatefulWidget {
+  final Id? referrerId;
   final ViewHistory viewHistory;
 
   const FamilyTreePage({
     super.key,
+    this.referrerId,
     required this.viewHistory,
   });
 
@@ -115,6 +118,54 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
   final _debouncer = Debouncer(
     delay: const Duration(seconds: 2),
   );
+
+  @override
+  void initState() {
+    super.initState();
+    _maybeOnboard();
+  }
+
+  void _maybeOnboard() async {
+    await WidgetsBinding.instance.endOfFrame;
+    if (!mounted) {
+      return;
+    }
+
+    final graph = ref.read(graphProvider);
+    final focalPersonId = graph.focalPerson.id;
+    final referrerId = widget.referrerId;
+    if (referrerId == null) {
+      return;
+    }
+    final notifier = ref.read(graphProvider.notifier);
+    final nodes = graph.people.values.toList();
+    final linkedNodes = buildLinkedTree(nodes, referrerId);
+    final focalPerson = linkedNodes[focalPersonId];
+    final referrer = linkedNodes[referrerId];
+    if (focalPerson == null || referrer == null) {
+      return;
+    }
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return Center(
+          child: OnboardingFlow(
+            person: focalPerson,
+            referral: referrer,
+            onSave: (profile) async {
+              await notifier.takeOwnership(focalPersonId);
+              await notifier.updateProfile(focalPerson.id, profile);
+            },
+            onDone: Navigator.of(context).pop,
+          ),
+        );
+      },
+    );
+    if (mounted) {
+      _selectPerson(focalPersonId);
+    }
+  }
 
   @override
   void dispose() {
@@ -218,6 +269,7 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
               targetId: selectedPerson.id,
               targetName: targetNode.data.profile.firstName,
               focalName: focalNode.data.profile.firstName,
+              referrerId: graph.focalPerson.id,
             );
             if (mounted) {
               _onDismissSelected();
@@ -418,9 +470,6 @@ class FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
     WidgetsBinding.instance.endOfFrame.then((_) {
       WidgetsBinding.instance.endOfFrame.then((_) {
         if (mounted) {
-          if (widget.focalPerson.ownedBy == null) {
-            _showOwnershipModal();
-          }
           centerOnPersonWithId(widget.focalPerson.id, animate: false);
           setState(() => _ready = true);
         }
@@ -633,31 +682,6 @@ class FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
 
   LinkedNode<Person>? linkedNodeForId(Id id) =>
       _graphKey.currentState?.linkedNodeForId(id);
-
-  void _showOwnershipModal() async {
-    final tookOwnership = await showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) {
-        return OwnershipDialog(
-          focalPerson: widget.focalPerson,
-        );
-      },
-    );
-    if (!mounted) {
-      return;
-    }
-    if (tookOwnership == true) {
-      ref.read(graphProvider.notifier).takeOwnership(widget.focalPerson.id);
-    } else {
-      context.goNamed(
-        'landing',
-        queryParameters: {
-          'status': 'decline',
-        },
-      );
-    }
-  }
 }
 
 class HoverableNodeProfile extends StatelessWidget {
@@ -919,45 +943,6 @@ class _MinimalProfileEditorState extends State<MinimalProfileEditor> {
           ),
         ),
       ],
-    );
-  }
-}
-
-class OwnershipDialog extends StatelessWidget {
-  final Person focalPerson;
-
-  const OwnershipDialog({
-    super.key,
-    required this.focalPerson,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: Text('Are you ${focalPerson.profile.fullName}?'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: FilledButton.styleFrom(
-              backgroundColor: const Color.fromRGBO(0xEB, 0xEB, 0xEB, 1.0),
-              fixedSize: const Size.fromHeight(48),
-            ),
-            child: const Text('Yes'),
-          ),
-          const SizedBox(height: 16),
-          FilledButton(
-            onPressed: Navigator.of(context).pop,
-            style: FilledButton.styleFrom(
-              backgroundColor: const Color.fromRGBO(0xEB, 0xEB, 0xEB, 1.0),
-              fixedSize: const Size.fromHeight(48),
-            ),
-            child: const Text('No'),
-          ),
-        ],
-      ),
     );
   }
 }

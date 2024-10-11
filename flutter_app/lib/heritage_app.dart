@@ -188,12 +188,23 @@ class _RouterBuilderState extends State<_RouterBuilder> {
   void initState() {
     super.initState();
     String? initialLocation;
+    Id? referrerId;
     ViewHistory? viewHistory;
     final redirectPath = widget.redirectPath;
-    if (redirectPath != null && redirectPath.startsWith('/invite/')) {
-      final focalUserId = redirectPath.substring(8);
+    if (redirectPath != null && redirectPath.startsWith('/login/')) {
+      final focalUserId = redirectPath.substring(7);
       initialLocation = '/view';
       viewHistory = ViewHistory(primaryUserId: focalUserId);
+    } else if (redirectPath != null && redirectPath.startsWith('/invite/')) {
+      final base = redirectPath.substring(8);
+      final tokens = base.split(':');
+      if (tokens case [Id focalUserId, Id referrer]) {
+        initialLocation = '/view';
+        referrerId = referrer;
+        viewHistory = ViewHistory(primaryUserId: focalUserId);
+      } else {
+        initialLocation = '/?status=failure';
+      }
     } else if (redirectPath != null) {
       initialLocation = '/?status=failure';
     }
@@ -201,6 +212,7 @@ class _RouterBuilderState extends State<_RouterBuilder> {
     _router = _initRouter(
       initialLocation: initialLocation,
       initialExtra: viewHistory,
+      referrerId: referrerId,
     );
   }
 
@@ -218,6 +230,7 @@ class _RouterBuilderState extends State<_RouterBuilder> {
   GoRouter _initRouter({
     String? initialLocation,
     Object? initialExtra,
+    Id? referrerId,
   }) {
     return GoRouter(
       debugLogDiagnostics: kDebugMode,
@@ -378,6 +391,7 @@ class _RouterBuilderState extends State<_RouterBuilder> {
                     );
                   },
                   child: FamilyTreePage(
+                    referrerId: referrerId,
                     viewHistory: viewHistory,
                   ),
                 ),

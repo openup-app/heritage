@@ -81,11 +81,26 @@ Future<ShareType> shareInvite({
   required String targetId,
   required String targetName,
   required String focalName,
+  required String referrerId,
 }) async {
   final data = ShareData(
     text:
         '$targetName has been invited by $focalName!\nJoin your family tree now!\n',
-    url: 'https://stitchfam.com/invite/$targetId',
+    url: 'https://stitchfam.com/invite/$targetId:$referrerId',
+  );
+
+  await shareContent(data);
+  return ShareType.share;
+}
+
+Future<ShareType> shareLoginLink({
+  required String targetId,
+  required String targetName,
+}) async {
+  final data = ShareData(
+    text:
+        '$targetName\'s login link for Stitchfam.\nOnly share it with $targetName',
+    url: 'https://stitchfam.com/login/$targetId',
   );
 
   await shareContent(data);

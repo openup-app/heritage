@@ -321,6 +321,7 @@ class _PanelsState extends ConsumerState<Panels> {
                               targetId: targetNode.id,
                               targetName: targetNode.data.profile.firstName,
                               focalName: focalNode.data.profile.firstName,
+                              referrerId: widget.focalPerson.id,
                             );
                             if (mounted) {
                               widget.onDismissPanelPopup();
@@ -639,14 +640,8 @@ class _PanelsState extends ConsumerState<Panels> {
     );
   }
 
-  void _onShareLoginLink(Person person) {
-    final focalPerson = ref.read(graphProvider).focalPerson;
-    shareInvite(
-      targetId: person.id,
-      targetName: person.profile.firstName,
-      focalName: focalPerson.profile.firstName,
-    );
-  }
+  void _onShareLoginLink(Person person) =>
+      shareLoginLink(targetId: person.id, targetName: person.profile.firstName);
 
   void _onDeleteManagedUser(Id id) async {
     final notifier = ref.read(graphProvider.notifier);
