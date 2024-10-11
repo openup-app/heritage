@@ -11,7 +11,7 @@ export class Database {
     this.firestore = getFirestore();
   }
 
-  public async addConnection(sourceId: Id, relationship: Relationship, creatorId: Id): Promise<{ id: Id, people: Person[] } | undefined> {
+  public async addConnection(sourceId: Id, relationship: Relationship, inviteText: string, creatorId: Id): Promise<{ id: Id, people: Person[] } | undefined> {
     return this.firestore.runTransaction(async (t: Transaction) => {
       const sourceRef = this.personRef(sourceId);
       const sourceDoc = await t.get(sourceRef);
@@ -122,6 +122,9 @@ export class Database {
       for (const person of createdPeople) {
         t.create(this.personRef(person.id), person);
       }
+
+      t.create(this.inviteRef(creatorId, newPerson.id), this.newInvite(creatorId, newPerson.id, inviteText));
+
 
       return { id: newPerson.id, people: [...createdPeople, ...updatedPeople] };
     });
@@ -320,6 +323,29 @@ export class Database {
     return personSchema.parse(data);
   }
 
+  public async getInvite(inviteId: string): Promise<string | undefined> {
+    const ref = this.firestore.collection("invites").doc(inviteId);
+    const snapshot = await ref.get();
+    const data = snapshot.data();
+    if (data) {
+      return data.inviteText;
+    }
+    return undefined;
+  }
+
+  public async addInvite(focalNodeId: Id, targetNodeId: Id, inviteText: string): Promise<void> {
+    const inviteRef = this.inviteRef(focalNodeId, targetNodeId);
+    await inviteRef.create(this.newInvite(focalNodeId, targetNodeId, inviteText))
+  }
+
+  private newInvite(focalNodeId: Id, targetNodeId: Id, inviteText: string) {
+    return {
+      createdAt: new Date().toISOString(),
+      focalNodeId: focalNodeId,
+      targetId: targetNodeId,
+      inviteText: inviteText,
+    };
+  }
 
   private newEmptyPerson(gender: Gender, creatorId: Id, firstName?: string): Person {
     return {
@@ -348,6 +374,10 @@ export class Database {
 
   private oppositeGender(gender: Gender): Gender {
     return !gender ? null : (gender === "male" ? "female" : "male")
+  }
+
+  private inviteRef(focalNodeId: Id, targetNodeId: Id): DocumentReference {
+    return this.firestore.collection("invites").doc(`${targetNodeId}:${focalNodeId}`);
   }
 
   private personRef(id: Id): DocumentReference {

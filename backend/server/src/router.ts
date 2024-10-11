@@ -28,7 +28,7 @@ export function router(auth: Auth, database: Database, storage: Storage): Router
     }
 
     try {
-      const result = await database.addConnection(sourceId, body.relationship, creatorId);
+      const result = await database.addConnection(sourceId, body.relationship, body.inviteText, creatorId);
       if (!result) {
         return res.sendStatus(400);
       }
@@ -186,6 +186,33 @@ export function router(auth: Auth, database: Database, storage: Storage): Router
     }
   });
 
+  router.get('/invites/:inviteId', async (req: Request, res: Response) => {
+    const inviteId = req.params.inviteId;
+    try {
+      const inviteText = await database.getInvite(inviteId);
+      if (inviteText) {
+        return res.json({
+          inviteText: inviteText,
+        });
+      }
+      return res.sendStatus(500);
+    } catch (e) {
+      console.log(e);
+      return res.sendStatus(500);
+    }
+  });
+
+  router.post('/invites', async (req: Request, res: Response) => {
+    try {
+      const addInvite = addInviteSchema.parse(req.body);
+      await database.addInvite(addInvite.focalNodeId, addInvite.targetNodeId, addInvite.inviteText);
+      return res.sendStatus(200);
+    } catch (e) {
+      console.log(e);
+      return res.sendStatus(500);
+    }
+  });
+
   return router;
 }
 
@@ -305,6 +332,7 @@ function normalizeFields(fields: formidable.Fields) {
 
 const addConnectionSchema = z.object({
   relationship: relationshipSchema,
+  inviteText: z.string(),
 });
 
 const createRootSchema = z.object({
@@ -328,6 +356,12 @@ const profileUpdateSchema = z.object({
   birthplace: z.string(),
   occupation: z.string(),
   hobbies: z.string(),
+});
+
+const addInviteSchema = z.object({
+  focalNodeId: z.string(),
+  targetNodeId: z.string(),
+  inviteText: z.string(),
 });
 
 type AddConnectionBody = z.infer<typeof addConnectionSchema>;
