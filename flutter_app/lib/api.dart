@@ -209,8 +209,8 @@ class Api {
   }
 
   Future<Either<Error, Null>> addInvite(
-    Id focalNodeId,
-    Id targetNodeId,
+    Id fromId,
+    Id toId,
     String inviteText,
   ) {
     return _makeRequest(
@@ -218,8 +218,8 @@ class Api {
         Uri.parse('$_baseUrl/v1/invites/'),
         headers: _headers,
         body: jsonEncode({
-          'focalNodeId': focalNodeId,
-          'targetNodeId': targetNodeId,
+          'fromId': fromId,
+          'toId': toId,
           'inviteText': inviteText,
         }),
       ),
