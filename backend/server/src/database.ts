@@ -37,7 +37,7 @@ export class Database {
       createdPeople.push(newPerson);
 
       if (relationship == "parent") {
-        const spouse = this.newEmptyPerson(this.oppositeGender(newPerson.profile.gender), creatorId, "Parent");
+        const spouse = this.newEmptyPerson(this.oppositeGender(newPerson.profile.gender), creatorId);
         createdPeople.push(spouse);
 
         spouse.spouses.push(newPerson.id);
@@ -55,8 +55,8 @@ export class Database {
         if (source.parents.length === 0) {
           didCreateParents = true;
 
-          parent1 = this.newEmptyPerson("male", creatorId, "Parent");
-          parent2 = this.newEmptyPerson("female", creatorId, "Parent");
+          parent1 = this.newEmptyPerson("male", creatorId);
+          parent2 = this.newEmptyPerson("female", creatorId);
           createdPeople.push(parent1, parent2);
 
           parent1.spouses.push(parent2.id);
@@ -91,7 +91,7 @@ export class Database {
         var didCreateSpouse = false;
         if (source.spouses.length === 0) {
           didCreateSpouse = true;
-          spouse = this.newEmptyPerson(this.oppositeGender(source.profile.gender), creatorId, "Parent");
+          spouse = this.newEmptyPerson(this.oppositeGender(source.profile.gender), creatorId);
           createdPeople.push(spouse);
 
           spouse.spouses.push(sourceId);
@@ -347,7 +347,7 @@ export class Database {
     };
   }
 
-  private newEmptyPerson(gender: Gender, creatorId: Id, firstName?: string): Person {
+  private newEmptyPerson(gender: Gender, creatorId: Id): Person {
     return {
       "id": shortUUID.generate(),
       "parents": [],
@@ -358,7 +358,7 @@ export class Database {
       "createdAt": new Date().toISOString(),
       "ownedAt": null,
       "profile": {
-        "firstName": firstName ?? "",
+        "firstName": "",
         "lastName": "",
         "gender": gender,
         "photoKey": null,
