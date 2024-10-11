@@ -370,6 +370,9 @@ class _RouterBuilderState extends State<_RouterBuilder> {
             }
 
             final isPersectiveMode = viewHistory.perspectiveUserId != null;
+            final loggedInUser = widget.storage.loadUid();
+            final isInvite =
+                referrerId != null && loggedInUser != focalPersonId;
             return TopLevelTransitionPage(
               key: ValueKey(focalPersonId),
               child: ProviderScope(
@@ -378,7 +381,7 @@ class _RouterBuilderState extends State<_RouterBuilder> {
                 ],
                 child: FamilyTreeLoadingPage(
                   isPerspectiveMode: isPersectiveMode,
-                  isInvite: referrerId != null,
+                  isInvite: isInvite,
                   onReady: () {
                     if (!isPersectiveMode) {
                       widget.storage.saveUid(focalPersonId);

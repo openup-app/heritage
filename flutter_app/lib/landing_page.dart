@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:heritage/family_tree_page_panels.dart';
 import 'package:heritage/storage.dart';
-import 'package:lottie/lottie.dart';
 
 class LandingPage extends StatefulWidget {
   final Storage storage;
@@ -63,22 +62,14 @@ class _LandingPageContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    return const Column(
       children: [
-        const SizedBox(height: 24),
-        Lottie.asset(
-          'assets/images/logo.json',
-          width: 86,
-          height: 86,
-          animate: false,
-        ),
-        const SizedBox(height: 16),
-        const LogoText(
-          width: 230,
-        ),
-        const Spacer(),
-        const _InviteOnlyText(),
-        const SizedBox(height: 24),
+        SizedBox(height: 24),
+        LogoText(width: 230),
+        Spacer(),
+        _InviteOnlyText(),
+        Spacer(),
+        SizedBox(height: 70),
       ],
     );
   }
@@ -97,23 +88,16 @@ class _InvalidLinkContent extends StatelessWidget {
         ),
         SizedBox(height: 40),
         Text(
-          'Invalid Link',
+          'Ask your family\for a login link',
+          textAlign: TextAlign.center,
           style: TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.w700,
             color: Color.fromRGBO(0x00, 0xAE, 0xFF, 1.0),
           ),
         ),
-        SizedBox(height: 4),
-        Text(
-          'Ask your family to resend a link!',
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w400,
-            color: Color.fromRGBO(0x31, 0x31, 0x31, 1.0),
-          ),
-        ),
         Spacer(),
+        SizedBox(height: 24),
         _InviteOnlyText(),
         SizedBox(height: 24),
       ],
