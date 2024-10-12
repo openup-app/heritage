@@ -411,6 +411,13 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
     if (focalPerson == null || referrer == null) {
       return;
     }
+
+    final isPerspectiveMode = widget.viewHistory.perspectiveUserId != null;
+    final needsOnboarding = focalPerson.data.ownedBy == null;
+    if (isPerspectiveMode || !needsOnboarding) {
+      return;
+    }
+
     await showDialog(
       context: context,
       barrierDismissible: false,
