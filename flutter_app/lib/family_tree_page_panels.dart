@@ -1,23 +1,18 @@
 import 'dart:async';
-import 'dart:ui';
 
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:heritage/api.dart';
-import 'package:heritage/date.dart';
 import 'package:heritage/graph.dart';
 import 'package:heritage/graph_provider.dart';
 import 'package:heritage/graph_view.dart';
 import 'package:heritage/help.dart';
 import 'package:heritage/heritage_app.dart';
 import 'package:heritage/layout.dart';
-import 'package:heritage/photo_management.dart';
 import 'package:heritage/profile_display.dart';
-import 'package:heritage/profile_update.dart';
 import 'package:heritage/util.dart';
 
 const _kMinPanelHeight = 200.0;
@@ -1217,6 +1212,133 @@ class _SidePanelContainer extends StatelessWidget {
   }
 }
 
+class AddConnectionButtons extends StatelessWidget {
+  final bool canAddParent;
+  final bool canAddSpouse;
+  final bool canAddChildren;
+  final double paddingWidth;
+  final void Function(Relationship relationship) onAddConnectionPressed;
+
+  const AddConnectionButtons({
+    super.key,
+    required this.canAddParent,
+    required this.canAddSpouse,
+    required this.canAddChildren,
+    required this.paddingWidth,
+    required this.onAddConnectionPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: [
+        _AddConnectionButton(
+          onPressed: canAddParent
+              ? () => onAddConnectionPressed(Relationship.parent)
+              : null,
+          paddingWidth: paddingWidth,
+          icon: SvgPicture.asset(
+            'assets/images/connection_parent.svg',
+            width: 24,
+          ),
+          label: const Text('Parent'),
+        ),
+        SizedBox(width: paddingWidth * 2),
+        _AddConnectionButton(
+          onPressed: () => onAddConnectionPressed(Relationship.sibling),
+          paddingWidth: paddingWidth,
+          icon: SvgPicture.asset(
+            'assets/images/connection_sibling.svg',
+            width: 32,
+          ),
+          label: const Text('Sibling'),
+        ),
+        SizedBox(width: paddingWidth * 2),
+        _AddConnectionButton(
+          onPressed: canAddChildren
+              ? () => onAddConnectionPressed(Relationship.child)
+              : null,
+          paddingWidth: paddingWidth,
+          icon: SvgPicture.asset(
+            'assets/images/connection_child.svg',
+            width: 32,
+          ),
+          label: const Text('Child'),
+        ),
+        SizedBox(width: paddingWidth * 2),
+        _AddConnectionButton(
+          onPressed: canAddSpouse
+              ? () => onAddConnectionPressed(Relationship.spouse)
+              : null,
+          paddingWidth: paddingWidth,
+          icon: SvgPicture.asset(
+            'assets/images/connection_spouse.svg',
+            width: 32,
+          ),
+          label: const Text('Spouse'),
+        ),
+      ],
+    );
+  }
+}
+
+class _AddConnectionButton extends StatelessWidget {
+  final double paddingWidth;
+  final Widget icon;
+  final Widget label;
+  final VoidCallback? onPressed;
+
+  const _AddConnectionButton({
+    super.key,
+    required this.paddingWidth,
+    required this.icon,
+    required this.label,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: onPressed,
+        child: Opacity(
+          opacity: onPressed == null ? 0.4 : 1.0,
+          child: Greyscale(
+            enabled: onPressed == null,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                FilledButton(
+                  onPressed: onPressed,
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size.square(48),
+                    foregroundColor:
+                        const Color.fromRGBO(0x00, 0xAE, 0xFF, 1.0),
+                    backgroundColor:
+                        const Color.fromRGBO(0xEB, 0xEB, 0xEB, 1.0),
+                  ),
+                  child: icon,
+                ),
+                const SizedBox(height: 4),
+                DefaultTextStyle.merge(
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  child: label,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class LogoText extends StatelessWidget {
   final double width;
   const LogoText({
@@ -1318,617 +1440,6 @@ class ProfileNameSection extends StatelessWidget {
                 ],
               ],
             ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class ProfileDisplay extends StatelessWidget {
-  final Profile initialProfile;
-  final bool isPrimaryUser;
-  final bool isEditable;
-  final bool isOwnedByPrimaryUser;
-  final bool hasDifferentOwner;
-  final VoidCallback? onViewPerspective;
-  final VoidCallback? onShareLoginLink;
-  final VoidCallback? onDeleteManagedUser;
-  final void Function(Profile profile) onSaveProfile;
-
-  const ProfileDisplay({
-    super.key,
-    required this.initialProfile,
-    required this.isPrimaryUser,
-    required this.isEditable,
-    required this.isOwnedByPrimaryUser,
-    required this.hasDifferentOwner,
-    required this.onViewPerspective,
-    required this.onShareLoginLink,
-    required this.onDeleteManagedUser,
-    required this.onSaveProfile,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return ProviderScope(
-      overrides: [
-        profileUpdateProvider.overrideWith(
-            (ref) => ProfileUpdateNotifier(initialProfile: initialProfile)),
-      ],
-      child: _ProfileDisplay(
-        isPrimaryUser: isPrimaryUser,
-        isEditable: isEditable,
-        isOwnedByPrimaryUser: isOwnedByPrimaryUser,
-        hasDifferentOwner: hasDifferentOwner,
-        onViewPerspective: onViewPerspective,
-        onShareLoginLink: onShareLoginLink,
-        onDeleteManagedUser: onDeleteManagedUser,
-        onSaveProfile: onSaveProfile,
-      ),
-    );
-  }
-}
-
-class _ProfileDisplay extends ConsumerStatefulWidget {
-  final bool isPrimaryUser;
-  final bool isEditable;
-  final bool isOwnedByPrimaryUser;
-  final bool hasDifferentOwner;
-  final VoidCallback? onViewPerspective;
-  final VoidCallback? onShareLoginLink;
-  final VoidCallback? onDeleteManagedUser;
-  final void Function(Profile profile) onSaveProfile;
-
-  const _ProfileDisplay({
-    super.key,
-    required this.isPrimaryUser,
-    required this.isEditable,
-    required this.isOwnedByPrimaryUser,
-    required this.hasDifferentOwner,
-    required this.onViewPerspective,
-    required this.onShareLoginLink,
-    required this.onDeleteManagedUser,
-    required this.onSaveProfile,
-  });
-
-  @override
-  ConsumerState<_ProfileDisplay> createState() => _ProfileDisplayState();
-}
-
-class _ProfileDisplayState extends ConsumerState<_ProfileDisplay> {
-  late final TextEditingController _firstNameController;
-  late final TextEditingController _lastNameController;
-  late final TextEditingController _birthdayController;
-  late final TextEditingController _deathdayController;
-  late final TextEditingController _birthplaceController;
-  late final TextEditingController _occupationController;
-  late final TextEditingController _hobbiesController;
-
-  @override
-  void initState() {
-    super.initState();
-    final profile = ref.read(profileUpdateProvider);
-    _firstNameController = TextEditingController(text: profile.firstName);
-    _lastNameController = TextEditingController(text: profile.lastName);
-    _birthdayController = TextEditingController();
-    _deathdayController = TextEditingController();
-    _birthplaceController = TextEditingController(text: profile.birthplace);
-    _occupationController = TextEditingController(text: profile.occupation);
-    _hobbiesController = TextEditingController(text: profile.hobbies);
-
-    final birthday = profile.birthday;
-    final deathday = profile.deathday;
-    _birthdayController.text = birthday == null ? '' : formatDate(birthday);
-    _deathdayController.text = deathday == null ? '' : formatDate(deathday);
-
-    ref.listenManual(profileUpdateProvider, (previous, next) {
-      if (previous != next) {
-        widget.onSaveProfile(next);
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _firstNameController.dispose();
-    _lastNameController.dispose();
-    _birthdayController.dispose();
-    _deathdayController.dispose();
-    _birthplaceController.dispose();
-    _occupationController.dispose();
-    _hobbiesController.dispose();
-
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final hasDateOfPassing = widget.hasDifferentOwner ||
-        ref.watch(profileUpdateProvider.select((s) => s.deathday != null));
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        if (widget.isEditable) ...[
-          const SizedBox(height: 24),
-          Text(
-            'Profile Picture',
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Add your profile picture',
-            style: Theme.of(context).textTheme.labelLarge,
-          ),
-          const SizedBox(height: 8),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: AddProfilePhotoButton(
-              photo: ref.watch(profileUpdateProvider.select((p) => p.photo)),
-              onPhoto: ref.read(profileUpdateProvider.notifier).photo,
-              onDelete: () {
-                final notifier = ref.read(profileUpdateProvider.notifier);
-                notifier.photo(
-                  const Photo.network(
-                    key: 'public/no_image.png',
-                    url: '$cdn/public/no_image.png',
-                  ),
-                );
-              },
-            ),
-          ),
-        ],
-        if (widget.onViewPerspective != null) ...[
-          const SizedBox(height: 18),
-          FilledButton(
-            onPressed: widget.onViewPerspective,
-            style: FilledButton.styleFrom(
-              fixedSize: const Size.fromHeight(44),
-              foregroundColor: Colors.white,
-              backgroundColor: primaryColor,
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Binoculars(
-                  size: 20,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                    'View ${ref.watch(profileUpdateProvider.select((s) => s.fullName))}\'s tree'),
-              ],
-            ),
-          ),
-        ],
-        const SizedBox(height: 24),
-        Text(
-          'Details',
-          style: Theme.of(context).textTheme.titleLarge,
-        ),
-        if (widget.isEditable) ...[
-          const SizedBox(height: 4),
-          Text(
-            'Add some information about yourself so your family can see',
-            style: Theme.of(context).textTheme.labelLarge,
-          ),
-          const SizedBox(height: 8),
-        ],
-        Column(
-          children: [
-            FocusTraversalGroup(
-              child: InputForm(
-                children: [
-                  InputLabel(
-                    label: 'First name',
-                    child: TextFormField(
-                      controller: _firstNameController,
-                      enabled: widget.isEditable,
-                      onChanged:
-                          ref.read(profileUpdateProvider.notifier).firstName,
-                      textCapitalization: TextCapitalization.words,
-                      textInputAction: TextInputAction.next,
-                    ),
-                  ),
-                  InputLabel(
-                    label: 'Last name',
-                    child: TextFormField(
-                      controller: _lastNameController,
-                      enabled: widget.isEditable,
-                      onChanged:
-                          ref.read(profileUpdateProvider.notifier).lastName,
-                      textCapitalization: TextCapitalization.words,
-                      textInputAction: TextInputAction.next,
-                    ),
-                  ),
-                  InputLabel(
-                    label: 'Date of birth',
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: TextFormField(
-                            controller: _birthdayController,
-                            enabled: widget.isEditable,
-                            keyboardType: TextInputType.number,
-                            textInputAction: TextInputAction.next,
-                            inputFormatters: [DateTextFormatter()],
-                            onChanged: ref
-                                .read(profileUpdateProvider.notifier)
-                                .birthday,
-                            decoration: InputDecoration(
-                              hintText: getFormattedDatePattern().formatted,
-                            ),
-                          ),
-                        ),
-                        if (widget.isEditable)
-                          ExcludeFocus(
-                            child: IconButton(
-                              onPressed: () async {
-                                final date = await showDatePicker(
-                                  context: context,
-                                  firstDate: firstDate,
-                                  lastDate: lastDate,
-                                  initialDate: ref.watch(profileUpdateProvider
-                                      .select((p) => p.birthday ?? lastDate)),
-                                );
-                                if (!mounted || date == null) {
-                                  return;
-                                }
-                                _birthdayController.text = formatDate(date);
-                                ref
-                                    .read(profileUpdateProvider.notifier)
-                                    .birthdayObject(date);
-                              },
-                              icon: const Icon(
-                                Icons.calendar_month,
-                                color: Color.fromRGBO(138, 138, 138, 1),
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                  if (hasDateOfPassing)
-                    InputLabel(
-                      label: 'Date of passing',
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: TextFormField(
-                              controller: _deathdayController,
-                              enabled: widget.isEditable,
-                              keyboardType: TextInputType.number,
-                              textInputAction: TextInputAction.next,
-                              inputFormatters: [DateTextFormatter()],
-                              onChanged: ref
-                                  .read(profileUpdateProvider.notifier)
-                                  .deathday,
-                              decoration: InputDecoration(
-                                hintText: getFormattedDatePattern().formatted,
-                              ),
-                            ),
-                          ),
-                          if (widget.isEditable)
-                            ExcludeFocus(
-                              child: IconButton(
-                                onPressed: () async {
-                                  final date = await showDatePicker(
-                                    context: context,
-                                    firstDate: firstDate,
-                                    lastDate: lastDate,
-                                    initialDate: ref.watch(profileUpdateProvider
-                                        .select((p) => p.deathday ?? lastDate)),
-                                  );
-                                  if (!mounted || date == null) {
-                                    return;
-                                  }
-                                  _deathdayController.text = formatDate(date);
-                                  ref
-                                      .read(profileUpdateProvider.notifier)
-                                      .deathdayObject(date);
-                                },
-                                icon: const Icon(
-                                  Icons.calendar_month,
-                                  color: Color.fromRGBO(138, 138, 138, 1),
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                  InputLabel(
-                    label: 'Place of birth',
-                    child: TextFormField(
-                      controller: _birthplaceController,
-                      enabled: widget.isEditable,
-                      textCapitalization: TextCapitalization.words,
-                      textInputAction: TextInputAction.next,
-                      onChanged:
-                          ref.read(profileUpdateProvider.notifier).birthplace,
-                    ),
-                  ),
-                  InputLabel(
-                    label: 'Occupation',
-                    child: TextFormField(
-                      controller: _occupationController,
-                      enabled: widget.isEditable,
-                      textCapitalization: TextCapitalization.words,
-                      textInputAction: TextInputAction.next,
-                      onChanged:
-                          ref.read(profileUpdateProvider.notifier).occupation,
-                    ),
-                  ),
-                  InputLabel(
-                    label: 'Hobbies',
-                    child: TextFormField(
-                      controller: _hobbiesController,
-                      enabled: widget.isEditable,
-                      textCapitalization: TextCapitalization.words,
-                      textInputAction: TextInputAction.next,
-                      onChanged:
-                          ref.read(profileUpdateProvider.notifier).hobbies,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            if (widget.isEditable) ...[
-              const SizedBox(height: 24),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  'Gender',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  'Needed to list you properly in the tree',
-                  style: Theme.of(context).textTheme.labelLarge,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  for (final gender in Gender.values) ...[
-                    if (gender != Gender.values.first)
-                      const SizedBox(width: 16),
-                    Expanded(
-                      child: Builder(builder: (context) {
-                        final selectedGender = ref.watch(
-                            profileUpdateProvider.select((p) => p.gender));
-                        return FilledButton(
-                          onPressed: () => ref
-                              .read(profileUpdateProvider.notifier)
-                              .gender(gender),
-                          style: FilledButton.styleFrom(
-                            fixedSize: const Size.fromHeight(44),
-                            foregroundColor:
-                                selectedGender == gender ? Colors.white : null,
-                            backgroundColor:
-                                selectedGender == gender ? primaryColor : null,
-                          ),
-                          child: Text(
-                              '${gender.name[0].toUpperCase()}${gender.name.substring(1)}'),
-                        );
-                      }),
-                    ),
-                  ],
-                ],
-              ),
-            ],
-            if (ref.watch(
-                profileUpdateProvider.select((p) => p.gallery.isNotEmpty))) ...[
-              const SizedBox(height: 24),
-              ClipRRect(
-                borderRadius: const BorderRadius.all(Radius.circular(10)),
-                child: GalleryView(
-                  photos:
-                      ref.watch(profileUpdateProvider.select((p) => p.gallery)),
-                ),
-              ),
-            ],
-            if (widget.isEditable) ...[
-              const SizedBox(height: 24),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  'Gallery',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  'Add photos for your family to see',
-                  style: Theme.of(context).textTheme.labelLarge,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: PhotoManagement(
-                  gallery:
-                      ref.watch(profileUpdateProvider.select((p) => p.gallery)),
-                  onChanged: ref.read(profileUpdateProvider.notifier).gallery,
-                  onProfilePhotoChanged: (photo) {
-                    ref.read(profileUpdateProvider.notifier).photo(photo);
-                    widget.onSaveProfile(ref.read(profileUpdateProvider));
-                  },
-                ),
-              ),
-            ],
-          ],
-        ),
-        const SizedBox(height: 16),
-        if (widget.onShareLoginLink != null) ...[
-          Text(
-            'Login Link',
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-          const SizedBox(height: 4),
-          Builder(
-            builder: (context) {
-              final name =
-                  ref.watch(profileUpdateProvider.select((s) => s.firstName));
-              return Text(
-                'Visible to direct relatives for login assistance. Share this with $name, sharing it with others risks the family tree.',
-                style: Theme.of(context).textTheme.labelLarge,
-              );
-            },
-          ),
-          const SizedBox(height: 8),
-          FilledButton(
-            onPressed: widget.onShareLoginLink,
-            style: FilledButton.styleFrom(
-              fixedSize: const Size.fromHeight(44),
-              foregroundColor: Colors.white,
-              backgroundColor: primaryColor,
-            ),
-            child: const Text(
-              'Share Login Link',
-            ),
-          ),
-        ],
-        // Display the button for certain users, even if parent won't handle the click
-        if (widget.hasDifferentOwner && widget.isOwnedByPrimaryUser) ...[
-          const SizedBox(height: 24),
-          TextButton(
-            onPressed: widget.onDeleteManagedUser == null
-                ? null
-                : _onDeleteManagedUser,
-            style: TextButton.styleFrom(
-              foregroundColor: Colors.red,
-            ),
-            child: Text(
-                'Delete ${ref.watch(profileUpdateProvider.select((p) => p.firstName))} from the tree'),
-          ),
-          const SizedBox(height: 24),
-        ],
-        const SizedBox(height: 24),
-      ],
-    );
-  }
-
-  void _onDeleteManagedUser() async {
-    final profile = ref.watch(profileUpdateProvider);
-    final delete = await showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text('Delete ${profile.firstName}?'),
-          actions: [
-            TextButton(
-              onPressed: Navigator.of(context).pop,
-              style: TextButton.styleFrom(
-                foregroundColor: Colors.black,
-              ),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              style: TextButton.styleFrom(
-                foregroundColor: Colors.red,
-              ),
-              child: const Text('Delete'),
-            ),
-          ],
-        );
-      },
-    );
-    if (mounted && delete == true) {
-      widget.onDeleteManagedUser?.call();
-    }
-  }
-}
-
-class FormBorder extends StatelessWidget {
-  final Widget child;
-
-  const FormBorder({
-    super.key,
-    required this.child,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        color: Color.fromRGBO(0xEB, 0xEB, 0xEB, 1.0),
-        borderRadius: BorderRadius.all(Radius.circular(10)),
-      ),
-      child: child,
-    );
-  }
-}
-
-class InputForm extends StatelessWidget {
-  final List<Widget> children;
-
-  const InputForm({super.key, required this.children});
-
-  @override
-  Widget build(BuildContext context) {
-    return FormBorder(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          for (final (index, child) in children.indexed) ...[
-            child,
-            if (index != children.length - 1)
-              const Divider(
-                height: 1,
-                indent: 14,
-                color: Color.fromRGBO(0xD8, 0xD8, 0xD8, 1.0),
-              ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class InputLabel extends StatelessWidget {
-  final String label;
-  final String? hintText;
-  final Widget child;
-
-  const InputLabel({
-    super.key,
-    required this.label,
-    this.hintText,
-    required this.child,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 12.0, top: 8.0),
-          child: Text(
-            label,
-            style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  color: const Color.fromRGBO(0x51, 0x51, 0x51, 1.0),
-                ),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.only(top: 8.0),
-          child: Theme(
-            data: Theme.of(context).copyWith(
-                inputDecorationTheme: const InputDecorationTheme(
-              isCollapsed: true,
-              border: InputBorder.none,
-              contentPadding:
-                  EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-              fillColor: Colors.transparent,
-            )),
-            child: child,
           ),
         ),
       ],
@@ -2203,27 +1714,58 @@ class TakeOwnershipButton extends StatelessWidget {
   }
 }
 
-class _Photo extends StatelessWidget {
-  final Photo photo;
-
-  const _Photo({
+class _PerspectiveTitle extends StatelessWidget {
+  final String fullName;
+  const _PerspectiveTitle({
     super.key,
-    required this.photo,
+    required this.fullName,
   });
 
   @override
   Widget build(BuildContext context) {
-    return switch (photo) {
-      MemoryPhoto(:final Uint8List bytes) => Image.memory(
-          bytes,
-          fit: BoxFit.cover,
+    const darkColor = Color.fromRGBO(0x3B, 0x3B, 0x3B, 1.0);
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 8.0,
+        vertical: 6.0,
+      ),
+      decoration: const BoxDecoration(
+        borderRadius: BorderRadius.all(
+          Radius.circular(10),
         ),
-      NetworkPhoto(:final url) => Image.network(
-          url,
-          fit: BoxFit.cover,
-        ),
-      _ => const SizedBox.shrink(),
-    };
+        color: Colors.white,
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const ColorFiltered(
+            colorFilter: ColorFilter.mode(
+              darkColor,
+              BlendMode.srcIn,
+            ),
+            child: Binoculars(
+              size: 16,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            '$fullName\'s Tree',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: darkColor,
+              shadows: const [
+                Shadow(
+                  color: Color.fromRGBO(0x00, 0x00, 0x00, 0.25),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -2298,150 +1840,4 @@ class PanelPopupStatePendingProfile implements PanelPopupState {
         other.focalNode.data == focalNode.data &&
         other.relatedness == relatedness;
   }
-}
-
-class GalleryView extends StatefulWidget {
-  final List<Photo> photos;
-  const GalleryView({
-    super.key,
-    required this.photos,
-  });
-
-  @override
-  State<GalleryView> createState() => _GalleryViewState();
-}
-
-class _GalleryViewState extends State<GalleryView> {
-  static const _largeNumber = 1000000000;
-
-  late final PageController _controller;
-  Timer? _timer;
-
-  @override
-  void initState() {
-    super.initState();
-    const center = _largeNumber ~/ 2;
-    final int initialIndex;
-    if (widget.photos.isEmpty) {
-      initialIndex = center;
-    } else {
-      initialIndex = center ~/ widget.photos.length * widget.photos.length;
-    }
-    _controller = PageController(
-      initialPage: initialIndex,
-    );
-    _controller.addListener(_restartTimer);
-    _restartTimer();
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    _timer?.cancel();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (widget.photos.isEmpty) {
-      return const ImageAspect(
-        child: ColoredBox(
-          color: Colors.grey,
-        ),
-      );
-    }
-    return ScrollbarTheme(
-      data: const ScrollbarThemeData(
-        thumbVisibility: WidgetStatePropertyAll(false),
-      ),
-      child: ImageAspect(
-        child: PageView.builder(
-          controller: _controller,
-          scrollBehavior: const _AllDevicesScrollBehavior(),
-          itemCount: _largeNumber,
-          itemBuilder: (context, index) {
-            final photo = widget.photos[index % widget.photos.length];
-            return _Photo(
-              photo: photo,
-            );
-          },
-        ),
-      ),
-    );
-  }
-
-  void _restartTimer() {
-    _timer?.cancel();
-    _timer = Timer.periodic(const Duration(seconds: 5), (_) => _onNext());
-  }
-
-  void _onNext() {
-    _controller.nextPage(
-      duration: const Duration(milliseconds: 600),
-      curve: Curves.easeOut,
-    );
-  }
-}
-
-class _PerspectiveTitle extends StatelessWidget {
-  final String fullName;
-  const _PerspectiveTitle({
-    super.key,
-    required this.fullName,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    const darkColor = Color.fromRGBO(0x3B, 0x3B, 0x3B, 1.0);
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 8.0,
-        vertical: 6.0,
-      ),
-      decoration: const BoxDecoration(
-        borderRadius: BorderRadius.all(
-          Radius.circular(10),
-        ),
-        color: Colors.white,
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const ColorFiltered(
-            colorFilter: ColorFilter.mode(
-              darkColor,
-              BlendMode.srcIn,
-            ),
-            child: Binoculars(
-              size: 16,
-            ),
-          ),
-          const SizedBox(width: 8),
-          Text(
-            '$fullName\'s Tree',
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              color: darkColor,
-              shadows: const [
-                Shadow(
-                  color: Color.fromRGBO(0x00, 0x00, 0x00, 0.25),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Allows all device kinds to scroll the scroll view
-class _AllDevicesScrollBehavior extends ScrollBehavior {
-  const _AllDevicesScrollBehavior();
-
-  @override
-  Set<PointerDeviceKind> get dragDevices => PointerDeviceKind.values.toSet();
 }
