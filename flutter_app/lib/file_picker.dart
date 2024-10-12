@@ -19,8 +19,6 @@ Future<XFile?> pickFile(String title) async {
 Future<(Uint8List? bytes, Size size)> getFirstFrameAndSize(
     Uint8List image) async {
   final decodedImage = await decodeImageFromList(image);
-  print(
-      'SIZE is ${decodedImage.width.toDouble()}, ${decodedImage.height.toDouble()}');
   final byteData =
       await decodedImage.toByteData(format: ui.ImageByteFormat.png);
   // Disposing decodedImage here throws "This image has been disposed" on web
