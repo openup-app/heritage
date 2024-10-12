@@ -65,46 +65,52 @@ class _OnboardingFlowState extends ConsumerState<OnboardingFlow> {
               ? const Color.fromRGBO(0x00, 0x00, 0x00, 0.1)
               : const Color.fromRGBO(0x00, 0x00, 0x00, 0.5),
         ),
-        Material(
-          type: MaterialType.transparency,
-          child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 300),
-            child: switch (_step) {
-              0 => Center(
-                  child: Lottie.asset(
-                    'assets/images/logo.json',
-                    width: 60,
-                  ),
-                ),
-              1 => _IntroStep(
-                  person: widget.person,
-                  referral: widget.referral,
-                  onDone: () => setState(() => _step++),
-                ),
-              2 => _NameStep(
-                  title: 'Your name',
-                  onDone: (firstName, lastName) {
-                    setState(() {
-                      _firstName = firstName;
-                      _lastName = lastName;
-                      _step++;
-                    });
-                  },
-                ),
-              3 => _PhotoStep(
-                  title: 'Add Your Photo',
-                  onDone: _uploading
-                      ? null
-                      : (photo) async {
-                          setState(() => _photo = photo);
-                          await _upload();
-                        },
-                ),
-              4 => _ExitStep(
-                  onDone: widget.onDone,
-                ),
-              _ => const SizedBox.shrink()
-            },
+        Center(
+          child: Padding(
+            padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom),
+            child: Material(
+              type: MaterialType.transparency,
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 300),
+                child: switch (_step) {
+                  0 => Center(
+                      child: Lottie.asset(
+                        'assets/images/logo.json',
+                        width: 60,
+                      ),
+                    ),
+                  1 => _IntroStep(
+                      person: widget.person,
+                      referral: widget.referral,
+                      onDone: () => setState(() => _step++),
+                    ),
+                  2 => _NameStep(
+                      title: 'Your name',
+                      onDone: (firstName, lastName) {
+                        setState(() {
+                          _firstName = firstName;
+                          _lastName = lastName;
+                          _step++;
+                        });
+                      },
+                    ),
+                  3 => _PhotoStep(
+                      title: 'Add Your Photo',
+                      onDone: _uploading
+                          ? null
+                          : (photo) async {
+                              setState(() => _photo = photo);
+                              await _upload();
+                            },
+                    ),
+                  4 => _ExitStep(
+                      onDone: widget.onDone,
+                    ),
+                  _ => const SizedBox.shrink()
+                },
+              ),
+            ),
           ),
         ),
       ],
@@ -418,32 +424,38 @@ class _ManagePersonFlowState extends ConsumerState<ManagePersonFlow> {
     return Stack(
       alignment: Alignment.center,
       children: [
-        Material(
-          type: MaterialType.transparency,
-          child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 300),
-            child: switch (_step) {
-              0 => _NameStep(
-                  title: '${widget.description}\'s Name',
-                  onDone: (firstName, lastName) {
-                    setState(() {
-                      _firstName = firstName;
-                      _lastName = lastName;
-                      _step++;
-                    });
-                  },
-                ),
-              1 => _PhotoStep(
-                  title: 'Add ${widget.description}\'s Photo',
-                  onDone: _uploading
-                      ? null
-                      : (photo) async {
-                          setState(() => _photo = photo);
-                          await _upload();
-                        },
-                ),
-              _ => const SizedBox.shrink()
-            },
+        Center(
+          child: Padding(
+            padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom),
+            child: Material(
+              type: MaterialType.transparency,
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 300),
+                child: switch (_step) {
+                  0 => _NameStep(
+                      title: '${widget.description}\'s Name',
+                      onDone: (firstName, lastName) {
+                        setState(() {
+                          _firstName = firstName;
+                          _lastName = lastName;
+                          _step++;
+                        });
+                      },
+                    ),
+                  1 => _PhotoStep(
+                      title: 'Add ${widget.description}\'s Photo',
+                      onDone: _uploading
+                          ? null
+                          : (photo) async {
+                              setState(() => _photo = photo);
+                              await _upload();
+                            },
+                    ),
+                  _ => const SizedBox.shrink()
+                },
+              ),
+            ),
           ),
         ),
       ],
