@@ -191,7 +191,6 @@ class _RouterBuilderState extends State<_RouterBuilder> {
   void initState() {
     super.initState();
     String? initialLocation;
-    Id? referrerId;
     ViewHistory? viewHistory;
     final redirectPath = widget.redirectPath;
     if (redirectPath != null && redirectPath.startsWith('/login/')) {
@@ -201,9 +200,8 @@ class _RouterBuilderState extends State<_RouterBuilder> {
     } else if (redirectPath != null && redirectPath.startsWith('/invite/')) {
       final base = redirectPath.substring(8);
       final tokens = base.split(':');
-      if (tokens case [Id focalUserId, Id referrer]) {
-        initialLocation = '/view';
-        referrerId = referrer;
+      if (tokens case [Id focalUserId, Id referrerId]) {
+        initialLocation = '/view?referrer=$referrerId';
         viewHistory = ViewHistory(primaryUserId: focalUserId);
       } else {
         initialLocation = '/?status=failure';
@@ -215,7 +213,6 @@ class _RouterBuilderState extends State<_RouterBuilder> {
     _router = _initRouter(
       initialLocation: initialLocation,
       initialExtra: viewHistory,
-      referrerId: referrerId,
     );
   }
 
@@ -233,12 +230,11 @@ class _RouterBuilderState extends State<_RouterBuilder> {
   GoRouter _initRouter({
     String? initialLocation,
     Object? initialExtra,
-    Id? referrerId,
   }) {
     return GoRouter(
       debugLogDiagnostics: kDebugMode,
       observers: widget.navigatorObservers,
-      initialLocation: kDebugMode ? '/menu' : initialLocation ?? '/',
+      initialLocation: initialLocation ?? '/',
       overridePlatformDefaultLocation: true,
       initialExtra: initialExtra,
       extraCodec: const _ExtraCodec(),
@@ -363,6 +359,7 @@ class _RouterBuilderState extends State<_RouterBuilder> {
             }
             final focalPersonId =
                 viewHistory.perspectiveUserId ?? viewHistory.primaryUserId;
+            final referrerId = state.uri.queryParameters['referrer'];
 
             // TODO: Probably best to set UID as a provider that apiProvider depends on
             if (viewHistory.perspectiveUserId == null) {
