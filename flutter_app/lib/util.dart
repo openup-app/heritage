@@ -151,32 +151,6 @@ Future<T> showBlockingModal<T>(BuildContext context, Future<T> future) async {
   }
 }
 
-bool canViewPerspective({
-  required Id id,
-  required Id primaryUserId,
-  required Id focalPersonId,
-  required bool isSibling,
-  required bool isOwned,
-}) =>
-    id != primaryUserId && id != focalPersonId && !isSibling && isOwned;
-
-bool canAddRelative(bool isBloodRelative, bool isPerspectiveMode) =>
-    isBloodRelative && !isPerspectiveMode;
-
-bool canDeletePerson(Person person) {
-  final ownedByThemself = person.ownedBy != null && person.ownedBy == person.id;
-  if (ownedByThemself) {
-    return false;
-  }
-  if (person.children.isNotEmpty) {
-    return false;
-  }
-
-  final hasParents = person.parents.isNotEmpty;
-  final hasSpouses = person.spouses.isNotEmpty;
-  return !(hasParents && hasSpouses);
-}
-
 String _genderedParent(Gender? gender) => gender == null
     ? 'parent'
     : gender == Gender.male

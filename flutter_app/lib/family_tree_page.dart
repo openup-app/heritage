@@ -139,6 +139,8 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
   @override
   Widget build(BuildContext context) {
     final graph = ref.watch(graphProvider);
+    final selectedPerson = _selectedPerson;
+    final relatedness = _relatedness;
     return Stack(
       fit: StackFit.expand,
       children: [
@@ -147,7 +149,7 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
           focalPerson: graph.focalPerson,
           people: graph.people.values.toList(),
           viewHistory: widget.viewHistory,
-          selectedPerson: _selectedPerson,
+          selectedPerson: selectedPerson,
           viewRectNotifier: _viewRectNotifier,
           onProfileSelected: _onProfileSelected,
           onDismissSelected: _onDismissSelected,
@@ -155,88 +157,39 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
         Panels(
           selectedPerson: _selectedPerson,
           relatedness: _relatedness,
-          focalPerson: graph.focalPerson,
-          viewHistory: widget.viewHistory,
+          isPerspectiveMode: widget.viewHistory.isPerspectiveMode,
+          isFocalPersonSelected: selectedPerson != null &&
+              selectedPerson.id == graph.focalPerson.id,
+          isPrimaryPersonSelected: selectedPerson != null &&
+              selectedPerson.id == widget.viewHistory.primaryUserId,
+          isProfileEditable: selectedPerson != null &&
+              selectedPerson.ownedBy == graph.focalPerson.id &&
+              !widget.viewHistory.isPerspectiveMode,
+          maybeShowDateOfPassing: selectedPerson != null &&
+              selectedPerson.ownedBy != selectedPerson.id,
+          focalPersonFullName: graph.focalPerson.profile.fullName,
           panelPopupState: _panelPopupState,
-          onDismissPanelPopup: _onDismissSelected,
-          onAddConnectionPressed: (relationship) async {
-            final selectedPerson = _selectedPerson;
-            if (selectedPerson == null) {
-              return;
-            }
-            final graphNotifier = ref.read(graphProvider.notifier);
-            final addConnectionFuture = graphNotifier.addConnection(
-              source: selectedPerson.id,
-              relationship: relationship,
-            );
-            final newId = await showBlockingModal(context, addConnectionFuture);
-            if (!mounted) {
-              return;
-            }
-
-            if (newId != null) {
-              // Wait for node to be added to graph
-              WidgetsBinding.instance.endOfFrame.then((_) {
-                if (!mounted) {
-                  return;
-                }
-                final focalNode = _familyTreeViewKey.currentState
-                    ?.linkedNodeForId(graph.focalPerson.id);
-                final targetNode =
-                    _familyTreeViewKey.currentState?.linkedNodeForId(newId);
-                if (focalNode == null || targetNode == null) {
-                  return;
-                }
-
-                _selectPerson(newId);
-                final linkedNode = targetNode;
-                setState(() {
-                  _selectedPerson = targetNode.data;
-                  _relatedness = Relatedness(
-                    isBloodRelative: linkedNode.isBloodRelative,
-                    isDirectRelativeOrSpouse:
-                        linkedNode.isDirectRelativeOrSpouse,
-                    isAncestor: linkedNode.isAncestor,
-                    isSibling: linkedNode.isSibling,
-                    relativeLevel: linkedNode.relativeLevel,
-                    description: relatednessDescription(
-                      focalNode,
-                      linkedNode,
-                      pov: PointOfView.first,
-                    ),
+          onShareInvite: selectedPerson == null
+              ? null
+              : () async {
+                  await shareInvite(
+                    targetId: selectedPerson.id,
+                    targetName: selectedPerson.profile.firstName,
+                    focalName: graph.focalPerson.profile.firstName,
+                    referrerId: graph.focalPerson.id,
                   );
-                  _panelPopupState = PanelPopupStateAddConnection(
-                    targetNode: targetNode,
-                    focalNode: focalNode,
-                    relationship: relationship,
+                  if (mounted) {
+                    _onDismissSelected();
+                  }
+                },
+          onShareLoginLink: !_canShareLoginLink || selectedPerson == null
+              ? null
+              : () {
+                  shareLoginLink(
+                    targetId: selectedPerson.id,
+                    targetName: selectedPerson.profile.firstName,
                   );
-                });
-              });
-            }
-          },
-          onSelectPerson: _selectPerson,
-          onShare: () async {
-            final selectedPerson = _selectedPerson;
-            if (selectedPerson == null) {
-              return;
-            }
-            final focalNode = _familyTreeViewKey.currentState
-                ?.linkedNodeForId(graph.focalPerson.id);
-            final targetNode = _familyTreeViewKey.currentState
-                ?.linkedNodeForId(selectedPerson.id);
-            if (focalNode == null || targetNode == null) {
-              return;
-            }
-            await shareInvite(
-              targetId: selectedPerson.id,
-              targetName: targetNode.data.profile.firstName,
-              focalName: focalNode.data.profile.firstName,
-              referrerId: graph.focalPerson.id,
-            );
-            if (mounted) {
-              _onDismissSelected();
-            }
-          },
+                },
           onTakeOwnership: () async {
             final selectedPerson = _selectedPerson;
             final relatedness = _relatedness;
@@ -244,24 +197,56 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
               _showManagePersonFlow(selectedPerson.id);
             }
           },
-          onViewPerspective: () {
-            final selectedPerson = _selectedPerson;
-            if (selectedPerson == null) {
-              return;
-            }
-            _onDismissSelected();
-            context.goNamed(
-              'view',
-              extra: ViewHistory(
-                primaryUserId: widget.viewHistory.primaryUserId,
-                perspectiveUserId: selectedPerson.id,
-              ),
-            );
-          },
+          onViewPerspective: !_canViewPerspective || selectedPerson == null
+              ? null
+              : () {
+                  _onDismissSelected();
+                  context.goNamed(
+                    'view',
+                    extra: ViewHistory(
+                      primaryUserId: widget.viewHistory.primaryUserId,
+                      perspectiveUserId: selectedPerson.id,
+                    ),
+                  );
+                },
+          onLeavePerspective: !widget.viewHistory.isPerspectiveMode
+              ? null
+              : () {
+                  context.goNamed(
+                    'view',
+                    extra: ViewHistory(
+                      primaryUserId: widget.viewHistory.primaryUserId,
+                    ),
+                  );
+                },
           onViewRectUpdated: (rect) => _viewRectNotifier.value = rect,
           onRecenter: () => _familyTreeViewKey.currentState
               ?.centerOnPersonWithId(graph.focalPerson.id),
           onSaveProfile: _onDebounceAutosave,
+          onDeletePerson: !_canDeletePerson || selectedPerson == null
+              ? null
+              : () {
+                  _onDismissSelected();
+                  final notifier = ref.read(graphProvider.notifier);
+                  final deleteFuture = notifier.deletePerson(selectedPerson.id);
+                  showBlockingModal(context, deleteFuture);
+                },
+          onInformPanelDismissed: _onDismissSelected,
+          addConnectionButtonsBuilder: !_canAddConnection ||
+                  selectedPerson == null ||
+                  relatedness == null
+              ? null
+              : (context, paddingWidth) {
+                  return AddConnectionButtons(
+                    paddingWidth: paddingWidth,
+                    canAddParent: selectedPerson.parents.isEmpty &&
+                        relatedness.isBloodRelative,
+                    canAddSpouse: selectedPerson.spouses.isEmpty,
+                    canAddChildren: relatedness.isAncestor ||
+                        !relatedness.isGrandparentLevelOrHigher,
+                    onAddConnectionPressed: _addConnection,
+                  );
+                },
         ),
         Positioned(
           top: 32,
@@ -284,6 +269,63 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
         ),
       ],
     );
+  }
+
+  void _addConnection(Relationship relationship) async {
+    final selectedPerson = _selectedPerson;
+    if (selectedPerson == null) {
+      return;
+    }
+
+    final graph = ref.read(graphProvider);
+    final graphNotifier = ref.read(graphProvider.notifier);
+    final addConnectionFuture = graphNotifier.addConnection(
+      source: selectedPerson.id,
+      relationship: relationship,
+    );
+    final newId = await showBlockingModal(context, addConnectionFuture);
+    if (!mounted) {
+      return;
+    }
+
+    if (newId != null) {
+      // Wait for node to be added to graph
+      WidgetsBinding.instance.endOfFrame.then((_) {
+        if (!mounted) {
+          return;
+        }
+        final focalNode = _familyTreeViewKey.currentState
+            ?.linkedNodeForId(graph.focalPerson.id);
+        final targetNode =
+            _familyTreeViewKey.currentState?.linkedNodeForId(newId);
+        if (focalNode == null || targetNode == null) {
+          return;
+        }
+
+        _selectPerson(newId);
+        final linkedNode = targetNode;
+        setState(() {
+          _selectedPerson = targetNode.data;
+          _relatedness = Relatedness(
+            isBloodRelative: linkedNode.isBloodRelative,
+            isDirectRelativeOrSpouse: linkedNode.isDirectRelativeOrSpouse,
+            isAncestor: linkedNode.isAncestor,
+            isSibling: linkedNode.isSibling,
+            relativeLevel: linkedNode.relativeLevel,
+            description: relatednessDescription(
+              focalNode,
+              linkedNode,
+              pov: PointOfView.first,
+            ),
+          );
+          _panelPopupState = PanelPopupStateAddConnection(
+            targetNode: targetNode,
+            focalNode: focalNode,
+            relationship: relationship,
+          );
+        });
+      });
+    }
   }
 
   void _selectPerson(Id id) {
@@ -372,11 +414,11 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
     });
   }
 
-  void _onDebounceAutosave(Profile update) {
+  void _onDebounceAutosave(Profile profile) {
     final selectedPersonId = _selectedPerson?.id;
     if (selectedPersonId != null) {
       _debouncer.afterDelay(() {
-        _applyProfileUpdate(selectedPersonId, update);
+        _applyProfileUpdate(selectedPersonId, profile);
       });
     }
   }
@@ -482,6 +524,49 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
       return;
     }
     _selectPerson(targetId);
+  }
+
+  bool get _canAddConnection {
+    final isPerspectiveMode = widget.viewHistory.isPerspectiveMode;
+    final isBloodRelative = _relatedness?.isBloodRelative == true;
+    return !isPerspectiveMode && isBloodRelative;
+  }
+
+  bool get _canViewPerspective {
+    final graph = ref.watch(graphProvider);
+    final isOwned = _selectedPerson?.ownedBy != null;
+    final isFocalPerson = _selectedPerson?.id == graph.focalPerson.id;
+    final isPrimaryUser =
+        _selectedPerson?.id == widget.viewHistory.primaryUserId;
+    final isSilbing = _relatedness?.isSibling == true;
+    return isOwned && !isFocalPerson && !isPrimaryUser && !isSilbing;
+  }
+
+  bool get _canShareLoginLink {
+    final graph = ref.watch(graphProvider);
+    final isPerspectiveMode = widget.viewHistory.isPerspectiveMode;
+    final isFocalUserSelected = _selectedPerson?.id == graph.focalPerson.id;
+    final isDirectRelativeOrSpouse =
+        _relatedness?.isDirectRelativeOrSpouse == true;
+    return !isPerspectiveMode &&
+        (isFocalUserSelected || isDirectRelativeOrSpouse);
+  }
+
+  bool get _canDeletePerson {
+    final isPerspectiveMode = widget.viewHistory.isPerspectiveMode;
+    final isOwnedByThemself = _selectedPerson?.ownedBy == _selectedPerson?.id;
+    final isUnowned = _selectedPerson?.ownedBy == null;
+    final isOwnedByPrimaryPerson =
+        _selectedPerson?.ownedBy == widget.viewHistory.primaryUserId;
+    final hasParents = _selectedPerson?.parents.isNotEmpty == true;
+    final hasChildren = _selectedPerson?.children.isNotEmpty == true;
+    final hasSpouses = _selectedPerson?.spouses.isNotEmpty == true;
+    final hasParentsAndSpouse = hasParents && hasSpouses;
+    return !isPerspectiveMode &&
+        !isOwnedByThemself &&
+        (isUnowned || isOwnedByPrimaryPerson) &&
+        !hasChildren &&
+        !hasParentsAndSpouse;
   }
 }
 
@@ -623,13 +708,6 @@ class FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
                       final isSelectedPerson = widget.selectedPerson == null ||
                           widget.selectedPerson?.id == data.id;
                       final enabled = isSelectedPerson && !isGhost;
-                      final canViewPerspectiveBool = canViewPerspective(
-                        id: data.id,
-                        primaryUserId: widget.viewHistory.primaryUserId,
-                        focalPersonId: widget.focalPerson.id,
-                        isSibling: node.isSibling,
-                        isOwned: data.ownedBy != null,
-                      );
                       final focalNode = _graphKey.currentState
                           ?.linkedNodeForId(widget.focalPerson.id);
                       final relatedness = Relatedness(
@@ -673,7 +751,6 @@ class FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
                                   person: data,
                                   relatednessDescription:
                                       relatedness.description,
-                                  showViewPerspective: canViewPerspectiveBool,
                                   onViewPerspectivePressed: () {
                                     widget.onDismissSelected();
                                     context.pushNamed(

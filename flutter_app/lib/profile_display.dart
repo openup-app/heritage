@@ -15,25 +15,21 @@ import 'package:path_drawing/path_drawing.dart' as path_drawing;
 
 class ProfileDisplay extends StatelessWidget {
   final Profile initialProfile;
-  final bool isPrimaryUser;
   final bool isEditable;
-  final bool isOwnedByPrimaryUser;
-  final bool hasDifferentOwner;
+  final bool maybeShowDateOfPassing;
   final VoidCallback? onViewPerspective;
   final VoidCallback? onShareLoginLink;
-  final VoidCallback? onDeleteManagedUser;
+  final VoidCallback? onDeletePerson;
   final void Function(Profile profile) onSaveProfile;
 
   const ProfileDisplay({
     super.key,
     required this.initialProfile,
-    required this.isPrimaryUser,
     required this.isEditable,
-    required this.isOwnedByPrimaryUser,
-    required this.hasDifferentOwner,
+    required this.maybeShowDateOfPassing,
     required this.onViewPerspective,
     required this.onShareLoginLink,
-    required this.onDeleteManagedUser,
+    required this.onDeletePerson,
     required this.onSaveProfile,
   });
 
@@ -45,13 +41,11 @@ class ProfileDisplay extends StatelessWidget {
             (ref) => ProfileUpdateNotifier(initialProfile: initialProfile)),
       ],
       child: _ProfileDisplay(
-        isPrimaryUser: isPrimaryUser,
         isEditable: isEditable,
-        isOwnedByPrimaryUser: isOwnedByPrimaryUser,
-        hasDifferentOwner: hasDifferentOwner,
+        maybeShowDateOfPassing: maybeShowDateOfPassing,
         onViewPerspective: onViewPerspective,
         onShareLoginLink: onShareLoginLink,
-        onDeleteManagedUser: onDeleteManagedUser,
+        onDeletePerson: onDeletePerson,
         onSaveProfile: onSaveProfile,
       ),
     );
@@ -59,24 +53,20 @@ class ProfileDisplay extends StatelessWidget {
 }
 
 class _ProfileDisplay extends ConsumerStatefulWidget {
-  final bool isPrimaryUser;
   final bool isEditable;
-  final bool isOwnedByPrimaryUser;
-  final bool hasDifferentOwner;
+  final bool maybeShowDateOfPassing;
   final VoidCallback? onViewPerspective;
   final VoidCallback? onShareLoginLink;
-  final VoidCallback? onDeleteManagedUser;
+  final VoidCallback? onDeletePerson;
   final void Function(Profile profile) onSaveProfile;
 
   const _ProfileDisplay({
     super.key,
-    required this.isPrimaryUser,
     required this.isEditable,
-    required this.isOwnedByPrimaryUser,
-    required this.hasDifferentOwner,
+    required this.maybeShowDateOfPassing,
     required this.onViewPerspective,
     required this.onShareLoginLink,
-    required this.onDeleteManagedUser,
+    required this.onDeletePerson,
     required this.onSaveProfile,
   });
 
@@ -132,7 +122,7 @@ class _ProfileDisplayState extends ConsumerState<_ProfileDisplay> {
 
   @override
   Widget build(BuildContext context) {
-    final hasDateOfPassing = widget.hasDifferentOwner ||
+    final hasDateOfPassing = widget.maybeShowDateOfPassing &&
         ref.watch(profileUpdateProvider.select((s) => s.deathday != null));
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -482,13 +472,10 @@ class _ProfileDisplayState extends ConsumerState<_ProfileDisplay> {
             ),
           ),
         ],
-        // Display the button for certain users, even if parent won't handle the click
-        if (widget.hasDifferentOwner && widget.isOwnedByPrimaryUser) ...[
+        if (widget.onDeletePerson != null) ...[
           const SizedBox(height: 24),
           TextButton(
-            onPressed: widget.onDeleteManagedUser == null
-                ? null
-                : _onDeleteManagedUser,
+            onPressed: _onConfirmDeleteManagedUser,
             style: TextButton.styleFrom(
               foregroundColor: Colors.red,
             ),
@@ -502,7 +489,7 @@ class _ProfileDisplayState extends ConsumerState<_ProfileDisplay> {
     );
   }
 
-  void _onDeleteManagedUser() async {
+  void _onConfirmDeleteManagedUser() async {
     final profile = ref.watch(profileUpdateProvider);
     final delete = await showDialog(
       context: context,
@@ -529,7 +516,7 @@ class _ProfileDisplayState extends ConsumerState<_ProfileDisplay> {
       },
     );
     if (mounted && delete == true) {
-      widget.onDeleteManagedUser?.call();
+      widget.onDeletePerson?.call();
     }
   }
 }
@@ -946,14 +933,12 @@ class _HoverPersonDisplayState extends State<HoverPersonDisplay> {
 class NodeProfile extends StatelessWidget {
   final Person person;
   final String relatednessDescription;
-  final bool showViewPerspective;
   final VoidCallback? onViewPerspectivePressed;
 
   const NodeProfile({
     super.key,
     required this.person,
     required this.relatednessDescription,
-    required this.showViewPerspective,
     required this.onViewPerspectivePressed,
   });
 

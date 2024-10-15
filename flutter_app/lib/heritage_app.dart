@@ -500,6 +500,10 @@ class ViewHistory with _$ViewHistory {
 
   factory ViewHistory.fromJson(Map<String, Object?> json) =>
       _$ViewHistoryFromJson(json);
+
+  const ViewHistory._();
+
+  bool get isPerspectiveMode => perspectiveUserId != null;
 }
 
 ({Person focalPerson, List<Person> people}) _generateRandomTree(
