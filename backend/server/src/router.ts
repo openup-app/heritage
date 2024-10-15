@@ -8,9 +8,46 @@ import fs from "fs/promises";
 import shortUUID from "short-uuid";
 import { parse } from "path";
 
-
 export function router(auth: Auth, database: Database, storage: Storage): Router {
   const router = Router();
+
+  router.post('/accounts/authenticate', async (req: Request, res: Response) => {
+    let body: AuthenticateBody;
+    try {
+      body = authenticateSchema.parse(req.body);
+      const googleUser = await auth.authenticateGoogleIdToken(body.oauthCredential.idToken);
+      if (!googleUser) {
+        return res.sendStatus(400);
+      }
+
+      const signInToken = await auth.getSignInTokenByEmail(googleUser.email);
+      if (signInToken) {
+        return res.json({
+          "token": signInToken,
+        });
+      } else {
+        const createUid = body.uid;
+        if (createUid) {
+          let person: Person;
+          try {
+            person = await database.getPerson(createUid);
+          } catch (e) {
+            return res.sendStatus(400);
+          }
+
+          const signInToken = await auth.createUser(createUid, googleUser);
+
+          return res.json({
+            "token": signInToken,
+          })
+        } else {
+          return res.sendStatus(400);
+        }
+      }
+    } catch (e) {
+      return res.sendStatus(500);
+    }
+  });
 
   router.post('/people/:sourceId/connections', async (req: Request, res: Response) => {
     const sourceId = req.params.sourceId;
@@ -330,6 +367,14 @@ function normalizeFields(fields: formidable.Fields) {
 };
 
 
+const authenticateSchema = z.object({
+  uid: z.string().nullable().optional(),
+  oauthCredential: z.object({
+    idToken: z.string(),
+  })
+})
+
+
 const addConnectionSchema = z.object({
   relationship: relationshipSchema,
   inviteText: z.string(),
@@ -363,6 +408,8 @@ const addInviteSchema = z.object({
   toId: z.string(),
   inviteText: z.string(),
 });
+
+type AuthenticateBody = z.infer<typeof authenticateSchema>;
 
 type AddConnectionBody = z.infer<typeof addConnectionSchema>;
 

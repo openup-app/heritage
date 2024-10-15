@@ -8,6 +8,7 @@ import * as gcp from "gcp-metadata";
 import { initFirebaseAdmin } from "./firebase.js";
 import { S3Storage } from "./storage/s3.js";
 import { Auth } from "./auth.js";
+import { OAuth2Client } from "google-auth-library";
 
 function getS3Storage() {
   const awsAccessKeyId = process.env.AWS_ACCESS_KEY_ID;
@@ -39,10 +40,16 @@ async function init() {
     }
   }
 
+  const googleClientId = process.env.GOOGLE_CLIENT_ID;
+  if (!googleClientId) {
+    throw "Missing Google Client ID";
+  }
+
   initFirebaseAdmin();
   const database = new Database();
   const storage = getS3Storage();
-  const auth = new Auth();
+  const googleOauth = new OAuth2Client(googleClientId)
+  const auth = new Auth(googleOauth);
 
   const expressApp = express();
   expressApp.use(cors());
