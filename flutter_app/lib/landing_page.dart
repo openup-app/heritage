@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:heritage/family_tree_page_panels.dart';
 import 'package:heritage/storage.dart';
+import 'package:url_launcher/link.dart';
 
 class LandingPage extends StatefulWidget {
   final Storage storage;
@@ -17,6 +18,8 @@ class LandingPage extends StatefulWidget {
 }
 
 class _LandingPageState extends State<LandingPage> {
+  final _privacyPolicyUri = Uri.parse('https://stitchfam.com/privacy_policy');
+  final _tosUri = Uri.parse('https://stitchfam.com/tos');
   @override
   void initState() {
     super.initState();
@@ -29,28 +32,76 @@ class _LandingPageState extends State<LandingPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color.fromRGBO(223, 235, 250, 1.0),
-      body: Center(
-        child: Container(
-          width: 287,
-          height: 287,
-          alignment: Alignment.center,
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.all(
-              Radius.circular(25),
+      body: SafeArea(
+        child: Stack(
+          children: [
+            Center(
+              child: Container(
+                width: 287,
+                height: 287,
+                alignment: Alignment.center,
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.all(
+                    Radius.circular(25),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      offset: Offset(0, 3),
+                      blurRadius: 20,
+                      color: Color.fromRGBO(0x00, 0x00, 0x00, 0.2),
+                    )
+                  ],
+                ),
+                child: switch (widget.status) {
+                  null ||
+                  LandingPageStatus.decline =>
+                    const _LandingPageContent(),
+                  LandingPageStatus.invalidLink => const _InvalidLinkContent(),
+                },
+              ),
             ),
-            boxShadow: [
-              BoxShadow(
-                offset: Offset(0, 3),
-                blurRadius: 20,
-                color: Color.fromRGBO(0x00, 0x00, 0x00, 0.2),
-              )
-            ],
-          ),
-          child: switch (widget.status) {
-            null || LandingPageStatus.decline => const _LandingPageContent(),
-            LandingPageStatus.invalidLink => const _InvalidLinkContent(),
-          },
+            Align(
+              alignment: Alignment.bottomCenter,
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 16.0),
+                child: TextButtonTheme(
+                  data: TextButtonThemeData(
+                    style: TextButton.styleFrom(
+                      foregroundColor:
+                          const Color.fromRGBO(0x00, 0x00, 0x00, 0.35),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Link(
+                        uri: _privacyPolicyUri,
+                        target: LinkTarget.blank,
+                        builder: (context, followLink) {
+                          return TextButton(
+                            onPressed: followLink,
+                            child: const Text('Privacy Policy'),
+                          );
+                        },
+                      ),
+                      const SizedBox(width: 16),
+                      Link(
+                        uri: _tosUri,
+                        target: LinkTarget.blank,
+                        builder: (context, followLink) {
+                          return TextButton(
+                            onPressed: followLink,
+                            child: const Text('Terms of Service'),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
