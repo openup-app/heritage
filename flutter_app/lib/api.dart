@@ -45,6 +45,72 @@ class Api {
     _headers['x-app-uid'] = uid;
   }
 
+  Future<Either<Error, String>> sendSms({
+    required String phoneNumber,
+  }) {
+    return _makeRequest(
+      request: () => http.post(
+        Uri.parse('$_baseUrl/v1/accounts/authenticate/send_sms'),
+        headers: _headers,
+        body: jsonEncode({
+          'phoneNumber': phoneNumber,
+        }),
+      ),
+      handleResponse: (response) {
+        final json = jsonDecode(response.body);
+        return right(json['token']);
+      },
+    );
+  }
+
+  Future<Either<Error, String>> authenticatePhone({
+    required String? claimUid,
+    required String phoneNumber,
+    required String smsCode,
+  }) {
+    return _makeRequest(
+      request: () => http.post(
+        Uri.parse('$_baseUrl/v1/accounts/authenticate'),
+        headers: _headers,
+        body: jsonEncode({
+          'claimUid': claimUid,
+          'credential': {
+            'type': 'phone',
+            'phoneNumber': phoneNumber,
+            'smsCode': smsCode,
+          },
+        }),
+      ),
+      handleResponse: (response) {
+        final json = jsonDecode(response.body);
+        return right(json['token']);
+      },
+    );
+  }
+
+  Future<Either<Error, String>> authenticateOauth({
+    required String? claimUid,
+    required String idToken,
+  }) {
+    return _makeRequest(
+      request: () => http.post(
+        Uri.parse('$_baseUrl/v1/accounts/authenticate'),
+        headers: _headers,
+        body: jsonEncode({
+          'claimUid': claimUid,
+          'credential': {
+            'type': 'oauth',
+            'idToken': idToken,
+          },
+        }),
+      ),
+      handleResponse: (response) {
+        final json = jsonDecode(response.body);
+        return right(json['token']);
+      },
+    );
+  }
+
   Future<Either<Error, (Id id, List<Person> people)>> addConnection({
     required Id sourceId,
     required Relationship relationship,

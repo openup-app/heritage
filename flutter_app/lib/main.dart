@@ -1,6 +1,9 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:heritage/api.dart';
+import 'package:heritage/authentication.dart';
 import 'package:heritage/heritage_app.dart';
 import 'package:heritage/storage.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -30,6 +33,21 @@ void init() async {
     baseUrl: serverBaseUrl,
     appVersionName: packageInfo.version,
     appVersionCode: packageInfo.buildNumber,
+  );
+
+  // Used to init GoogleSignIn before the web-only renderButton()
+  googleSignIn = GoogleSignIn(
+    clientId: const String.fromEnvironment('GOOGLE_CLIENT_ID'),
+    scopes: ['email'],
+  );
+
+  await Firebase.initializeApp(
+    options: const FirebaseOptions(
+      apiKey: String.fromEnvironment('FIREBASE_API_KEY'),
+      appId: String.fromEnvironment('FIREBASE_APP_ID'),
+      messagingSenderId: String.fromEnvironment('FIREBASE_MESSAGING_SENDER_ID'),
+      projectId: String.fromEnvironment('FIREBASE_PROJECT_ID'),
+    ),
   );
 
   final sharedPreferences = await SharedPreferences.getInstance();
