@@ -11,41 +11,111 @@ import { parse } from "path";
 export function router(auth: Auth, database: Database, storage: Storage): Router {
   const router = Router();
 
+  router.post('/accounts/authenticate/send_sms', async (req: Request, res: Response) => {
+    let body: SendSmsBody;
+    try {
+      body = sendSmsSchema.parse(req.body);
+    } catch {
+      return res.sendStatus(400);
+    }
+
+    try {
+      const result = await auth.sendSmsCode(body.phoneNumber);
+      if (result === "approved" || result === "pending") {
+        return res.sendStatus(200);
+      } else {
+        return res.sendStatus(401);
+      }
+    } catch (e) {
+      return res.sendStatus(500);
+    }
+  });
+
+  async function signIn(credential: Credential): Promise<SignInResult | undefined> {
+    if (credential.type === "oauth") {
+      try {
+        const googleUser = await auth.authenticateGoogleIdToken(credential.idToken);
+        if (!googleUser) {
+          return;
+        }
+        return {
+          token: await auth.getSignInTokenByEmail(googleUser.email),
+          data: {
+            type: credential.type,
+            googleUser: googleUser,
+          }
+        }
+      } catch {
+        return;
+      }
+    } else if (credential.type === "phone") {
+      try {
+        const verified = await auth.verifySmsCode(credential.phoneNumber, credential.smsCode);
+        if (!verified) {
+          return;
+        }
+        return {
+          token: await auth.getSignInTokenByPhoneNumber(credential.phoneNumber),
+          data: {
+            type: credential.type,
+            phoneNumber: credential.phoneNumber,
+          }
+        }
+      } catch {
+        return;
+      }
+    }
+    return;
+  }
+
+  async function createUser(uid: string, authResult: SignInResult): Promise<string | undefined> {
+    try {
+      if (authResult.data.type === "oauth") {
+        return await auth.createGoogleUser(uid, authResult.data.googleUser);
+      } else if (authResult.data.type === "phone") {
+        return await auth.createPhoneUser(uid, authResult.data.phoneNumber);
+      }
+    } catch {
+      return;
+    }
+    return;
+  }
+
+
   router.post('/accounts/authenticate', async (req: Request, res: Response) => {
     let body: AuthenticateBody;
     try {
       body = authenticateSchema.parse(req.body);
-      const googleUser = await auth.authenticateGoogleIdToken(body.oauthCredential.idToken);
-      if (!googleUser) {
+    } catch {
+      return res.sendStatus(400);
+    }
+
+    const signInResult = await signIn(body.credential);
+    if (!signInResult) {
+      return res.sendStatus(401);
+    }
+    if (signInResult.token) {
+      return res.json({ "token": signInResult.token });
+    } else {
+      if (!body.claimUid) {
         return res.sendStatus(400);
       }
 
-      const signInToken = await auth.getSignInTokenByEmail(googleUser.email);
-      if (signInToken) {
-        return res.json({
-          "token": signInToken,
-        });
-      } else {
-        const createUid = body.uid;
-        if (createUid) {
-          let person: Person;
-          try {
-            person = await database.getPerson(createUid);
-          } catch (e) {
-            return res.sendStatus(400);
-          }
-
-          const signInToken = await auth.createUser(createUid, googleUser);
-
-          return res.json({
-            "token": signInToken,
-          })
-        } else {
+      // Ensure person exists and is unowned
+      try {
+        const person = await database.getPerson(body.claimUid);
+        if (person.ownedBy) {
           return res.sendStatus(400);
         }
+      } catch (e) {
+        return res.sendStatus(400);
       }
-    } catch (e) {
-      return res.sendStatus(500);
+
+      const signInToken = await createUser(body.claimUid, signInResult);
+      if (!signInToken) {
+        return res.sendStatus(500);
+      }
+      return res.json({ "token": signInToken })
     }
   });
 
@@ -366,14 +436,27 @@ function normalizeFields(fields: formidable.Fields) {
   return normalized;
 };
 
+const sendSmsSchema = z.object({
+  phoneNumber: z.string(),
+});
 
-const authenticateSchema = z.object({
-  uid: z.string().nullable().optional(),
-  oauthCredential: z.object({
-    idToken: z.string(),
-  })
+const oauthCredentialSchema = z.object({
+  type: z.literal("oauth"),
+  idToken: z.string(),
 })
 
+const phoneCredentialSchema = z.object({
+  type: z.literal("phone"),
+  phoneNumber: z.string(),
+  smsCode: z.string(),
+});
+
+const credentialSchema = z.discriminatedUnion("type", [oauthCredentialSchema, phoneCredentialSchema]);
+
+const authenticateSchema = z.object({
+  claimUid: z.string().nullable().optional(),
+  credential: credentialSchema,
+});
 
 const addConnectionSchema = z.object({
   relationship: relationshipSchema,
@@ -409,6 +492,10 @@ const addInviteSchema = z.object({
   inviteText: z.string(),
 });
 
+type SendSmsBody = z.infer<typeof sendSmsSchema>;
+
+type Credential = z.infer<typeof credentialSchema>;
+
 type AuthenticateBody = z.infer<typeof authenticateSchema>;
 
 type AddConnectionBody = z.infer<typeof addConnectionSchema>;
@@ -418,3 +505,28 @@ type CreateRootBody = z.infer<typeof createRootSchema>;
 type GalleryUpdate = z.infer<typeof photoUpdateSchema>;
 
 type ProfileUpdate = z.infer<typeof profileUpdateSchema>;
+
+const googleUserSchema = z.object({
+  googleId: z.string(),
+  email: z.string(),
+  name: z.string().optional(),
+  picture: z.string().optional(),
+
+});
+
+const authResultOauthDataSchema = z.object({
+  type: z.literal("oauth"),
+  googleUser: googleUserSchema,
+});
+
+const authResultPhoneDataSchema = z.object({
+  type: z.literal("phone"),
+  phoneNumber: z.string(),
+});
+
+const signInResultSchema = z.object({
+  token: z.string().nullable().optional(),
+  data: z.discriminatedUnion("type", [authResultOauthDataSchema, authResultPhoneDataSchema]),
+});
+
+type SignInResult = z.infer<typeof signInResultSchema>;

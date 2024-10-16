@@ -9,6 +9,7 @@ import { initFirebaseAdmin } from "./firebase.js";
 import { S3Storage } from "./storage/s3.js";
 import { Auth } from "./auth.js";
 import { OAuth2Client } from "google-auth-library";
+import Twilio from "twilio";
 
 function getS3Storage() {
   const awsAccessKeyId = process.env.AWS_ACCESS_KEY_ID;
@@ -45,11 +46,20 @@ async function init() {
     throw "Missing Google Client ID";
   }
 
+  const twilioAccountSid = process.env.TWILIO_ACCOUNT_SID;
+  const twilioAuthToken = process.env.TWILIO_AUTH_TOKEN;
+  const twilioServiceSid = process.env.TWILIO_SERVICE_SID;
+  if (!twilioAccountSid || !twilioAuthToken || !twilioServiceSid) {
+    throw `Missing Twilio environment variable`;
+  }
+
   initFirebaseAdmin();
   const database = new Database();
   const storage = getS3Storage();
   const googleOauth = new OAuth2Client(googleClientId)
-  const auth = new Auth(googleOauth);
+  const twilio = Twilio(twilioAccountSid, twilioAuthToken);
+  const twilioServices = twilio.verify.v2.services(twilioServiceSid);
+  const auth = new Auth(googleOauth, twilioServices);
 
   const expressApp = express();
   expressApp.use(cors());
