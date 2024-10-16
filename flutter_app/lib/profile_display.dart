@@ -1356,6 +1356,31 @@ class _MouseRegionWithWorkaroundState
   }
 }
 
+class AwaitingInvite extends StatelessWidget {
+  const AwaitingInvite({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 24,
+      width: 128,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        color: const Color.fromRGBO(0xFF, 0x38, 0x38, 1.0),
+      ),
+      child: const Text(
+        'Awaiting Invite',
+        style: TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
+          color: Colors.white,
+        ),
+      ),
+    );
+  }
+}
+
 class Binoculars extends StatelessWidget {
   final double size;
 

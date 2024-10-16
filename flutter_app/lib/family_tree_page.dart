@@ -306,7 +306,7 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
         final linkedNode = targetNode;
         setState(() {
           _selectedPerson = targetNode.data;
-          _relatedness = Relatedness(
+          final relatedness = Relatedness(
             isBloodRelative: linkedNode.isBloodRelative,
             isDirectRelativeOrSpouse: linkedNode.isDirectRelativeOrSpouse,
             isAncestor: linkedNode.isAncestor,
@@ -318,10 +318,10 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
               pov: PointOfView.first,
             ),
           );
-          _panelPopupState = PanelPopupStateAddConnection(
-            targetNode: targetNode,
-            focalNode: focalNode,
-            relationship: relationship,
+          _relatedness = relatedness;
+          _panelPopupState = PanelPopupStateProfile(
+            person: targetNode.data,
+            relatedness: relatedness,
           );
         });
       });
@@ -360,40 +360,14 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
     }
 
     _familyTreeViewKey.currentState?.centerOnPersonWithId(person.id);
-
-    final graph = ref.read(graphProvider);
-    final focalNode =
-        _familyTreeViewKey.currentState?.linkedNodeForId(graph.focalPerson.id);
-    final targetNode =
-        _familyTreeViewKey.currentState?.linkedNodeForId(person.id);
-
-    if (focalNode != null &&
-        targetNode != null &&
-        targetNode.data.ownedBy == null) {
-      final notifier = ref.read(graphProvider.notifier);
-      notifier.addInvite(focalNode, targetNode);
-    }
-
-    if (person.ownedBy == null) {
-      if (focalNode == null || targetNode == null) {
-        return;
-      }
-      setState(() {
-        _selectedPerson = person;
-        _relatedness = relatedness;
-        _panelPopupState = PanelPopupStatePendingProfile(
-            targetNode: targetNode,
-            focalNode: focalNode,
-            relatedness: relatedness);
-      });
-    } else {
-      setState(() {
-        _selectedPerson = person;
-        _relatedness = relatedness;
-        _panelPopupState =
-            PanelPopupStateProfile(person: person, relatedness: relatedness);
-      });
-    }
+    setState(() {
+      _selectedPerson = person;
+      _relatedness = relatedness;
+      _panelPopupState = PanelPopupStateProfile(
+        person: person,
+        relatedness: relatedness,
+      );
+    });
   }
 
   void _onDismissSelected() {
@@ -528,8 +502,7 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
 
   bool get _canAddConnection {
     final isPerspectiveMode = widget.viewHistory.isPerspectiveMode;
-    final isBloodRelative = _relatedness?.isBloodRelative == true;
-    return !isPerspectiveMode && isBloodRelative;
+    return !isPerspectiveMode;
   }
 
   bool get _canViewPerspective {
@@ -680,25 +653,20 @@ class FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
                     nodeKeys: _nodeKeys,
                     spacing: spacing,
                     builder: (context, nodes, child) {
-                      return Stack(
-                        children: [
-                          ValueListenableBuilder(
-                            valueListenable: _transformNotifier,
-                            builder: (context, value, _) {
-                              return Edges(
-                                idToKey: _idToKey,
-                                idToNode: nodes,
-                                focalPersonId: widget.focalPerson.id,
-                                isPrimaryPerson:
-                                    widget.viewHistory.perspectiveUserId ==
-                                        null,
-                                spacing: spacing,
-                                transform: value,
-                                child: child,
-                              );
-                            },
-                          ),
-                        ],
+                      return ValueListenableBuilder(
+                        valueListenable: _transformNotifier,
+                        builder: (context, value, _) {
+                          return Edges(
+                            idToKey: _idToKey,
+                            idToNode: nodes,
+                            focalPersonId: widget.focalPerson.id,
+                            isPrimaryPerson:
+                                widget.viewHistory.perspectiveUserId == null,
+                            spacing: spacing,
+                            transform: value,
+                            child: child,
+                          );
+                        },
                       );
                     },
                     nodeBuilder: (context, data, node, key) {
@@ -728,45 +696,61 @@ class FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
                                 capitalizeWords: true,
                               ),
                       );
-                      return HoverableNodeProfile(
-                        key: key,
-                        person: data,
-                        enabled: enabled,
-                        forceHover: widget.selectedPerson?.id == data.id,
-                        builder: (context, overlaying) {
-                          return Opacity(
-                            opacity: isGhost ? 0.4 : 1.0,
-                            child: MouseRegion(
-                              cursor: enabled
-                                  ? SystemMouseCursors.click
-                                  : MouseCursor.defer,
-                              child: GestureDetector(
-                                onTap: !enabled
-                                    ? null
-                                    : () {
-                                        widget.onProfileSelected(
-                                            data, relatedness);
-                                      },
-                                child: NodeProfile(
-                                  person: data,
-                                  relatednessDescription:
-                                      relatedness.description,
-                                  onViewPerspectivePressed: () {
-                                    widget.onDismissSelected();
-                                    context.pushNamed(
-                                      'view',
-                                      extra: ViewHistory(
-                                        primaryUserId:
-                                            widget.viewHistory.primaryUserId,
-                                        perspectiveUserId: data.id,
+                      return Stack(
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 40.0),
+                            child: HoverableNodeProfile(
+                              key: key,
+                              person: data,
+                              enabled: enabled,
+                              forceHover: widget.selectedPerson?.id == data.id,
+                              builder: (context, overlaying) {
+                                return Opacity(
+                                  opacity: isGhost ? 0.4 : 1.0,
+                                  child: MouseRegion(
+                                    cursor: enabled
+                                        ? SystemMouseCursors.click
+                                        : MouseCursor.defer,
+                                    child: GestureDetector(
+                                      onTap: !enabled
+                                          ? null
+                                          : () {
+                                              widget.onProfileSelected(
+                                                  data, relatedness);
+                                            },
+                                      child: NodeProfile(
+                                        person: data,
+                                        relatednessDescription:
+                                            relatedness.description,
+                                        onViewPerspectivePressed: () {
+                                          widget.onDismissSelected();
+                                          context.pushNamed(
+                                            'view',
+                                            extra: ViewHistory(
+                                              primaryUserId: widget
+                                                  .viewHistory.primaryUserId,
+                                              perspectiveUserId: data.id,
+                                            ),
+                                          );
+                                        },
                                       ),
-                                    );
-                                  },
-                                ),
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                          if (node.data.ownedBy == null)
+                            const Positioned(
+                              left: 0,
+                              top: 0,
+                              right: 0,
+                              child: Center(
+                                child: AwaitingInvite(),
                               ),
                             ),
-                          );
-                        },
+                        ],
                       );
                     },
                   ),

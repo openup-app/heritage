@@ -14,7 +14,7 @@ import 'package:heritage/layout.dart';
 import 'package:heritage/profile_display.dart';
 import 'package:heritage/util.dart';
 
-const _kMinPanelHeight = 200.0;
+const _kMinPanelHeight = 330.0;
 
 typedef AddConnectionButtonsBuilder = Widget Function(
     BuildContext context, double paddingWidth);
@@ -73,7 +73,7 @@ class _PanelsState extends ConsumerState<Panels> {
   bool _hadInitialLayout = false;
   late LayoutType _layout;
   final _modalKey = GlobalKey();
-  final _modalKey2 = GlobalKey();
+  PersistentBottomSheetController? _bottomSheetController;
 
   @override
   void didChangeDependencies() {
@@ -158,34 +158,6 @@ class _PanelsState extends ConsumerState<Panels> {
               ),
             ),
           ),
-          Positioned.fill(
-            child: _DismissWhenNoPersonSelected(
-              selectedPerson: selectedPerson,
-              relatedness: relatedness,
-              builder: (context, childKey, selectedPerson, relatedness) {
-                return _DraggableSheet(
-                  key: childKey,
-                  selectedPerson: selectedPerson,
-                  relatedness: relatedness,
-                  isFocalPersonSelected: widget.isFocalPersonSelected,
-                  isPrimaryPersonSelected: widget.isPrimaryPersonSelected,
-                  addConnectionButtonsBuilder:
-                      widget.addConnectionButtonsBuilder,
-                  profileDisplayBuilder: (context) {
-                    return ProfileDisplay(
-                      initialProfile: selectedPerson.profile,
-                      isEditable: widget.isProfileEditable,
-                      maybeShowDateOfPassing: widget.maybeShowDateOfPassing,
-                      onViewPerspective: widget.onViewPerspective,
-                      onShareLoginLink: widget.onShareLoginLink,
-                      onDeletePerson: widget.onDeletePerson,
-                      onSaveProfile: widget.onSaveProfile,
-                    );
-                  },
-                );
-              },
-            ),
-          ),
         ] else ...[
           Positioned(
             top: MediaQuery.of(context).padding.top,
@@ -238,57 +210,22 @@ class _PanelsState extends ConsumerState<Panels> {
                     PanelPopupStateProfile(:final person, :final relatedness) =>
                       _SidePanelContainer(
                         key: Key('profile_${person.id}'),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            ProfileNameSection(
-                              person: person,
-                              relatedness: relatedness,
-                              isPrimaryPersonSelected:
-                                  widget.isPrimaryPersonSelected,
-                            ),
-                            ProfileDisplay(
-                              initialProfile: person.profile,
-                              isEditable: widget.isProfileEditable,
-                              maybeShowDateOfPassing:
-                                  widget.maybeShowDateOfPassing,
-                              onViewPerspective: widget.onViewPerspective,
-                              onShareLoginLink: widget.onShareLoginLink,
-                              onDeletePerson: widget.onDeletePerson,
-                              onSaveProfile: widget.onSaveProfile,
-                            ),
-                          ],
-                        ),
-                      ),
-                    PanelPopupStateAddConnection(
-                      :final targetNode,
-                      :final focalNode,
-                      :final relationship
-                    ) =>
-                      _SidePanelContainer(
-                        key: Key('connection_${relationship.name}'),
-                        child: AddConnectionDisplay(
-                          targetNode: targetNode,
-                          focalNode: focalNode,
-                          relationship: relationship,
-                          onShare: widget.onShareInvite,
-                          onTakeOwnership: widget.onTakeOwnership,
-                        ),
-                      ),
-                    PanelPopupStatePendingProfile(
-                      :final targetNode,
-                      :final focalNode
-                    ) =>
-                      _SidePanelContainer(
-                        key: Key('approval_${targetNode.id}'),
-                        child: PendingProfiledDisplay(
-                          targetNode: targetNode,
-                          focalNode: focalNode,
-                          onShareInvite: widget.onShareInvite,
-                          onTakeOwnership: widget.onTakeOwnership,
-                          onAddConnection: null,
-                          onDeletePressed: widget.onDeletePerson,
-                        ),
+                        child: Builder(builder: (context) {
+                          final addConnectionButtonsBuilder =
+                              widget.addConnectionButtonsBuilder;
+                          if (addConnectionButtonsBuilder == null) {
+                            return const SizedBox.shrink();
+                          }
+                          return _ProfileSheet(
+                            selectedPerson: person,
+                            relatedness: relatedness,
+                            isFocalPersonSelected: widget.isFocalPersonSelected,
+                            isPrimaryPersonSelected:
+                                widget.isPrimaryPersonSelected,
+                            addConnectionButtonsBuilder:
+                                addConnectionButtonsBuilder,
+                          );
+                        }),
                       ),
                   },
                 ),
@@ -341,10 +278,9 @@ class _PanelsState extends ConsumerState<Panels> {
         if (context != null) {
           Navigator.of(context).pop();
         }
-        final context2 = _modalKey2.currentContext;
-        if (context2 != null) {
-          Navigator.of(context2).pop();
-        }
+        WidgetsBinding.instance.endOfFrame.then((_) {
+          _bottomSheetController?.close();
+        });
     }
   }
 
@@ -377,57 +313,47 @@ class _PanelsState extends ConsumerState<Panels> {
         switch (widget.panelPopupState) {
           case PanelPopupStateNone():
             // Ignore
-            break;
-          case PanelPopupStateProfile():
-            // Displayed in build() by bottom panel
-            break;
-          case PanelPopupStateAddConnection(
-              :final targetNode,
-              :final focalNode,
-              :final relationship
-            ):
             WidgetsBinding.instance.endOfFrame.then((_) {
               if (mounted) {
-                _showAddConnectionModal(targetNode, focalNode, relationship);
+                _bottomSheetController?.close();
               }
             });
-          case PanelPopupStatePendingProfile(
-              :final targetNode,
-              :final focalNode,
-              :final relatedness
-            ):
-            final owned = targetNode.data.ownedBy != null;
-            if (owned) {
-              return;
-            }
+            break;
+          case PanelPopupStateProfile(:final person, :final relatedness):
             WidgetsBinding.instance.endOfFrame.then((_) {
               if (mounted) {
-                final addConnectionButtonsBuilder =
-                    widget.addConnectionButtonsBuilder;
-                _showPendingProfileModal(
-                  targetNode: targetNode,
-                  focalNode: focalNode,
-                  onShareInvite: widget.onShareInvite,
-                  onTakeOwnership: widget.onTakeOwnership,
-                  onAddConnection: addConnectionButtonsBuilder == null
-                      ? null
-                      : () async {
-                          await WidgetsBinding.instance.endOfFrame;
-                          if (!mounted) {
-                            return;
-                          }
-                          _showMiniAddConnectionModal(
-                            context: context,
-                            selectedPerson: targetNode.data,
-                            relatedness: relatedness,
-                            addConnectionButtonsBuilder:
-                                addConnectionButtonsBuilder,
-                          );
-                        },
-                  onDeletePressed: widget.onDeletePerson,
-                );
+                final controller = Scaffold.of(context).showBottomSheet(
+                    shape: const RoundedRectangleBorder(
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(10),
+                        topRight: Radius.circular(10),
+                      ),
+                    ), (context) {
+                  final addConnectionButtonsBuilder =
+                      widget.addConnectionButtonsBuilder;
+                  if (addConnectionButtonsBuilder == null) {
+                    return const SizedBox.shrink();
+                  }
+                  return _ProfileSheet(
+                    selectedPerson: person,
+                    relatedness: relatedness,
+                    isFocalPersonSelected: widget.isFocalPersonSelected,
+                    isPrimaryPersonSelected: widget.isPrimaryPersonSelected,
+                    addConnectionButtonsBuilder: addConnectionButtonsBuilder,
+                  );
+                });
+                setState(() => _bottomSheetController = controller);
+                controller.closed.then((_) {
+                  if (mounted) {
+                    if (Layout.of(context) == LayoutType.small) {
+                      print('closed');
+                      widget.onInformPanelDismissed();
+                    }
+                  }
+                });
               }
             });
+            break;
         }
       case LayoutType.large:
         // Displayed in build() by side panel
@@ -520,50 +446,6 @@ class _PanelsState extends ConsumerState<Panels> {
       widget.onInformPanelDismissed();
     }
   }
-
-  void _showMiniAddConnectionModal({
-    required BuildContext context,
-    required Person selectedPerson,
-    required Relatedness relatedness,
-    required AddConnectionButtonsBuilder addConnectionButtonsBuilder,
-  }) async {
-    final poppedManually = await showModalBottomSheet<bool>(
-      context: context,
-      barrierColor: Colors.transparent,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(10),
-          topRight: Radius.circular(10),
-        ),
-      ),
-      builder: (context) {
-        return Column(
-          key: _modalKey2,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Text(
-                  selectedPerson.profile.fullName,
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: addConnectionButtonsBuilder(context, 16),
-            ),
-          ],
-        );
-      },
-    );
-    if (mounted && poppedManually != true) {
-      // Panel dismissed, no one knows, so inform this means deselect user
-      widget.onInformPanelDismissed();
-    }
-  }
 }
 
 Future<T?> showModalBottomSheetWithDragHandle<T>({
@@ -647,10 +529,8 @@ class _DismissWhenNoPersonSelectedState
       _selectedPerson = widget.selectedPerson ?? _selectedPerson;
       _relatedness = widget.relatedness ?? _relatedness;
       if (!shouldShow) {
-        print('dismiss');
         _controller.reverse();
       } else {
-        print('show');
         _childKey = UniqueKey();
         _controller.forward();
       }
@@ -693,161 +573,94 @@ class _DismissWhenNoPersonSelectedState
   }
 }
 
-class _DraggableSheet extends StatefulWidget {
+class _ProfileSheet extends StatefulWidget {
   final Person selectedPerson;
   final Relatedness relatedness;
   final bool isFocalPersonSelected;
   final bool isPrimaryPersonSelected;
-  final AddConnectionButtonsBuilder? addConnectionButtonsBuilder;
-  final WidgetBuilder profileDisplayBuilder;
+  final AddConnectionButtonsBuilder addConnectionButtonsBuilder;
 
-  const _DraggableSheet({
+  const _ProfileSheet({
     super.key,
     required this.selectedPerson,
     required this.relatedness,
     required this.isFocalPersonSelected,
     required this.isPrimaryPersonSelected,
     required this.addConnectionButtonsBuilder,
-    required this.profileDisplayBuilder,
   });
 
   @override
-  State<_DraggableSheet> createState() => _DraggableSheetState();
+  State<_ProfileSheet> createState() => _ProfileSheetState();
 }
 
-class _DraggableSheetState extends State<_DraggableSheet> {
-  final _draggableScrollableController = DraggableScrollableController();
-
+class _ProfileSheetState extends State<_ProfileSheet> {
   @override
   Widget build(BuildContext context) {
-    // Clamped in case of narrow, but extremely tall/short windows
-    final windowSize = MediaQuery.of(context).size;
-    final maxPanelHeight = windowSize.height - 68.0;
-    final minPanelRatio =
-        (_kMinPanelHeight / windowSize.height).clamp(0.05, 1.0);
-    final maxPanelRatio = (maxPanelHeight / windowSize.height).clamp(0.05, 1.0);
-
-    return DraggableScrollableSheet(
-      controller: _draggableScrollableController,
-      expand: false,
-      snap: true,
-      initialChildSize: minPanelRatio,
-      minChildSize: minPanelRatio,
-      maxChildSize: maxPanelRatio,
-      builder: (context, controller) {
-        return Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom,
+    return Container(
+      height: _kMinPanelHeight,
+      clipBehavior: Clip.antiAlias,
+      decoration: const BoxDecoration(
+        color: Color.fromRGBO(0xEC, 0xEC, 0xEC, 1.0),
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(10),
+          topRight: Radius.circular(10),
+        ),
+      ),
+      child: Column(
+        key: Key(widget.selectedPerson.id),
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: ProfileNameSection(
+              person: widget.selectedPerson,
+              relatedness: widget.relatedness,
+              isPrimaryPersonSelected: widget.isPrimaryPersonSelected,
+            ),
           ),
-          child: Container(
-            clipBehavior: Clip.hardEdge,
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(24),
-                topRight: Radius.circular(24),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  offset: Offset(0, 4),
-                  blurRadius: 16,
-                  color: Color.fromRGBO(0x00, 0x00, 0x00, 0.25),
+          ColoredBox(
+            color: Colors.white,
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        widget.isFocalPersonSelected
+                            ? 'I need to add my...'
+                            : 'Add ${widget.selectedPerson.profile.firstName}\'s...',
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                      const SizedBox(height: 4),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: widget.addConnectionButtonsBuilder
+                            .call(context, 12),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Divider(
+                  height: 1,
+                  color: Color.fromRGBO(0xEB, 0xEB, 0xEB, 1.0),
                 ),
               ],
             ),
-            child: GestureDetector(
-              onTap: () {
-                _draggableScrollableController.animateTo(
-                  maxPanelRatio,
-                  duration: const Duration(milliseconds: 300),
-                  curve: Curves.easeOut,
-                );
-              },
-              child: CustomScrollView(
-                key: Key(widget.selectedPerson.id),
-                controller: controller,
-                keyboardDismissBehavior:
-                    ScrollViewKeyboardDismissBehavior.onDrag,
-                slivers: [
-                  if (widget.addConnectionButtonsBuilder != null)
-                    PinnedHeaderSliver(
-                      child: ColoredBox(
-                        color: Colors.white,
-                        child: Column(
-                          children: [
-                            Padding(
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 16),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Center(
-                                    child: Padding(
-                                      padding:
-                                          EdgeInsets.symmetric(vertical: 12.0),
-                                      child: _DragHandle(),
-                                    ),
-                                  ),
-                                  Text(
-                                    widget.isFocalPersonSelected
-                                        ? 'I need to add my...'
-                                        : 'Add ${widget.selectedPerson.profile.firstName}\'s...',
-                                    style:
-                                        Theme.of(context).textTheme.titleLarge,
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Align(
-                                    alignment: Alignment.centerLeft,
-                                    child: widget.addConnectionButtonsBuilder
-                                        ?.call(context, 12),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            const Divider(
-                              height: 1,
-                              color: Color.fromRGBO(0xEB, 0xEB, 0xEB, 1.0),
-                            ),
-                          ],
-                        ),
-                      ),
-                    )
-                  else
-                    PinnedHeaderSliver(
-                      child: Container(
-                        width: double.infinity,
-                        color: Colors.white,
-                        child: const Center(
-                          child: Padding(
-                            padding: EdgeInsets.symmetric(vertical: 12.0),
-                            child: _DragHandle(),
-                          ),
-                        ),
-                      ),
-                    ),
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: ProfileNameSection(
-                        person: widget.selectedPerson,
-                        relatedness: widget.relatedness,
-                        isPrimaryPersonSelected: widget.isPrimaryPersonSelected,
-                      ),
-                    ),
-                  ),
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: widget.profileDisplayBuilder(context),
-                    ),
-                  ),
-                ],
-              ),
-            ),
           ),
-        );
-      },
+          FilledButton(
+            onPressed: () {},
+            style: FilledButton.styleFrom(
+              padding: const EdgeInsets.all(8),
+              foregroundColor: Colors.white,
+              backgroundColor: primaryColor,
+            ),
+            child: const Text('Invite Or Something'),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -1641,53 +1454,6 @@ class PanelPopupStateProfile implements PanelPopupState {
   bool operator ==(Object other) {
     return other is PanelPopupStateProfile &&
         other.person == person &&
-        other.relatedness == relatedness;
-  }
-}
-
-class PanelPopupStateAddConnection implements PanelPopupState {
-  final LinkedNode<Person> targetNode;
-  final LinkedNode<Person> focalNode;
-  final Relationship relationship;
-
-  PanelPopupStateAddConnection({
-    required this.targetNode,
-    required this.focalNode,
-    required this.relationship,
-  });
-
-  @override
-  int get hashCode =>
-      Object.hash(targetNode.data, focalNode.data, relationship);
-
-  @override
-  bool operator ==(Object other) {
-    return other is PanelPopupStateAddConnection &&
-        other.targetNode.data == targetNode.data &&
-        other.focalNode.data == focalNode.data &&
-        other.relationship == relationship;
-  }
-}
-
-class PanelPopupStatePendingProfile implements PanelPopupState {
-  final LinkedNode<Person> targetNode;
-  final LinkedNode<Person> focalNode;
-  final Relatedness relatedness;
-
-  PanelPopupStatePendingProfile({
-    required this.targetNode,
-    required this.focalNode,
-    required this.relatedness,
-  });
-
-  @override
-  int get hashCode => Object.hash(targetNode.data, focalNode.data, relatedness);
-
-  @override
-  bool operator ==(Object other) {
-    return other is PanelPopupStatePendingProfile &&
-        other.targetNode.data == targetNode.data &&
-        other.focalNode.data == focalNode.data &&
         other.relatedness == relatedness;
   }
 }
