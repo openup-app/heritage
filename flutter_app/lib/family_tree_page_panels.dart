@@ -492,92 +492,63 @@ class _ProfileSheetState extends State<_ProfileSheet> {
   Widget build(BuildContext context) {
     return Container(
       height: _kMinPanelHeight,
-      clipBehavior: Clip.antiAlias,
+      clipBehavior: Clip.none,
       decoration: const BoxDecoration(
         borderRadius: BorderRadius.only(
           topLeft: Radius.circular(10),
           topRight: Radius.circular(10),
         ),
       ),
-      child: Column(
-        key: Key(widget.person.id),
-        mainAxisSize: MainAxisSize.min,
+      child: Stack(
         children: [
-          Container(
-            height: 30,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              children: [
-                if (widget.person.isAwaiting) const AwaitingInvite(),
-                const Spacer(),
-                if (widget.onDelete != null)
-                  FilledButton(
-                    onPressed: () async {
-                      final delete = await showDialog<bool>(
-                        context: context,
-                        builder: (context) {
-                          return AlertDialog(
-                            title: Text(
-                                'Delete ${widget.person.profile.fullName} from the tree?'),
-                            actions: [
-                              TextButton(
-                                onPressed: Navigator.of(context).pop,
-                                child: const Text(
-                                  'Cancel',
-                                  style: TextStyle(
-                                    color: Colors.black,
+          Column(
+            key: Key(widget.person.id),
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                clipBehavior: Clip.none,
+                height: 30,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Row(
+                  children: [
+                    const Spacer(),
+                    if (widget.onDelete != null)
+                      FilledButton(
+                        onPressed: () async {
+                          final delete = await showDialog<bool>(
+                            context: context,
+                            builder: (context) {
+                              return AlertDialog(
+                                title: Text(
+                                    'Delete ${widget.person.profile.fullName} from the tree?'),
+                                actions: [
+                                  TextButton(
+                                    onPressed: Navigator.of(context).pop,
+                                    child: const Text(
+                                      'Cancel',
+                                      style: TextStyle(
+                                        color: Colors.black,
+                                      ),
+                                    ),
                                   ),
-                                ),
-                              ),
-                              TextButton(
-                                onPressed: () =>
-                                    Navigator.of(context).pop(true),
-                                child: const Text(
-                                  'Delete',
-                                  style: TextStyle(
-                                    color: _kAwaitingColor,
+                                  TextButton(
+                                    onPressed: () =>
+                                        Navigator.of(context).pop(true),
+                                    child: const Text(
+                                      'Delete',
+                                      style: TextStyle(
+                                        color: _kAwaitingColor,
+                                      ),
+                                    ),
                                   ),
-                                ),
-                              ),
-                            ],
+                                ],
+                              );
+                            },
                           );
+                          if (mounted && delete == true) {
+                            widget.onDelete?.call();
+                          }
                         },
-                      );
-                      if (mounted && delete == true) {
-                        widget.onDelete?.call();
-                      }
-                    },
-                    style: IconButton.styleFrom(
-                      shape: const RoundedRectangleBorder(
-                        borderRadius: BorderRadius.all(
-                          Radius.circular(64),
-                        ),
-                      ),
-                      padding: EdgeInsets.zero,
-                      minimumSize: const Size.square(40),
-                      foregroundColor: _kAwaitingColor,
-                      backgroundColor: Colors.white,
-                    ),
-                    child: const Icon(
-                      Icons.delete_outline,
-                      size: 20,
-                    ),
-                  )
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Stack(
-              children: [
-                if (widget.onEdit != null)
-                  Positioned(
-                    left: 0,
-                    top: 0,
-                    bottom: 0,
-                    child: Center(
-                      child: FilledButton(
-                        onPressed: widget.onEdit,
                         style: IconButton.styleFrom(
                           shape: const RoundedRectangleBorder(
                             borderRadius: BorderRadius.all(
@@ -585,83 +556,123 @@ class _ProfileSheetState extends State<_ProfileSheet> {
                             ),
                           ),
                           padding: EdgeInsets.zero,
-                          minimumSize: const Size.square(48),
-                          foregroundColor: widget.person.isAwaiting
-                              ? _kAwaitingColor
-                              : primaryColor,
+                          minimumSize: const Size.square(40),
+                          foregroundColor: _kAwaitingColor,
                           backgroundColor: Colors.white,
                         ),
-                        child: const Icon(Icons.edit),
-                      ),
-                    ),
-                  ),
-                Center(
-                  child: ProfileNameSection(
-                    person: widget.person,
-                    relatedness: widget.relatedness,
-                    isPrimaryPersonSelected: widget.isPrimaryPersonSelected,
-                  ),
+                        child: const Icon(
+                          Icons.delete_outline,
+                          size: 20,
+                        ),
+                      )
+                  ],
                 ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          Container(
-            height: 128,
-            margin: const EdgeInsets.symmetric(horizontal: 16),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.all(
-                Radius.circular(10),
               ),
-            ),
-            child: Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: 8),
-                      Text(
-                        widget.isPrimaryPersonSelected
-                            ? 'Add my...'
-                            : 'Add ${widget.person.profile.firstName}\'s...',
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                          color: Color.fromRGBO(0x88, 0x88, 0x88, 1.0),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Stack(
+                  children: [
+                    if (widget.onEdit != null)
+                      Positioned(
+                        left: 0,
+                        top: 0,
+                        bottom: 0,
+                        child: Center(
+                          child: FilledButton(
+                            onPressed: widget.onEdit,
+                            style: IconButton.styleFrom(
+                              shape: const RoundedRectangleBorder(
+                                borderRadius: BorderRadius.all(
+                                  Radius.circular(64),
+                                ),
+                              ),
+                              padding: EdgeInsets.zero,
+                              minimumSize: const Size.square(48),
+                              foregroundColor: widget.person.isAwaiting
+                                  ? _kAwaitingColor
+                                  : primaryColor,
+                              backgroundColor: Colors.white,
+                            ),
+                            child: const Icon(Icons.edit),
+                          ),
                         ),
                       ),
-                      const SizedBox(height: 8),
-                      widget.addConnectionButtonsBuilder.call(context, 12),
-                    ],
+                    Center(
+                      child: ProfileNameSection(
+                        person: widget.person,
+                        relatedness: widget.relatedness,
+                        isPrimaryPersonSelected: widget.isPrimaryPersonSelected,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                height: 128,
+                margin: const EdgeInsets.symmetric(horizontal: 16),
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.all(
+                    Radius.circular(10),
                   ),
                 ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: FilledButton(
-              onPressed: widget.person.isAwaiting
-                  ? widget.onInvite
-                  : widget.isFocalPersonSelected
-                      ? null
-                      : widget.onViewPerspective,
-              style: FilledButton.styleFrom(
-                padding: const EdgeInsets.all(8),
-                minimumSize: const Size.fromHeight(64),
-                foregroundColor: Colors.white,
-                backgroundColor:
-                    widget.person.isAwaiting ? _kAwaitingColor : primaryColor,
+                child: Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(height: 8),
+                          Text(
+                            widget.isPrimaryPersonSelected
+                                ? 'Add my...'
+                                : 'Add ${widget.person.profile.firstName}\'s...',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              color: Color.fromRGBO(0x88, 0x88, 0x88, 1.0),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          widget.addConnectionButtonsBuilder.call(context, 12),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              child: widget.person.isAwaiting
-                  ? Text('Invite ${widget.person.profile.firstName}')
-                  : Text('View ${widget.person.profile.firstName}\'s Tree'),
-            ),
+              const SizedBox(height: 16),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: FilledButton(
+                  onPressed: widget.person.isAwaiting
+                      ? widget.onInvite
+                      : widget.isFocalPersonSelected
+                          ? null
+                          : widget.onViewPerspective,
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.all(8),
+                    minimumSize: const Size.fromHeight(64),
+                    foregroundColor: Colors.white,
+                    backgroundColor: widget.person.isAwaiting
+                        ? _kAwaitingColor
+                        : primaryColor,
+                  ),
+                  child: widget.person.isAwaiting
+                      ? Text('Invite ${widget.person.profile.firstName}')
+                      : Text('View ${widget.person.profile.firstName}\'s Tree'),
+                ),
+              ),
+            ],
           ),
+          if (widget.person.isAwaiting)
+            const Positioned(
+              left: 0,
+              top: 0,
+              child: AwaitingInvite(),
+            ),
         ],
       ),
     );

@@ -56,6 +56,7 @@ flutter:
   assets:
     - assets/images/add_photo.svg
     - assets/images/add_photo_2.svg
+    - assets/images/awaiting_invite.json
     - assets/images/badge.svg
     - assets/images/binoculars.png
     - assets/images/connection_child.svg

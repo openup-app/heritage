@@ -11,6 +11,7 @@ import 'package:heritage/heritage_app.dart';
 import 'package:heritage/photo_management.dart';
 import 'package:heritage/profile_update.dart';
 import 'package:heritage/util.dart';
+import 'package:lottie/lottie.dart';
 import 'package:path_drawing/path_drawing.dart' as path_drawing;
 
 class ProfileDisplay extends StatelessWidget {
@@ -1369,21 +1370,20 @@ class AwaitingInvite extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return SizedBox(
+      width: 148,
       height: 24,
-      width: 128,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        color: const Color.fromRGBO(0xFF, 0x38, 0x38, 1.0),
-      ),
-      child: const Text(
-        'Awaiting Invite',
-        style: TextStyle(
-          fontSize: 14,
-          fontWeight: FontWeight.w500,
-          color: Colors.white,
-        ),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Transform.scale(
+            scale: 8,
+            child: Lottie.asset(
+              'assets/images/awaiting_invite.json',
+              width: 148,
+            ),
+          ),
+        ],
       ),
     );
   }
