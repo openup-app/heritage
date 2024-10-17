@@ -301,6 +301,7 @@ class _CreatePersonFlowState extends State<CreatePersonFlow> {
                   ),
                   _PhotoStep(
                     title: 'Edit Photo',
+                    optional: true,
                     buttonLabel: 'Next',
                     initialPhoto: null,
                     onPhoto: (photo) => setState(() => _photo = photo),
@@ -997,7 +998,8 @@ class _PhotoStepState extends State<_PhotoStep> {
           const SizedBox(height: 24),
           const SizedBox(height: 24),
           _Button(
-            onPressed: widget.onDone,
+            onPressed:
+                _photo == null && !widget.optional ? null : widget.onDone,
             child: widget.onDone == null
                 ? const _LoadingIndicator()
                 : Text(widget.buttonLabel),
