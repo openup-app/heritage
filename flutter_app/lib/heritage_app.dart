@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:math';
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -15,7 +16,6 @@ import 'package:heritage/landing_page.dart';
 import 'package:heritage/layout.dart';
 import 'package:heritage/menu_page.dart';
 import 'package:heritage/restart_app.dart';
-import 'package:heritage/storage.dart';
 import 'package:heritage/transition.dart';
 import 'package:heritage/util.dart';
 
@@ -30,13 +30,11 @@ const unselectedColor = Color.fromRGBO(175, 175, 175, 1);
 
 class HeritageApp extends StatelessWidget {
   final Api api;
-  final Storage storage;
   final String? redirectPath;
 
   const HeritageApp({
     super.key,
     required this.api,
-    required this.storage,
     required this.redirectPath,
   });
 
@@ -68,7 +66,6 @@ class HeritageApp extends StatelessWidget {
               redirectPath: redirectPath,
               navigatorObservers: [SentryNavigatorObserver()],
               tempApi: api,
-              storage: storage,
               builder: (context, router) {
                 return MaterialApp.router(
                   routerConfig: router,
@@ -168,7 +165,6 @@ class _RouterBuilder extends StatefulWidget {
   final String? redirectPath;
   final List<NavigatorObserver> navigatorObservers;
   final Api tempApi;
-  final Storage storage;
   final Widget Function(BuildContext context, GoRouter router) builder;
 
   const _RouterBuilder({
@@ -176,7 +172,6 @@ class _RouterBuilder extends StatefulWidget {
     required this.redirectPath,
     required this.navigatorObservers,
     required this.tempApi,
-    required this.storage,
     required this.builder,
   });
 
@@ -192,7 +187,11 @@ class _RouterBuilderState extends State<_RouterBuilder> {
     super.initState();
     String? initialLocation;
     ViewHistory? viewHistory;
-    final redirectPath = widget.redirectPath;
+
+    final auth = FirebaseAuth.instance;
+    final uid = auth.currentUser?.uid;
+    final redirectPath = uid != null ? '/login/$uid' : widget.redirectPath;
+
     if (redirectPath != null && redirectPath.startsWith('/login/')) {
       final focalUserId = redirectPath.substring(7);
       initialLocation = '/view';
@@ -234,7 +233,7 @@ class _RouterBuilderState extends State<_RouterBuilder> {
     return GoRouter(
       debugLogDiagnostics: kDebugMode,
       observers: widget.navigatorObservers,
-      initialLocation: kDebugMode ? '/menu' : initialLocation ?? '/',
+      initialLocation: initialLocation ?? '/',
       overridePlatformDefaultLocation: true,
       initialExtra: initialExtra,
       extraCodec: const _ExtraCodec(),
@@ -252,7 +251,6 @@ class _RouterBuilderState extends State<_RouterBuilder> {
                     : null;
             return TopLevelTransitionPage(
               child: LandingPage(
-                storage: widget.storage,
                 status: status,
               ),
             );
@@ -367,7 +365,7 @@ class _RouterBuilderState extends State<_RouterBuilder> {
             }
 
             final isPersectiveMode = viewHistory.perspectiveUserId != null;
-            final loggedInUser = widget.storage.loadUid();
+            final loggedInUser = FirebaseAuth.instance.currentUser?.uid;
             final isInvite =
                 referrerId != null && loggedInUser != focalPersonId;
             return TopLevelTransitionPage(
@@ -379,16 +377,9 @@ class _RouterBuilderState extends State<_RouterBuilder> {
                 child: FamilyTreeLoadingPage(
                   isPerspectiveMode: isPersectiveMode,
                   isInvite: isInvite,
-                  onReady: () {
-                    if (!isPersectiveMode) {
-                      widget.storage.saveUid(focalPersonId);
-                    }
-                  },
+                  onReady: () {},
                   onError: () {
-                    final uid = widget.storage.loadUid();
-                    if (uid == focalPersonId) {
-                      widget.storage.clearUid();
-                    }
+                    FirebaseAuth.instance.signOut();
                     _router.goNamed(
                       'landing',
                       queryParameters: {'status': 'failure'},

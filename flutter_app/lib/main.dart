@@ -5,10 +5,8 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:heritage/api.dart';
 import 'package:heritage/authentication.dart';
 import 'package:heritage/heritage_app.dart';
-import 'package:heritage/storage.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 void main() async {
   const sentryDsn = String.fromEnvironment('SENTRY_DSN');
@@ -50,16 +48,10 @@ void init() async {
     ),
   );
 
-  final sharedPreferences = await SharedPreferences.getInstance();
-  final storage = Storage(sharedPreferences: sharedPreferences);
-  final uid = storage.loadUid();
-  final redirectPath = uid != null ? '/login/$uid' : redirect;
-
   runApp(
     HeritageApp(
       api: api,
-      storage: storage,
-      redirectPath: redirectPath,
+      redirectPath: redirect,
     ),
   );
 }

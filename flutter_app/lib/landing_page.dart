@@ -1,32 +1,22 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:heritage/api.dart';
 import 'package:heritage/family_tree_page_panels.dart';
-import 'package:heritage/storage.dart';
+import 'package:heritage/onboarding_flow.dart';
+import 'package:heritage/restart_app.dart';
 import 'package:url_launcher/link.dart';
 
-class LandingPage extends StatefulWidget {
-  final Storage storage;
+final _privacyPolicyUri = Uri.parse('https://stitchfam.com/privacy_policy');
+final _tosUri = Uri.parse('https://stitchfam.com/tos');
+
+class LandingPage extends StatelessWidget {
   final LandingPageStatus? status;
 
   const LandingPage({
     super.key,
-    required this.storage,
     required this.status,
   });
-
-  @override
-  State<LandingPage> createState() => _LandingPageState();
-}
-
-class _LandingPageState extends State<LandingPage> {
-  final _privacyPolicyUri = Uri.parse('https://stitchfam.com/privacy_policy');
-  final _tosUri = Uri.parse('https://stitchfam.com/tos');
-  @override
-  void initState() {
-    super.initState();
-    if (widget.status == LandingPageStatus.decline) {
-      widget.storage.clearUid();
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -35,30 +25,58 @@ class _LandingPageState extends State<LandingPage> {
       body: SafeArea(
         child: Stack(
           children: [
+            const Align(
+              alignment: Alignment.topCenter,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(height: 16),
+                  LogoText(width: 230),
+                  Text('Collaborative Family Tree'),
+                ],
+              ),
+            ),
             Center(
-              child: Container(
-                width: 287,
-                height: 287,
-                alignment: Alignment.center,
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.all(
-                    Radius.circular(25),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 287,
+                    height: 327,
+                    alignment: Alignment.center,
+                    padding: const EdgeInsets.all(16),
+                    decoration: const BoxDecoration(
+                      color: Color.fromRGBO(0xEC, 0xEC, 0xEC, 1.0),
+                      borderRadius: BorderRadius.all(
+                        Radius.circular(25),
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          offset: Offset(0, 3),
+                          blurRadius: 20,
+                          color: Color.fromRGBO(0x00, 0x00, 0x00, 0.2),
+                        )
+                      ],
+                    ),
+                    child: switch (status) {
+                      null ||
+                      LandingPageStatus.decline =>
+                        const _LandingPageContent(),
+                      LandingPageStatus.invalidLink =>
+                        const _InvalidLinkContent(),
+                    },
                   ),
-                  boxShadow: [
-                    BoxShadow(
-                      offset: Offset(0, 3),
-                      blurRadius: 20,
-                      color: Color.fromRGBO(0x00, 0x00, 0x00, 0.2),
-                    )
-                  ],
-                ),
-                child: switch (widget.status) {
-                  null ||
-                  LandingPageStatus.decline =>
-                    const _LandingPageContent(),
-                  LandingPageStatus.invalidLink => const _InvalidLinkContent(),
-                },
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Stitchfam is invite only.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w400,
+                      color: Color.fromRGBO(0x9E, 0x9E, 0x9E, 1.0),
+                    ),
+                  ),
+                ],
               ),
             ),
             Align(
@@ -108,28 +126,124 @@ class _LandingPageState extends State<LandingPage> {
   }
 }
 
-class _LandingPageContent extends StatelessWidget {
+class _LandingPageContent extends ConsumerStatefulWidget {
   const _LandingPageContent({super.key});
 
   @override
+  ConsumerState<_LandingPageContent> createState() =>
+      _LandingPageContentState();
+}
+
+class _LandingPageContentState extends ConsumerState<_LandingPageContent> {
+  String _phoneNumber = '';
+  bool _awaitingSmsVerification = false;
+
+  @override
   Widget build(BuildContext context) {
-    return const Column(
+    return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        SizedBox(height: 24),
-        LogoText(width: 230),
-        Spacer(),
-        Text(
-          'Stitchfam is a collaborative family tree.\n\nCurrently Stitchfam is invite only.',
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w400,
-            color: Color.fromRGBO(0x9E, 0x9E, 0x9E, 1.0),
+        if (!_awaitingSmsVerification)
+          Expanded(
+            child: SignInLogic(
+              title: 'Sign in to view\nyour family tree',
+              initialPhoneNumber: _phoneNumber,
+              onGoogleSignIn: (idToken) async {
+                final api = ref.read(apiProvider);
+                final result = await api.authenticateOauth(
+                  claimUid: null,
+                  idToken: idToken,
+                );
+                if (!mounted) {
+                  return;
+                }
+
+                result.fold(
+                  (l) => _showErrorPopup(label: 'Something went wrong'),
+                  (r) async {
+                    final userRecord =
+                        await FirebaseAuth.instance.signInWithCustomToken(r);
+                    if (!context.mounted) {
+                      return;
+                    }
+                    if (userRecord.user == null) {
+                      _showErrorPopup(label: 'Something went wrong');
+                    } else {
+                      RestartApp.of(context).restart();
+                    }
+                  },
+                );
+              },
+              onSendSms: (phoneNumber) async {
+                setState(() => _phoneNumber = phoneNumber);
+                final api = ref.read(apiProvider);
+                final result = await api.sendSms(phoneNumber: phoneNumber);
+                result.fold(
+                  (l) => _showErrorPopup(label: 'Failed to send code'),
+                  (r) {
+                    if (mounted) {
+                      setState(() => _awaitingSmsVerification = true);
+                    }
+                  },
+                );
+              },
+            ),
+          )
+        else
+          Expanded(
+            child: SignUpPhoneVerificationLogic(
+              onResendCode: () async {
+                final api = ref.read(apiProvider);
+                final result = await api.sendSms(phoneNumber: _phoneNumber);
+                result.fold(
+                  (l) => _showErrorPopup(label: 'Failed to send code'),
+                  (r) {},
+                );
+              },
+              onSubmit: (smsCode) async {
+                if (_phoneNumber.isEmpty) {
+                  return;
+                }
+                final api = ref.read(apiProvider);
+                final result = await api.authenticatePhone(
+                  claimUid: null,
+                  phoneNumber: _phoneNumber,
+                  smsCode: smsCode,
+                );
+                result.fold(
+                  (l) {
+                    if (l == 'Status 401') {
+                      _showErrorPopup(label: 'Invalid code');
+                    } else {
+                      _showErrorPopup(label: 'Something went wrong');
+                    }
+                  },
+                  (r) => RestartApp.of(context).restart(),
+                );
+              },
+              onBack: () => setState(() => _awaitingSmsVerification = false),
+            ),
           ),
-        ),
-        Spacer(),
-        SizedBox(height: 70),
       ],
+    );
+  }
+
+  void _showErrorPopup({
+    required String label,
+  }) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text(label),
+          actions: [
+            TextButton(
+              onPressed: Navigator.of(context).pop,
+              child: const Text('Okay'),
+            )
+          ],
+        );
+      },
     );
   }
 }
@@ -142,10 +256,6 @@ class _InvalidLinkContent extends StatelessWidget {
     return const Column(
       children: [
         SizedBox(height: 24),
-        LogoText(
-          width: 230,
-        ),
-        SizedBox(height: 40),
         Text(
           'Ask your family\for a login link',
           textAlign: TextAlign.center,

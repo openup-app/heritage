@@ -94,81 +94,86 @@ class _OnboardingFlowState extends ConsumerState<OnboardingFlow> {
                     activePeople: widget.activePeople,
                     onDone: () => setState(() => _step++),
                   ),
-                  _SignUpStep(
-                    initialPhoneNumber: _phoneNumber,
-                    onGoogleSignIn: (idToken) async {
-                      final api = ref.read(apiProvider);
-                      final result = await api.authenticateOauth(
-                        claimUid: widget.person.id,
-                        idToken: idToken,
-                      );
-                      if (!mounted) {
-                        return;
-                      }
+                  _Container(
+                    child: SignInLogic(
+                      title: 'Sign up to join\nyour family tree',
+                      initialPhoneNumber: _phoneNumber,
+                      onGoogleSignIn: (idToken) async {
+                        final api = ref.read(apiProvider);
+                        final result = await api.authenticateOauth(
+                          claimUid: widget.person.id,
+                          idToken: idToken,
+                        );
+                        if (!mounted) {
+                          return;
+                        }
 
-                      result.fold(
-                        (l) => _showErrorPopup(label: 'Something went wrong'),
-                        (r) async {
-                          final userRecord = await FirebaseAuth.instance
-                              .signInWithCustomToken(r);
-                          if (!mounted) {
-                            return;
-                          }
-                          if (userRecord.user == null) {
-                            _showErrorPopup(label: 'Something went wrong');
-                          } else {
-                            setState(() => _step += 2);
-                          }
-                        },
-                      );
-                    },
-                    onSendSms: (phoneNumber) async {
-                      setState(() => _phoneNumber = phoneNumber);
-                      final api = ref.read(apiProvider);
-                      final result =
-                          await api.sendSms(phoneNumber: phoneNumber);
-                      result.fold(
-                        (l) => _showErrorPopup(label: 'Failed to send code'),
-                        (r) {
-                          if (mounted) {
-                            setState(() => _step++);
-                          }
-                        },
-                      );
-                    },
+                        result.fold(
+                          (l) => _showErrorPopup(label: 'Something went wrong'),
+                          (r) async {
+                            final userRecord = await FirebaseAuth.instance
+                                .signInWithCustomToken(r);
+                            if (!mounted) {
+                              return;
+                            }
+                            if (userRecord.user == null) {
+                              _showErrorPopup(label: 'Something went wrong');
+                            } else {
+                              setState(() => _step += 2);
+                            }
+                          },
+                        );
+                      },
+                      onSendSms: (phoneNumber) async {
+                        setState(() => _phoneNumber = phoneNumber);
+                        final api = ref.read(apiProvider);
+                        final result =
+                            await api.sendSms(phoneNumber: phoneNumber);
+                        result.fold(
+                          (l) => _showErrorPopup(label: 'Failed to send code'),
+                          (r) {
+                            if (mounted) {
+                              setState(() => _step++);
+                            }
+                          },
+                        );
+                      },
+                    ),
                   ),
-                  _SignUpPhoneVerificationStep(
-                    onResendCode: () async {
-                      final api = ref.read(apiProvider);
-                      final result =
-                          await api.sendSms(phoneNumber: _phoneNumber);
-                      result.fold(
-                        (l) => _showErrorPopup(label: 'Failed to send code'),
-                        (r) {},
-                      );
-                    },
-                    onSubmit: (smsCode) async {
-                      if (_phoneNumber.isEmpty) {
-                        return;
-                      }
-                      final api = ref.read(apiProvider);
-                      final result = await api.authenticatePhone(
-                        claimUid: widget.person.id,
-                        phoneNumber: _phoneNumber,
-                        smsCode: smsCode,
-                      );
-                      result.fold(
-                        (l) {
-                          if (l == 'Status 401') {
-                            _showErrorPopup(label: 'Invalid code');
-                          } else {
-                            _showErrorPopup(label: 'Something went wrong');
-                          }
-                        },
-                        (r) => setState(() => _step++),
-                      );
-                    },
-                    onBack: () => setState(() => _step--),
+                  _Container(
+                    child: SignUpPhoneVerificationLogic(
+                      onResendCode: () async {
+                        final api = ref.read(apiProvider);
+                        final result =
+                            await api.sendSms(phoneNumber: _phoneNumber);
+                        result.fold(
+                          (l) => _showErrorPopup(label: 'Failed to send code'),
+                          (r) {},
+                        );
+                      },
+                      onSubmit: (smsCode) async {
+                        if (_phoneNumber.isEmpty) {
+                          return;
+                        }
+                        final api = ref.read(apiProvider);
+                        final result = await api.authenticatePhone(
+                          claimUid: widget.person.id,
+                          phoneNumber: _phoneNumber,
+                          smsCode: smsCode,
+                        );
+                        result.fold(
+                          (l) {
+                            if (l == 'Status 401') {
+                              _showErrorPopup(label: 'Invalid code');
+                            } else {
+                              _showErrorPopup(label: 'Something went wrong');
+                            }
+                          },
+                          (r) => setState(() => _step++),
+                        );
+                      },
+                      onBack: () => setState(() => _step--),
+                    ),
                   ),
                   _NameStep(
                     title: 'Your name',
@@ -571,23 +576,25 @@ class _ActivePeopleStepState extends State<_ActivePeopleStep> {
   }
 }
 
-class _SignUpStep extends StatefulWidget {
+class SignInLogic extends StatefulWidget {
+  final String title;
   final String initialPhoneNumber;
   final Future<void> Function(String idToken) onGoogleSignIn;
   final Future<void> Function(String phoneNumber)? onSendSms;
 
-  const _SignUpStep({
+  const SignInLogic({
     super.key,
+    required this.title,
     required this.initialPhoneNumber,
     required this.onGoogleSignIn,
     required this.onSendSms,
   });
 
   @override
-  State<_SignUpStep> createState() => _SignUpStepState();
+  State<SignInLogic> createState() => _SignInLogicState();
 }
 
-class _SignUpStepState extends State<_SignUpStep> {
+class _SignInLogicState extends State<SignInLogic> {
   bool _sending = false;
   late final _phoneNumberNotifier =
       ValueNotifier<String>(widget.initialPhoneNumber);
@@ -620,76 +627,73 @@ class _SignUpStepState extends State<_SignUpStep> {
   @override
   Widget build(BuildContext context) {
     final onSendSms = widget.onSendSms;
-    return _Container(
-      child: Column(
-        children: [
-          const SizedBox(height: 0),
-          const Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
-              'Sign up to join\nyour family tree',
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.w700,
-              ),
+    return Column(
+      children: [
+        const SizedBox(height: 0),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: Text(
+            widget.title,
+            style: const TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.w700,
             ),
           ),
-          const Spacer(),
-          buildSignInButton(),
-          const Row(
-            children: [
-              Expanded(
-                child: Divider(),
-              ),
-              Padding(
-                padding: EdgeInsets.all(16.0),
-                child: Text('or'),
-              ),
-              Expanded(
-                child: Divider(),
-              ),
-            ],
-          ),
-          IntlPhoneField(
-            initialValue: widget.initialPhoneNumber,
-            initialCountryCode: 'US',
-            keyboardType: TextInputType.number,
-            disableLengthCheck: true,
-            decoration: const InputDecoration(
-              hintText: 'Phone number',
+        ),
+        const Spacer(),
+        buildSignInButton(),
+        const Row(
+          children: [
+            Expanded(
+              child: Divider(),
             ),
-            onChanged: (value) =>
-                _phoneNumberNotifier.value = value.completeNumber,
+            Padding(
+              padding: EdgeInsets.all(16.0),
+              child: Text('or'),
+            ),
+            Expanded(
+              child: Divider(),
+            ),
+          ],
+        ),
+        IntlPhoneField(
+          initialValue: widget.initialPhoneNumber,
+          initialCountryCode: 'US',
+          keyboardType: TextInputType.number,
+          disableLengthCheck: true,
+          decoration: const InputDecoration(
+            hintText: 'Phone number',
           ),
-          const SizedBox(height: 16),
-          ValueListenableBuilder(
-            valueListenable: _phoneNumberNotifier,
-            builder: (context, value, child) {
-              return _Button(
-                onPressed: _sending || value.isEmpty || onSendSms == null
-                    ? null
-                    : () async {
-                        setState(() => _sending = true);
-                        await onSendSms(value);
-                        setState(() => _sending = false);
-                      },
-                child:
-                    _sending ? const _LoadingIndicator() : const Text('Next'),
-              );
-            },
-          ),
-        ],
-      ),
+          onChanged: (value) =>
+              _phoneNumberNotifier.value = value.completeNumber,
+        ),
+        const SizedBox(height: 16),
+        ValueListenableBuilder(
+          valueListenable: _phoneNumberNotifier,
+          builder: (context, value, child) {
+            return _Button(
+              onPressed: _sending || value.isEmpty || onSendSms == null
+                  ? null
+                  : () async {
+                      setState(() => _sending = true);
+                      await onSendSms(value);
+                      setState(() => _sending = false);
+                    },
+              child: _sending ? const _LoadingIndicator() : const Text('Next'),
+            );
+          },
+        ),
+      ],
     );
   }
 }
 
-class _SignUpPhoneVerificationStep extends StatefulWidget {
+class SignUpPhoneVerificationLogic extends StatefulWidget {
   final Future<void> Function(String smsCode)? onSubmit;
   final VoidCallback? onResendCode;
   final VoidCallback? onBack;
 
-  const _SignUpPhoneVerificationStep({
+  const SignUpPhoneVerificationLogic({
     super.key,
     required this.onResendCode,
     required this.onSubmit,
@@ -697,12 +701,12 @@ class _SignUpPhoneVerificationStep extends StatefulWidget {
   });
 
   @override
-  State<_SignUpPhoneVerificationStep> createState() =>
-      _SignUpPhoneVerificationStepState();
+  State<SignUpPhoneVerificationLogic> createState() =>
+      _SignUpPhoneVerificationLogicState();
 }
 
-class _SignUpPhoneVerificationStepState
-    extends State<_SignUpPhoneVerificationStep> {
+class _SignUpPhoneVerificationLogicState
+    extends State<SignUpPhoneVerificationLogic> {
   final _smsController = TextEditingController();
   bool _submitting = false;
   Timer? _resendTimer;
@@ -716,90 +720,88 @@ class _SignUpPhoneVerificationStepState
 
   @override
   Widget build(BuildContext context) {
-    return _Container(
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 32),
-              const Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  'Enter your\nverification code',
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.w700,
-                  ),
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 32),
+            const Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'Enter your\nverification code',
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w700,
                 ),
-              ),
-              TextButton(
-                onPressed: _submitting ||
-                        _resendTimer != null ||
-                        widget.onResendCode == null
-                    ? null
-                    : () {
-                        setState(() {
-                          _resendTimer = Timer(
-                            const Duration(seconds: 10),
-                            () => setState(() => _resendTimer = null),
-                          );
-                        });
-                        _smsController.clear();
-                        widget.onResendCode?.call();
-                      },
-                style: TextButton.styleFrom(padding: EdgeInsets.zero),
-                child: const Text('Resend Code'),
-              ),
-              const Spacer(),
-              TextFormField(
-                controller: _smsController,
-                keyboardType: TextInputType.number,
-                textAlign: TextAlign.center,
-                decoration: const InputDecoration(
-                  hintText: 'Verification code',
-                ),
-              ),
-              const Spacer(),
-              const SizedBox(height: 16),
-              ValueListenableBuilder(
-                valueListenable: _smsController,
-                builder: (context, value, child) {
-                  return _Button(
-                    onPressed: _submitting ||
-                            value.text.length < 6 ||
-                            widget.onSubmit == null
-                        ? null
-                        : () async {
-                            setState(() => _submitting = true);
-                            await widget.onSubmit?.call(value.text);
-                            if (mounted) {
-                              setState(() => _submitting = false);
-                            }
-                          },
-                    child: _submitting
-                        ? const _LoadingIndicator()
-                        : const Text('Next'),
-                  );
-                },
-              ),
-            ],
-          ),
-          Positioned(
-            left: -16,
-            top: -16,
-            child: IconButton(
-              onPressed: _submitting ? null : widget.onBack,
-              style: IconButton.styleFrom(padding: EdgeInsets.zero),
-              icon: const Icon(
-                CupertinoIcons.chevron_back,
-                color: Color.fromRGBO(0xA4, 0xA4, 0xA4, 1.0),
               ),
             ),
+            TextButton(
+              onPressed: _submitting ||
+                      _resendTimer != null ||
+                      widget.onResendCode == null
+                  ? null
+                  : () {
+                      setState(() {
+                        _resendTimer = Timer(
+                          const Duration(seconds: 10),
+                          () => setState(() => _resendTimer = null),
+                        );
+                      });
+                      _smsController.clear();
+                      widget.onResendCode?.call();
+                    },
+              style: TextButton.styleFrom(padding: EdgeInsets.zero),
+              child: const Text('Resend Code'),
+            ),
+            const Spacer(),
+            TextFormField(
+              controller: _smsController,
+              keyboardType: TextInputType.number,
+              textAlign: TextAlign.center,
+              decoration: const InputDecoration(
+                hintText: 'Verification code',
+              ),
+            ),
+            const Spacer(),
+            const SizedBox(height: 16),
+            ValueListenableBuilder(
+              valueListenable: _smsController,
+              builder: (context, value, child) {
+                return _Button(
+                  onPressed: _submitting ||
+                          value.text.length < 6 ||
+                          widget.onSubmit == null
+                      ? null
+                      : () async {
+                          setState(() => _submitting = true);
+                          await widget.onSubmit?.call(value.text);
+                          if (mounted) {
+                            setState(() => _submitting = false);
+                          }
+                        },
+                  child: _submitting
+                      ? const _LoadingIndicator()
+                      : const Text('Next'),
+                );
+              },
+            ),
+          ],
+        ),
+        Positioned(
+          left: -16,
+          top: -16,
+          child: IconButton(
+            onPressed: _submitting ? null : widget.onBack,
+            style: IconButton.styleFrom(padding: EdgeInsets.zero),
+            icon: const Icon(
+              CupertinoIcons.chevron_back,
+              color: Color.fromRGBO(0xA4, 0xA4, 0xA4, 1.0),
+            ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
