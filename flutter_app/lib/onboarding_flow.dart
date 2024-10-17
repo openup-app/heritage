@@ -51,7 +51,7 @@ class _OnboardingFlowState extends ConsumerState<OnboardingFlow> {
   @override
   void initState() {
     super.initState();
-    _timer = Timer(const Duration(seconds: 0), () {
+    _timer = Timer(const Duration(seconds: 3), () {
       if (mounted) {
         setState(() => _step++);
       }
