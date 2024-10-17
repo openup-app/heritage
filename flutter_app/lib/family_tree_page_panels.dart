@@ -953,8 +953,10 @@ class AddConnectionButtons extends StatelessWidget {
               : null,
           foregroundColor: foregroundColor,
           icon: SvgPicture.asset(
-            'assets/images/connection_parent.svg',
-            width: 24,
+            !isAwaiting
+                ? 'assets/images/connection_parent.svg'
+                : 'assets/images/connection_parent_awaiting.svg',
+            width: 32,
           ),
           label: const Text('Parent'),
         ),
@@ -964,7 +966,9 @@ class AddConnectionButtons extends StatelessWidget {
               : null,
           foregroundColor: foregroundColor,
           icon: SvgPicture.asset(
-            'assets/images/connection_sibling.svg',
+            !isAwaiting
+                ? 'assets/images/connection_sibling.svg'
+                : 'assets/images/connection_sibling_awaiting.svg',
             width: 32,
           ),
           label: const Text('Sibling'),
@@ -975,7 +979,9 @@ class AddConnectionButtons extends StatelessWidget {
               : null,
           foregroundColor: foregroundColor,
           icon: SvgPicture.asset(
-            'assets/images/connection_child.svg',
+            !isAwaiting
+                ? 'assets/images/connection_child.svg'
+                : 'assets/images/connection_child_awaiting.svg',
             width: 32,
           ),
           label: const Text('Child'),
@@ -986,7 +992,9 @@ class AddConnectionButtons extends StatelessWidget {
               : null,
           foregroundColor: foregroundColor,
           icon: SvgPicture.asset(
-            'assets/images/connection_spouse.svg',
+            !isAwaiting
+                ? 'assets/images/connection_spouse.svg'
+                : 'assets/images/connection_spouse_awaiting.svg',
             width: 32,
           ),
           label: const Text('Spouse'),
@@ -1031,6 +1039,7 @@ class _AddConnectionButton extends StatelessWidget {
                 ),
                 foregroundColor: foregroundColor,
                 backgroundColor: Colors.transparent,
+                disabledBackgroundColor: Colors.transparent,
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
