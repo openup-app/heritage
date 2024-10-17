@@ -118,7 +118,15 @@ class _LandingPageContent extends StatelessWidget {
         SizedBox(height: 24),
         LogoText(width: 230),
         Spacer(),
-        _InviteOnlyText(),
+        Text(
+          'Stitchfam is a collaborative family tree.\n\nCurrently Stitchfam is invite only.',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w400,
+            color: Color.fromRGBO(0x9E, 0x9E, 0x9E, 1.0),
+          ),
+        ),
         Spacer(),
         SizedBox(height: 70),
       ],
@@ -149,25 +157,17 @@ class _InvalidLinkContent extends StatelessWidget {
         ),
         Spacer(),
         SizedBox(height: 24),
-        _InviteOnlyText(),
+        Text(
+          'Stitchfam is currently invite only.',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w400,
+            color: Color.fromRGBO(0x9E, 0x9E, 0x9E, 1.0),
+          ),
+        ),
         SizedBox(height: 24),
       ],
-    );
-  }
-}
-
-class _InviteOnlyText extends StatelessWidget {
-  const _InviteOnlyText({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Text(
-      'Stitchfam is currently invite only',
-      style: TextStyle(
-        fontSize: 14,
-        fontWeight: FontWeight.w400,
-        color: Color.fromRGBO(0x9E, 0x9E, 0x9E, 1.0),
-      ),
     );
   }
 }
