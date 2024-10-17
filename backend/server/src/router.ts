@@ -83,7 +83,7 @@ export function router(auth: Auth, database: Database, storage: Storage): Router
       }
 
       if (!body.claimUid) {
-        return res.status(400).json({ "error": { "code": "badUid" } });
+        return res.status(400).json({ "error": { "code": "noAccount" } });
       }
 
       // Ensure person exists and is unowned
@@ -93,7 +93,7 @@ export function router(auth: Auth, database: Database, storage: Storage): Router
           return res.status(400).json({ "error": { "code": "alreadyOwned" } });
         }
       } catch (e) {
-        return res.status(400).json({ "error": { "code": "badUid" } });
+        return res.status(400).json({ "error": { "code": "unknownUid" } });
       }
 
       const signInToken = await createUser(body.claimUid, signInResult.data);

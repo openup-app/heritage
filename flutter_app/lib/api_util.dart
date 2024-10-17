@@ -48,7 +48,9 @@ String authErrorToMessage(
         AuthError.badRequest => 'Something went wrong',
         AuthError.badCredential =>
           isGoogleOauth ? 'Failed to sign in with Google' : 'Invalid code',
-        AuthError.badUid => 'Unable to find profile',
+        AuthError.noAccount =>
+          'Unable to find your account. Stitchfam is invite only',
+        AuthError.unknownUid => 'Unable to find profile',
         AuthError.alreadyOwned => 'This profile has already been claimed',
         AuthError.accountLinkFailure => 'Unable to claim the profile',
       },

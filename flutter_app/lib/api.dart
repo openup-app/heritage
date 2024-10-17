@@ -415,7 +415,8 @@ enum AuthError {
   failure,
   badRequest,
   badCredential,
-  badUid,
+  noAccount,
+  unknownUid,
   alreadyOwned,
   accountLinkFailure
 }
