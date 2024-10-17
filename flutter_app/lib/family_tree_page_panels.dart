@@ -135,27 +135,6 @@ class _PanelsState extends ConsumerState<Panels> {
                 onPressed: widget.onLeavePerspective,
               ),
             ),
-          Positioned(
-            left: 16,
-            bottom: 216,
-            width: 48,
-            height: 48,
-            child: AnimatedOpacity(
-              duration: const Duration(milliseconds: 150),
-              opacity: widget.onViewPerspective == null ? 0.0 : 1.0,
-              child: FilledButton(
-                onPressed: widget.onViewPerspective,
-                style: FilledButton.styleFrom(
-                  minimumSize: const Size.square(48),
-                  backgroundColor: Colors.transparent,
-                ),
-                child: Image.asset(
-                  'assets/images/perspective_portal.png',
-                  fit: BoxFit.cover,
-                ),
-              ),
-            ),
-          ),
         ] else ...[
           Positioned(
             top: MediaQuery.of(context).padding.top,
@@ -234,37 +213,6 @@ class _PanelsState extends ConsumerState<Panels> {
               ),
             ),
           ),
-          if (widget.addConnectionButtonsBuilder != null)
-            AnimatedSlideIn(
-              duration: const Duration(milliseconds: 300),
-              beginOffset: const Offset(0, 0.1),
-              alignment: Alignment.bottomCenter,
-              child: Align(
-                alignment: Alignment.bottomCenter,
-                child: Padding(
-                  padding: const EdgeInsets.only(bottom: 24),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.all(Radius.circular(20)),
-                      boxShadow: [
-                        BoxShadow(
-                          offset: Offset(0, 4),
-                          blurRadius: 16,
-                          color: Color.fromRGBO(0x00, 0x00, 0x00, 0.25),
-                        ),
-                      ],
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                      child:
-                          widget.addConnectionButtonsBuilder?.call(context, 20),
-                    ),
-                  ),
-                ),
-              ),
-            ),
         ],
       ],
     );
@@ -694,21 +642,26 @@ class _ProfileSheetState extends State<_ProfileSheet> {
             ),
           ),
           const SizedBox(height: 16),
-          if (widget.onInvite != null)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: FilledButton(
-                onPressed: widget.onInvite,
-                style: FilledButton.styleFrom(
-                  padding: const EdgeInsets.all(8),
-                  minimumSize: const Size.fromHeight(64),
-                  foregroundColor: Colors.white,
-                  backgroundColor:
-                      widget.person.isAwaiting ? _kAwaitingColor : primaryColor,
-                ),
-                child: Text('Invite ${widget.person.profile.firstName}'),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: FilledButton(
+              onPressed: widget.person.isAwaiting
+                  ? widget.onInvite
+                  : widget.isFocalPersonSelected
+                      ? null
+                      : widget.onViewPerspective,
+              style: FilledButton.styleFrom(
+                padding: const EdgeInsets.all(8),
+                minimumSize: const Size.fromHeight(64),
+                foregroundColor: Colors.white,
+                backgroundColor:
+                    widget.person.isAwaiting ? _kAwaitingColor : primaryColor,
               ),
+              child: widget.person.isAwaiting
+                  ? Text('Invite ${widget.person.profile.firstName}')
+                  : Text('View ${widget.person.profile.firstName}\'s Tree'),
             ),
+          ),
         ],
       ),
     );
@@ -902,7 +855,7 @@ class _SidePanelContainer extends StatelessWidget {
       clipBehavior: Clip.hardEdge,
       padding: const EdgeInsets.only(top: 8),
       decoration: const BoxDecoration(
-        color: Colors.white,
+        color: Color.fromRGBO(0xEC, 0xEC, 0xEC, 1.0),
         borderRadius: BorderRadius.all(Radius.circular(10)),
         boxShadow: [
           BoxShadow(
@@ -913,8 +866,7 @@ class _SidePanelContainer extends StatelessWidget {
         ],
       ),
       child: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 16) +
-            const EdgeInsets.only(top: 8, bottom: 16),
+        padding: EdgeInsets.zero,
         child: child,
       ),
     );
