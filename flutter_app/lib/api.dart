@@ -253,7 +253,11 @@ class Api {
       final response = await request.send().timeout(_kTimeout);
 
       if (response.statusCode != 200) {
-        return left(ClientError('Status ${response.statusCode}'));
+        if (response.statusCode == 500) {
+          return left(ServerError());
+        } else {
+          return left(UnhandledError('Status ${response.statusCode}'));
+        }
       }
 
       // Handle the response
@@ -267,6 +271,7 @@ class Api {
     } on TimeoutException {
       return left(NetworkError());
     } catch (e) {
+      debugPrint(e.toString());
       return left(UnhandledError(e.toString()));
     }
   }
@@ -345,6 +350,8 @@ class Api {
       if (response.statusCode != 200) {
         if (response.statusCode == 400 && handleError != null) {
           return left(handleError(response));
+        } else if (response.statusCode == 500) {
+          return left(ServerError());
         } else {
           return left(UnhandledError('Status ${response.statusCode}'));
         }
@@ -357,6 +364,7 @@ class Api {
     } on TimeoutException {
       return left(NetworkError());
     } catch (e) {
+      debugPrint(e.toString());
       return left(UnhandledError(e.toString()));
     }
   }
@@ -379,6 +387,8 @@ class ClientError<T> implements ApiError<T> {
 
   ClientError(this.data);
 }
+
+class ServerError<T> implements ApiError<T> {}
 
 class PackageError<T> implements ApiError<T> {}
 

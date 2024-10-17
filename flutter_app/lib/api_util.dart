@@ -29,6 +29,7 @@ String smsErrorToMessage(ApiError<SmsError> error) {
         SmsError.badPhoneNumber =>
           'Unable to send code, ensure the phone number is correct',
       },
+    ServerError() => 'Something went wrong on our end, please try again',
     NetworkError() =>
       'There was a network connection problem, please try again',
     PackageError() ||
@@ -51,6 +52,7 @@ String authErrorToMessage(
         AuthError.alreadyOwned => 'This profile has already been claimed',
         AuthError.accountLinkFailure => 'Unable to claim the profile',
       },
+    ServerError() => 'Something went wrong on our end, please try again',
     NetworkError() =>
       'There was a network connection problem, please try again',
     PackageError() ||
