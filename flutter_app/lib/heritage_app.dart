@@ -135,7 +135,7 @@ class HeritageApp extends StatelessWidget {
                     disabledColor: Colors.black,
                     inputDecorationTheme: const InputDecorationTheme(
                       filled: true,
-                      fillColor: greyColor,
+                      fillColor: Colors.white,
                       outlineBorder: BorderSide.none,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.all(Radius.circular(10)),

@@ -450,6 +450,10 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
       return;
     }
 
+    final activePeople = graphWhere(focalPerson, (e) => e.data.ownedBy != null)
+        .take(4)
+        .map((e) => e.data)
+        .toList();
     await showDialog(
       context: context,
       barrierDismissible: false,
@@ -457,6 +461,7 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
         return OnboardingFlow(
           person: focalPerson,
           referral: referrer,
+          activePeople: activePeople,
           onSave: (profile) async {
             await notifier.takeOwnership(focalPersonId);
             await notifier.updateProfile(focalPerson.id, profile);

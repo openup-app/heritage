@@ -555,6 +555,29 @@ List<LinkedNode<T>> withoutSpouses<T extends GraphNode>(
   return copy;
 }
 
+Iterable<LinkedNode<T>> graphWhere<T extends GraphNode>(
+    LinkedNode<T> root, bool Function(LinkedNode<T> node) whereCallback) {
+  final matching = <LinkedNode<T>>[];
+
+  final fringe = Queue<LinkedNode<T>>();
+  final visited = <Id>{};
+  fringe.addAll(root.parents.isEmpty ? [root] : root.parents);
+  while (fringe.isNotEmpty) {
+    final node = fringe.removeFirst();
+    if (visited.contains(node.id)) {
+      continue;
+    }
+    visited.add(node.id);
+    if (whereCallback(node)) {
+      matching.add(node);
+    }
+
+    fringe.addAll(node.children);
+    fringe.addAll(node.parents);
+  }
+  return matching;
+}
+
 void dumpCoupleTree(Couple couple) {
   final visited = <Id>{};
 

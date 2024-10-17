@@ -45,7 +45,7 @@ class Api {
     _headers['x-app-uid'] = uid;
   }
 
-  Future<Either<Error, String>> sendSms({
+  Future<Either<Error, void>> sendSms({
     required String phoneNumber,
   }) {
     return _makeRequest(
@@ -56,10 +56,7 @@ class Api {
           'phoneNumber': phoneNumber,
         }),
       ),
-      handleResponse: (response) {
-        final json = jsonDecode(response.body);
-        return right(json['token']);
-      },
+      handleResponse: (response) => right(null),
     );
   }
 

@@ -533,7 +533,7 @@ class FormBorder extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: const BoxDecoration(
-        color: Color.fromRGBO(0xEB, 0xEB, 0xEB, 1.0),
+        color: Colors.white,
         borderRadius: BorderRadius.all(Radius.circular(10)),
       ),
       child: child,
@@ -558,6 +558,7 @@ class InputForm extends StatelessWidget {
               const Divider(
                 height: 1,
                 indent: 14,
+                endIndent: 14,
                 color: Color.fromRGBO(0xD8, 0xD8, 0xD8, 1.0),
               ),
           ],
@@ -672,7 +673,7 @@ class _GalleryViewState extends State<GalleryView> {
           itemCount: _largeNumber,
           itemBuilder: (context, index) {
             final photo = widget.photos[index % widget.photos.length];
-            return _Photo(
+            return PhotoDisplay(
               photo: photo,
             );
           },
@@ -1400,11 +1401,11 @@ class Binoculars extends StatelessWidget {
 }
 
 class VerifiedBadge extends StatelessWidget {
-  final double width;
+  final double size;
 
   const VerifiedBadge({
     super.key,
-    this.width = 80,
+    this.size = 80,
   });
 
   @override
@@ -1414,7 +1415,7 @@ class VerifiedBadge extends StatelessWidget {
         opacity: 0.9,
         child: SvgPicture.asset(
           'assets/images/badge.svg',
-          width: width,
+          width: size,
           fit: BoxFit.contain,
         ),
       ),
@@ -1441,10 +1442,10 @@ class ImageAspect extends StatelessWidget {
   }
 }
 
-class _Photo extends StatelessWidget {
+class PhotoDisplay extends StatelessWidget {
   final Photo photo;
 
-  const _Photo({
+  const PhotoDisplay({
     super.key,
     required this.photo,
   });
