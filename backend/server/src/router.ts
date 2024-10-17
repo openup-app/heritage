@@ -19,99 +19,84 @@ export function router(auth: Auth, database: Database, storage: Storage): Router
       return res.sendStatus(400);
     }
 
-    try {
-      const result = await auth.sendSmsCode(body.phoneNumber);
-      if (result === "approved" || result === "pending") {
-        return res.sendStatus(200);
-      } else {
-        return res.sendStatus(401);
-      }
-    } catch (e) {
-      return res.sendStatus(500);
+    const result = await auth.sendSmsCode(body.phoneNumber);
+    if (result === "success") {
+      return res.sendStatus(200);
+    } else {
+      return res.status(400).json({ "error": { "code": result } });
     }
   });
 
-  async function signIn(credential: Credential): Promise<SignInResult | undefined> {
+  async function signIn(credential: Credential): Promise<SignInResult> {
     if (credential.type === "oauth") {
-      try {
-        const googleUser = await auth.authenticateGoogleIdToken(credential.idToken);
-        if (!googleUser) {
-          return;
+      const googleUser = await auth.authenticateGoogleIdToken(credential.idToken);
+      if (!googleUser) {
+        return { "type": "badCredential" };
+      }
+      return {
+        type: "success",
+        token: await auth.getSignInTokenByEmail(googleUser.email),
+        data: {
+          type: credential.type,
+          googleUser: googleUser,
         }
-        return {
-          token: await auth.getSignInTokenByEmail(googleUser.email),
-          data: {
-            type: credential.type,
-            googleUser: googleUser,
-          }
-        }
-      } catch {
-        return;
       }
     } else if (credential.type === "phone") {
-      try {
-        const verified = await auth.verifySmsCode(credential.phoneNumber, credential.smsCode);
-        if (!verified) {
-          return;
+      const status = await auth.verifySmsCode(credential.phoneNumber, credential.smsCode);
+      if (status !== "success") {
+        return { "type": "badCredential" };
+      }
+      return {
+        type: "success",
+        token: await auth.getSignInTokenByPhoneNumber(credential.phoneNumber),
+        data: {
+          type: credential.type,
+          phoneNumber: credential.phoneNumber,
         }
-        return {
-          token: await auth.getSignInTokenByPhoneNumber(credential.phoneNumber),
-          data: {
-            type: credential.type,
-            phoneNumber: credential.phoneNumber,
-          }
-        }
-      } catch {
-        return;
       }
     }
-    return;
+    return { type: "failure" };
   }
 
-  async function createUser(uid: string, authResult: SignInResult): Promise<string | undefined> {
-    try {
-      if (authResult.data.type === "oauth") {
-        return await auth.createGoogleUser(uid, authResult.data.googleUser);
-      } else if (authResult.data.type === "phone") {
-        return await auth.createPhoneUser(uid, authResult.data.phoneNumber);
-      }
-    } catch {
-      return;
+  async function createUser(uid: string, data: SignInData): Promise<string | undefined> {
+    if (data.type === "oauth") {
+      return await auth.createGoogleUser(uid, data.googleUser);
+    } else if (data.type === "phone") {
+      return await auth.createPhoneUser(uid, data.phoneNumber);
     }
-    return;
   }
-
 
   router.post('/accounts/authenticate', async (req: Request, res: Response) => {
     let body: AuthenticateBody;
     try {
       body = authenticateSchema.parse(req.body);
     } catch {
-      return res.sendStatus(400);
+      return res.status(400).json({ "error": { "code": "badRequest" } });
     }
 
     const signInResult = await signIn(body.credential);
-    if (!signInResult) {
-      return res.sendStatus(401);
-    }
-    if (signInResult.token) {
-      return res.json({ "token": signInResult.token });
+    if (signInResult.type !== "success") {
+      return res.status(400).json({ "error": { "code": signInResult.type } });
     } else {
+      if (signInResult.token) {
+        return res.json({ "token": signInResult.token });
+      }
+
       if (!body.claimUid) {
-        return res.sendStatus(400);
+        return res.status(400).json({ "error": { "code": "badUid" } });
       }
 
       // Ensure person exists and is unowned
       try {
         const person = await database.getPerson(body.claimUid);
         if (person.ownedBy) {
-          return res.sendStatus(400);
+          return res.status(400).json({ "error": { "code": "alreadyOwned" } });
         }
       } catch (e) {
-        return res.sendStatus(400);
+        return res.status(400).json({ "error": { "code": "badUid" } });
       }
 
-      const signInToken = await createUser(body.claimUid, signInResult);
+      const signInToken = await createUser(body.claimUid, signInResult.data);
       if (!signInToken) {
         return res.sendStatus(500);
       }
@@ -524,9 +509,32 @@ const authResultPhoneDataSchema = z.object({
   phoneNumber: z.string(),
 });
 
-const signInResultSchema = z.object({
-  token: z.string().nullable().optional(),
-  data: z.discriminatedUnion("type", [authResultOauthDataSchema, authResultPhoneDataSchema]),
+const signInBadCredendialSchema = z.object({
+  type: z.literal("badCredential"),
 });
+
+const signInAlreadyOwnedSchema = z.object({
+  type: z.literal("alreadyOwned"),
+});
+
+const accountLinkFailureSchema = z.object({
+  type: z.literal("accountLinkFailure"),
+});
+
+const signInFailureSchema = z.object({
+  type: z.literal("failure"),
+});
+
+const signInDataSchema = z.discriminatedUnion("type", [authResultOauthDataSchema, authResultPhoneDataSchema]);
+
+const signInResultSuccessSchema = z.object({
+  type: z.literal("success"),
+  token: z.string().nullable().optional(),
+  data: signInDataSchema,
+});
+
+const signInResultSchema = z.discriminatedUnion("type", [signInResultSuccessSchema, signInBadCredendialSchema, signInAlreadyOwnedSchema, accountLinkFailureSchema, signInFailureSchema]);
+
+type SignInData = z.infer<typeof signInDataSchema>;
 
 type SignInResult = z.infer<typeof signInResultSchema>;

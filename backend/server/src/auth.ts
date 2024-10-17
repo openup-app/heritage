@@ -1,5 +1,5 @@
 import { getAuth, Auth as FirebaseAuth, UserRecord } from "firebase-admin/auth";
-import { OAuth2Client } from "google-auth-library";
+import { LoginTicket, OAuth2Client } from "google-auth-library";
 import { ServiceContext } from "twilio/lib/rest/verify/v2/service";
 
 export class Auth {
@@ -34,10 +34,15 @@ export class Auth {
     }
 
     public async authenticateGoogleIdToken(idToken: string): Promise<GoogleUser | undefined> {
-        const ticket = await this.googleOauth.verifyIdToken({
-            idToken: idToken,
-            audience: this.googleOauth._clientId,
-        });
+        let ticket: LoginTicket;
+        try {
+            ticket = await this.googleOauth.verifyIdToken({
+                idToken: idToken,
+                audience: this.googleOauth._clientId,
+            });
+        } catch (e) {
+            return;
+        }
         const payload = ticket.getPayload();
         const email = payload?.email;
         if (!(payload && email)) {
@@ -51,14 +56,53 @@ export class Auth {
         }
     }
 
-    public async sendSmsCode(phoneNumber: string): Promise<SmsSendStatus> {
-        const result = await this.twilioServices.verifications.create({ to: phoneNumber, channel: "sms" });
-        return result.status as SmsSendStatus;
+    public async sendSmsCode(phoneNumber: string): Promise<SmsStatus> {
+        try {
+            const result = await this.twilioServices.verifications.create({ to: phoneNumber, channel: "sms" });
+            const status = result.status as TwilioSmsStatus;
+            if (status === "approved" || status === "pending") {
+                return "success";
+            } else if (status === "max_attempts_reached") {
+                return "tooManyAttempts";
+            } else {
+                return "failure";
+            }
+        } catch (e: any) {
+            if (e.code == 20429) {
+                return "tooManyAttempts";
+            } else if (e.code === 21608) {
+                return "badPhoneNumber";
+            } else if (e.code === 60200) {
+                return "badPhoneNumber";
+            }
+            console.error(JSON.stringify(e));
+            return "failure";
+        }
     }
 
-    public async verifySmsCode(phoneNumber: string, smsCode: string): Promise<boolean> {
-        const result = await this.twilioServices.verificationChecks.create({ to: phoneNumber, code: smsCode });
-        return result.status === "approved";
+    public async verifySmsCode(phoneNumber: string, smsCode: string): Promise<SmsStatus> {
+        try {
+            const result = await this.twilioServices.verificationChecks.create({ to: phoneNumber, code: smsCode });
+            const status = result.status as TwilioSmsStatus;
+            if (status === "approved" || status === "pending") {
+                return "success";
+            } else if (status === "max_attempts_reached") {
+                return "tooManyAttempts";
+            } else {
+                return "failure";
+            }
+        } catch (e: any) {
+            if (e.code == 20429) {
+                return "tooManyAttempts";
+            } else if (e.code === 21608) {
+                return "badPhoneNumber";
+            } else if (e.code === 60200) {
+                return "badPhoneNumber";
+            }
+            console.error(JSON.stringify(e));
+            return "failure";
+        }
+
     }
 
     public async createGoogleUser(uid: string, googleUser: GoogleUser): Promise<string | undefined> {
@@ -121,7 +165,9 @@ export class Auth {
     }
 }
 
-export type SmsSendStatus = "pending" | "approved" | "canceled" | "max_attempts_reached" | "deleted" | "failed" | "expired";
+type TwilioSmsStatus = "pending" | "approved" | "canceled" | "max_attempts_reached" | "deleted" | "failed" | "expired";
+
+export type SmsStatus = "success" | "tooManyAttempts" | "badPhoneNumber" | "failure";
 
 export type GoogleUser = {
     googleId: string,
