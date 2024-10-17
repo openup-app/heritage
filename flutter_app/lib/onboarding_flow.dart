@@ -73,42 +73,40 @@ class _OnboardingFlowState extends ConsumerState<OnboardingFlow> {
               type: MaterialType.transparency,
               child: AnimatedSwitcher(
                 duration: const Duration(milliseconds: 300),
-                child: switch (_step) {
-                  0 => Center(
-                      child: Lottie.asset(
-                        'assets/images/logo.json',
-                        width: 60,
-                      ),
+                child: [
+                  Center(
+                    child: Lottie.asset(
+                      'assets/images/logo.json',
+                      width: 60,
                     ),
-                  1 => _IntroStep(
-                      person: widget.person,
-                      referral: widget.referral,
-                      onDone: () => setState(() => _step++),
-                    ),
-                  2 => _NameStep(
-                      title: 'Your name',
-                      onDone: (firstName, lastName) {
-                        setState(() {
-                          _firstName = firstName;
-                          _lastName = lastName;
-                          _step++;
-                        });
-                      },
-                    ),
-                  3 => _PhotoStep(
-                      title: 'Add Your Photo',
-                      onDone: _uploading
-                          ? null
-                          : (photo) async {
-                              setState(() => _photo = photo);
-                              await _upload();
-                            },
-                    ),
-                  4 => _ExitStep(
-                      onDone: widget.onDone,
-                    ),
-                  _ => const SizedBox.shrink()
-                },
+                  ),
+                  _IntroStep(
+                    person: widget.person,
+                    referral: widget.referral,
+                    onDone: () => setState(() => _step++),
+                  ),
+                  _NameStep(
+                    title: 'Your name',
+                    initialFirstName: widget.person.data.profile.firstName,
+                    initialLastName: widget.person.data.profile.lastName,
+                    onDone: (firstName, lastName) {
+                      setState(() {
+                        _firstName = firstName;
+                        _lastName = lastName;
+                        _step++;
+                      });
+                    },
+                  ),
+                  _PhotoStep(
+                    title: 'Add Your Photo',
+                    initialPhoto: widget.person.data.profile.photo,
+                    onPhoto: (photo) => setState(() => _photo = photo),
+                    onDone: _uploading ? null : _upload,
+                  ),
+                  _ExitStep(
+                    onDone: widget.onDone,
+                  ),
+                ][_step],
               ),
             ),
           ),
@@ -136,6 +134,164 @@ class _OnboardingFlowState extends ConsumerState<OnboardingFlow> {
       _uploading = false;
       _step++;
     });
+  }
+}
+
+class CreatePersonFlow extends StatefulWidget {
+  final Relationship relationship;
+  final Future<Id?> Function(String firstName, String lastName, Photo? photo)
+      onSave;
+  final void Function(Id id) onDone;
+
+  const CreatePersonFlow({
+    super.key,
+    required this.relationship,
+    required this.onSave,
+    required this.onDone,
+  });
+
+  @override
+  State<CreatePersonFlow> createState() => _CreatePersonFlowState();
+}
+
+class _CreatePersonFlowState extends State<CreatePersonFlow> {
+  int _step = 0;
+  String _firstName = '';
+  String _lastName = '';
+  Photo? _photo;
+  bool _uploading = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        Center(
+          child: Padding(
+            padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom),
+            child: Material(
+              type: MaterialType.transparency,
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 300),
+                child: [
+                  _NameStep(
+                    title: 'Edit Name',
+                    initialFirstName: null,
+                    initialLastName: null,
+                    onDone: (firstName, lastName) {
+                      setState(() {
+                        _firstName = firstName;
+                        _lastName = lastName;
+                        _step++;
+                      });
+                    },
+                  ),
+                  _PhotoStep(
+                    title: 'Edit Photo',
+                    initialPhoto: null,
+                    onPhoto: (photo) => setState(() => _photo = photo),
+                    onDone: _uploading ? null : _upload,
+                  ),
+                ][_step],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _upload() async {
+    setState(() => _uploading = true);
+    final id = await widget.onSave(_firstName, _lastName, _photo);
+    if (!mounted || id == null) {
+      return;
+    }
+    return widget.onDone(id);
+  }
+}
+
+class EditPersonFlow extends ConsumerStatefulWidget {
+  final Person person;
+  final Future<void> Function(Profile profile) onSave;
+  final void Function() onDone;
+
+  const EditPersonFlow({
+    super.key,
+    required this.person,
+    required this.onSave,
+    required this.onDone,
+  });
+
+  @override
+  ConsumerState<EditPersonFlow> createState() => _EditPersonFlowState();
+}
+
+class _EditPersonFlowState extends ConsumerState<EditPersonFlow> {
+  int _step = 0;
+  String _firstName = '';
+  String _lastName = '';
+  Photo? _photo;
+  bool _uploading = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        Center(
+          child: Padding(
+            padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom),
+            child: Material(
+              type: MaterialType.transparency,
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 300),
+                child: [
+                  _NameStep(
+                    title: 'Edit Name',
+                    initialFirstName: widget.person.profile.firstName,
+                    initialLastName: widget.person.profile.lastName,
+                    onDone: (firstName, lastName) {
+                      setState(() {
+                        _firstName = firstName;
+                        _lastName = lastName;
+                        _step++;
+                      });
+                    },
+                  ),
+                  _PhotoStep(
+                    title: 'Edit Photo',
+                    initialPhoto: widget.person.profile.photo,
+                    onPhoto: (photo) => setState(() => _photo),
+                    onDone: _uploading ? null : _upload,
+                  ),
+                ][_step],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _upload() async {
+    final photo = _photo;
+    if (photo == null) {
+      return;
+    }
+    final profile = widget.person.profile.copyWith(
+      firstName: _firstName,
+      lastName: _lastName,
+      photo: photo,
+    );
+    setState(() => _uploading = true);
+    await widget.onSave(profile);
+    if (!mounted) {
+      return;
+    }
+    widget.onDone();
   }
 }
 
@@ -168,9 +324,10 @@ class _IntroStep extends StatelessWidget {
           ),
           Center(
             child: _Title(
-                icon: null,
-                label:
-                    '${referral.data.profile.firstName} wants to add you\nas $description on the tree!'),
+              icon: null,
+              label:
+                  '${referral.data.profile.firstName} wants to add you\nas $description on the tree!',
+            ),
           ),
           const SizedBox(height: 100),
           _Button(
@@ -185,11 +342,15 @@ class _IntroStep extends StatelessWidget {
 
 class _NameStep extends StatefulWidget {
   final String title;
+  final String? initialFirstName;
+  final String? initialLastName;
   final void Function(String firstName, String lastName) onDone;
 
   const _NameStep({
     super.key,
     required this.title,
+    required this.initialFirstName,
+    required this.initialLastName,
     required this.onDone,
   });
 
@@ -198,8 +359,8 @@ class _NameStep extends StatefulWidget {
 }
 
 class _NameStepState extends State<_NameStep> {
-  String _firstName = '';
-  String _lastName = '';
+  late String _firstName = widget.initialFirstName ?? '';
+  late String _lastName = widget.initialLastName ?? '';
 
   @override
   Widget build(BuildContext context) {
@@ -215,6 +376,8 @@ class _NameStepState extends State<_NameStep> {
           ),
           const Spacer(),
           MinimalProfileEditor(
+            initialFirstName: widget.initialFirstName,
+            initialLastName: widget.initialLastName,
             onUpdate: (firstName, lastName) {
               setState(() {
                 _firstName = firstName;
@@ -237,11 +400,15 @@ class _NameStepState extends State<_NameStep> {
 
 class _PhotoStep extends StatefulWidget {
   final String title;
-  final void Function(Photo photo)? onDone;
+  final Photo? initialPhoto;
+  final void Function(Photo? photo) onPhoto;
+  final VoidCallback? onDone;
 
   const _PhotoStep({
     super.key,
     required this.title,
+    required this.initialPhoto,
+    required this.onPhoto,
     required this.onDone,
   });
 
@@ -250,7 +417,7 @@ class _PhotoStep extends StatefulWidget {
 }
 
 class _PhotoStepState extends State<_PhotoStep> {
-  Photo? _photo;
+  late Photo? _photo = widget.initialPhoto;
 
   @override
   Widget build(BuildContext context) {
@@ -273,6 +440,7 @@ class _PhotoStepState extends State<_PhotoStep> {
                   final photo = await pickPhotoWithCropper(context);
                   if (context.mounted && photo != null) {
                     setState(() => _photo = photo);
+                    widget.onPhoto(photo);
                   }
                 },
                 style: OutlinedButton.styleFrom(
@@ -302,11 +470,7 @@ class _PhotoStepState extends State<_PhotoStep> {
           const SizedBox(height: 24),
           const SizedBox(height: 24),
           _Button(
-            onPressed: photo == null
-                ? null
-                : widget.onDone == null
-                    ? null
-                    : () => widget.onDone!(photo),
+            onPressed: widget.onDone,
             child: widget.onDone == null
                 ? const Center(
                     child: SizedBox(
@@ -386,98 +550,6 @@ class _ExitStepState extends State<_ExitStep> {
         ),
       ),
     );
-  }
-}
-
-class ManagePersonFlow extends ConsumerStatefulWidget {
-  final LinkedNode<Person> targetPerson;
-  final String description;
-  final Future<void> Function(Profile profile) onSave;
-  final void Function() onDone;
-
-  const ManagePersonFlow({
-    super.key,
-    required this.targetPerson,
-    required this.description,
-    required this.onSave,
-    required this.onDone,
-  });
-
-  @override
-  ConsumerState<ManagePersonFlow> createState() => _ManagePersonFlowState();
-}
-
-class _ManagePersonFlowState extends ConsumerState<ManagePersonFlow> {
-  int _step = 0;
-  String _firstName = '';
-  String _lastName = '';
-  Photo? _photo;
-  bool _uploading = false;
-
-  @override
-  void initState() {
-    super.initState();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Stack(
-      alignment: Alignment.center,
-      children: [
-        Center(
-          child: Padding(
-            padding: EdgeInsets.only(
-                bottom: MediaQuery.of(context).viewInsets.bottom),
-            child: Material(
-              type: MaterialType.transparency,
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 300),
-                child: switch (_step) {
-                  0 => _NameStep(
-                      title: '${widget.description}\'s Name',
-                      onDone: (firstName, lastName) {
-                        setState(() {
-                          _firstName = firstName;
-                          _lastName = lastName;
-                          _step++;
-                        });
-                      },
-                    ),
-                  1 => _PhotoStep(
-                      title: 'Add ${widget.description}\'s Photo',
-                      onDone: _uploading
-                          ? null
-                          : (photo) async {
-                              setState(() => _photo = photo);
-                              await _upload();
-                            },
-                    ),
-                  _ => const SizedBox.shrink()
-                },
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Future<void> _upload() async {
-    final photo = _photo;
-    if (photo == null) {
-      return;
-    }
-    final profile = widget.targetPerson.data.profile.copyWith(
-      firstName: _firstName,
-      lastName: _lastName,
-      photo: photo,
-    );
-    setState(() => _uploading = true);
-    await widget.onSave(profile);
-    if (!mounted) {
-      return;
-    }
-    widget.onDone();
   }
 }
 

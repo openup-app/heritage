@@ -31,7 +31,7 @@ class Panels extends ConsumerStatefulWidget {
   final PanelPopupState panelPopupState;
   final VoidCallback? onShareInvite;
   final VoidCallback? onShareLoginLink;
-  final VoidCallback? onTakeOwnership;
+  final VoidCallback? onEdit;
   final VoidCallback? onViewPerspective;
   final VoidCallback? onLeavePerspective;
   final void Function(Rect rect) onViewRectUpdated;
@@ -54,7 +54,7 @@ class Panels extends ConsumerStatefulWidget {
     required this.panelPopupState,
     required this.onShareInvite,
     required this.onShareLoginLink,
-    required this.onTakeOwnership,
+    required this.onEdit,
     required this.onViewPerspective,
     required this.onLeavePerspective,
     required this.onViewRectUpdated,
@@ -103,8 +103,6 @@ class _PanelsState extends ConsumerState<Panels> {
 
   @override
   Widget build(BuildContext context) {
-    final selectedPerson = widget.selectedPerson;
-    final relatedness = widget.relatedness;
     final small = _layout == LayoutType.small;
     return Stack(
       children: [
@@ -224,6 +222,7 @@ class _PanelsState extends ConsumerState<Panels> {
                                 widget.isPrimaryPersonSelected,
                             addConnectionButtonsBuilder:
                                 addConnectionButtonsBuilder,
+                            onEdit: widget.onEdit,
                           );
                         }),
                       ),
@@ -340,13 +339,13 @@ class _PanelsState extends ConsumerState<Panels> {
                     isFocalPersonSelected: widget.isFocalPersonSelected,
                     isPrimaryPersonSelected: widget.isPrimaryPersonSelected,
                     addConnectionButtonsBuilder: addConnectionButtonsBuilder,
+                    onEdit: widget.onEdit,
                   );
                 });
                 setState(() => _bottomSheetController = controller);
                 controller.closed.then((_) {
                   if (mounted) {
                     if (Layout.of(context) == LayoutType.small) {
-                      print('closed');
                       widget.onInformPanelDismissed();
                     }
                   }
@@ -363,87 +362,6 @@ class _PanelsState extends ConsumerState<Panels> {
             widget.onViewRectUpdated(Offset.zero & windowSize);
           }
         });
-    }
-  }
-
-  void _showAddConnectionModal(LinkedNode<Person> targetNode,
-      LinkedNode<Person> focalNode, Relationship relationship) async {
-    final poppedManually = await showModalBottomSheetWithDragHandle<bool>(
-      context: context,
-      builder: (context) {
-        final onShareInvite = widget.onShareInvite;
-        final onTakeOwnership = widget.onTakeOwnership;
-        return AddConnectionDisplay(
-          key: _modalKey,
-          targetNode: targetNode,
-          focalNode: focalNode,
-          relationship: relationship,
-          onShare: onShareInvite == null
-              ? null
-              : () {
-                  Navigator.of(context).pop(true);
-                  onShareInvite();
-                },
-          onTakeOwnership: onTakeOwnership == null
-              ? null
-              : () {
-                  Navigator.of(context).pop(true);
-                  onTakeOwnership();
-                },
-        );
-      },
-    );
-    if (mounted && poppedManually != true) {
-      // Panel dismissed, no one knows, so inform this means deselect user
-      widget.onInformPanelDismissed();
-    }
-  }
-
-  void _showPendingProfileModal({
-    required LinkedNode<Person> targetNode,
-    required LinkedNode<Person> focalNode,
-    required VoidCallback? onShareInvite,
-    required VoidCallback? onTakeOwnership,
-    required VoidCallback? onAddConnection,
-    required VoidCallback? onDeletePressed,
-  }) async {
-    final poppedManually = await showModalBottomSheetWithDragHandle<bool>(
-      context: context,
-      builder: (context) {
-        return PendingProfiledDisplay(
-          key: _modalKey,
-          targetNode: targetNode,
-          focalNode: focalNode,
-          onShareInvite: onShareInvite == null
-              ? null
-              : () {
-                  Navigator.of(context).pop(true);
-                  onShareInvite();
-                },
-          onTakeOwnership: onTakeOwnership == null
-              ? null
-              : () {
-                  Navigator.of(context).pop(true);
-                  onTakeOwnership();
-                },
-          onAddConnection: onAddConnection == null
-              ? null
-              : () {
-                  Navigator.of(context).pop(true);
-                  onAddConnection();
-                },
-          onDeletePressed: onDeletePressed == null
-              ? null
-              : () {
-                  Navigator.of(context).pop(true);
-                  onDeletePressed();
-                },
-        );
-      },
-    );
-    if (mounted && poppedManually != true) {
-      // Panel dismissed, no one knows, so inform this means deselect user
-      widget.onInformPanelDismissed();
     }
   }
 }
@@ -579,6 +497,7 @@ class _ProfileSheet extends StatefulWidget {
   final bool isFocalPersonSelected;
   final bool isPrimaryPersonSelected;
   final AddConnectionButtonsBuilder addConnectionButtonsBuilder;
+  final VoidCallback? onEdit;
 
   const _ProfileSheet({
     super.key,
@@ -587,6 +506,7 @@ class _ProfileSheet extends StatefulWidget {
     required this.isFocalPersonSelected,
     required this.isPrimaryPersonSelected,
     required this.addConnectionButtonsBuilder,
+    required this.onEdit,
   });
 
   @override
@@ -612,10 +532,21 @@ class _ProfileSheetState extends State<_ProfileSheet> {
         children: [
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: ProfileNameSection(
-              person: widget.selectedPerson,
-              relatedness: widget.relatedness,
-              isPrimaryPersonSelected: widget.isPrimaryPersonSelected,
+            child: Row(
+              children: [
+                if (widget.onEdit != null)
+                  IconButton(
+                    onPressed: widget.onEdit,
+                    icon: const Icon(Icons.edit),
+                  ),
+                Expanded(
+                  child: ProfileNameSection(
+                    person: widget.selectedPerson,
+                    relatedness: widget.relatedness,
+                    isPrimaryPersonSelected: widget.isPrimaryPersonSelected,
+                  ),
+                ),
+              ],
             ),
           ),
           ColoredBox(

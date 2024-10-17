@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:heritage/api.dart';
@@ -83,7 +84,7 @@ class GraphNotifier extends StateNotifier<Graph> {
     super.dispose();
   }
 
-  Future<Id?> addConnection({
+  Future<Person?> addConnection({
     required Id source,
     required Relationship relationship,
   }) async {
@@ -109,7 +110,7 @@ class GraphNotifier extends StateNotifier<Graph> {
       return null;
     }, (r) {
       _updatePeople(r.$2);
-      return r.$1;
+      return r.$2.firstWhereOrNull((e) => e.id == r.$1);
     });
   }
 

@@ -190,13 +190,11 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
                     targetName: selectedPerson.profile.firstName,
                   );
                 },
-          onTakeOwnership: () async {
-            final selectedPerson = _selectedPerson;
-            final relatedness = _relatedness;
-            if (selectedPerson != null && relatedness != null) {
-              _showManagePersonFlow(selectedPerson.id);
-            }
-          },
+          onEdit: !_canEdit || selectedPerson == null
+              ? null
+              : () {
+                  _showEditPersonFlow(selectedPerson);
+                },
           onViewPerspective: !_canViewPerspective || selectedPerson == null
               ? null
               : () {
@@ -277,55 +275,73 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
       return;
     }
 
-    final graph = ref.read(graphProvider);
-    final graphNotifier = ref.read(graphProvider.notifier);
-    final addConnectionFuture = graphNotifier.addConnection(
-      source: selectedPerson.id,
-      relationship: relationship,
+    final notifier = ref.read(graphProvider.notifier);
+    final newId = await showDialog<Id>(
+      context: context,
+      builder: (context) {
+        return CreatePersonFlow(
+          relationship: relationship,
+          onSave: (firstName, lastName, photo) async {
+            final newPerson = await notifier.addConnection(
+                source: selectedPerson.id, relationship: relationship);
+            if (newPerson != null) {
+              await notifier.updateProfile(
+                newPerson.id,
+                newPerson.profile.copyWith(
+                  firstName: firstName,
+                  lastName: lastName,
+                  photo: photo ?? newPerson.profile.photo,
+                ),
+              );
+              return newPerson.id;
+            }
+          },
+          onDone: Navigator.of(context).pop,
+        );
+      },
     );
-    final newId = await showBlockingModal(context, addConnectionFuture);
-    if (!mounted) {
+
+    if (!mounted || newId == null) {
       return;
     }
 
-    if (newId != null) {
-      // Wait for node to be added to graph
-      WidgetsBinding.instance.endOfFrame.then((_) {
-        if (!mounted) {
-          return;
-        }
-        final focalNode = _familyTreeViewKey.currentState
-            ?.linkedNodeForId(graph.focalPerson.id);
-        final targetNode =
-            _familyTreeViewKey.currentState?.linkedNodeForId(newId);
-        if (focalNode == null || targetNode == null) {
-          return;
-        }
+    // Wait for node to be added to graph
+    WidgetsBinding.instance.endOfFrame.then((_) {
+      if (!mounted) {
+        return;
+      }
+      final graph = ref.read(graphProvider);
+      final focalNode = _familyTreeViewKey.currentState
+          ?.linkedNodeForId(graph.focalPerson.id);
+      final targetNode =
+          _familyTreeViewKey.currentState?.linkedNodeForId(newId);
+      if (focalNode == null || targetNode == null) {
+        return;
+      }
 
-        _selectPerson(newId);
-        final linkedNode = targetNode;
-        setState(() {
-          _selectedPerson = targetNode.data;
-          final relatedness = Relatedness(
-            isBloodRelative: linkedNode.isBloodRelative,
-            isDirectRelativeOrSpouse: linkedNode.isDirectRelativeOrSpouse,
-            isAncestor: linkedNode.isAncestor,
-            isSibling: linkedNode.isSibling,
-            relativeLevel: linkedNode.relativeLevel,
-            description: relatednessDescription(
-              focalNode,
-              linkedNode,
-              pov: PointOfView.first,
-            ),
-          );
-          _relatedness = relatedness;
-          _panelPopupState = PanelPopupStateProfile(
-            person: targetNode.data,
-            relatedness: relatedness,
-          );
-        });
+      _selectPerson(newId);
+      final linkedNode = targetNode;
+      setState(() {
+        _selectedPerson = targetNode.data;
+        final relatedness = Relatedness(
+          isBloodRelative: linkedNode.isBloodRelative,
+          isDirectRelativeOrSpouse: linkedNode.isDirectRelativeOrSpouse,
+          isAncestor: linkedNode.isAncestor,
+          isSibling: linkedNode.isSibling,
+          relativeLevel: linkedNode.relativeLevel,
+          description: relatednessDescription(
+            focalNode,
+            linkedNode,
+            pov: PointOfView.first,
+          ),
+        );
+        _relatedness = relatedness;
+        _panelPopupState = PanelPopupStateProfile(
+          person: targetNode.data,
+          relatedness: relatedness,
+        );
       });
-    }
+    });
   }
 
   void _selectPerson(Id id) {
@@ -454,34 +470,16 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
     }
   }
 
-  void _showManagePersonFlow(Id targetId) async {
-    final graph = ref.read(graphProvider);
-    final focalPersonId = graph.focalPerson.id;
+  void _showEditPersonFlow(Person person) async {
     final notifier = ref.read(graphProvider.notifier);
-    final nodes = graph.people.values.toList();
-    final linkedNodes = buildLinkedTree(nodes, focalPersonId);
-    final focalPerson = linkedNodes[focalPersonId];
-    final targetPerson = linkedNodes[targetId];
-    if (focalPerson == null || targetPerson == null) {
-      return;
-    }
-
-    final description = relatednessDescription(
-      focalPerson,
-      targetPerson,
-      pov: PointOfView.first,
-      capitalizeWords: true,
-    );
     _onDismissSelected();
     await showDialog(
       context: context,
       builder: (context) {
-        return ManagePersonFlow(
-          targetPerson: targetPerson,
-          description: description,
+        return EditPersonFlow(
+          person: person,
           onSave: (profile) async {
-            await notifier.takeOwnership(targetId);
-            await notifier.updateProfile(targetId, profile);
+            await notifier.updateProfile(person.id, profile);
           },
           onDone: Navigator.of(context).pop,
         );
@@ -497,7 +495,7 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
     if (!context.mounted) {
       return;
     }
-    _selectPerson(targetId);
+    _selectPerson(person.id);
   }
 
   bool get _canAddConnection {
@@ -523,6 +521,14 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
         _relatedness?.isDirectRelativeOrSpouse == true;
     return !isPerspectiveMode &&
         (isFocalUserSelected || isDirectRelativeOrSpouse);
+  }
+
+  bool get _canEdit {
+    final graph = ref.watch(graphProvider);
+    final isPerspectiveMode = widget.viewHistory.isPerspectiveMode;
+    final isFocalUserSelected = _selectedPerson?.id == graph.focalPerson.id;
+    final isOwned = _selectedPerson?.ownedBy != null;
+    return !isPerspectiveMode && isFocalUserSelected || !isOwned;
   }
 
   bool get _canDeletePerson {
