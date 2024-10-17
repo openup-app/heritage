@@ -951,6 +951,7 @@ class NodeProfile extends StatelessWidget {
         SizedBox(
           width: 180,
           child: Stack(
+            clipBehavior: Clip.none,
             children: [
               Center(
                 child: ImageAspect(
@@ -968,10 +969,10 @@ class NodeProfile extends StatelessWidget {
                             ),
                             boxShadow: [
                               BoxShadow(
-                                offset: Offset(0, 10),
-                                blurRadius: 44,
-                                spreadRadius: -11,
-                                color: Color.fromRGBO(0x00, 0x00, 0x00, 0.4),
+                                offset: Offset(0, 2),
+                                blurRadius: 9,
+                                spreadRadius: 0,
+                                color: Color.fromRGBO(0x0C, 0x0C, 0x0C, 0.25),
                               ),
                             ],
                           ),
@@ -1035,6 +1036,12 @@ class NodeProfile extends StatelessWidget {
                   ],
                 ),
               ),
+              if (!person.isAwaiting)
+                const Positioned(
+                  right: -20,
+                  top: -15,
+                  child: VerifiedBadge(),
+                ),
             ],
           ),
         ),
@@ -1411,13 +1418,10 @@ class VerifiedBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return IgnorePointer(
-      child: Opacity(
-        opacity: 0.9,
-        child: SvgPicture.asset(
-          'assets/images/badge.svg',
-          width: size,
-          fit: BoxFit.contain,
-        ),
+      child: SvgPicture.asset(
+        'assets/images/badge.svg',
+        width: size,
+        fit: BoxFit.contain,
       ),
     );
   }
