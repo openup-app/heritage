@@ -363,6 +363,8 @@ class Person with _$Person implements GraphNode {
 
   const Person._();
 
+  bool get isAwaiting => ownedBy == null;
+
   factory Person.fromJson(Map<String, Object?> json) => _$PersonFromJson(json);
 
   @override

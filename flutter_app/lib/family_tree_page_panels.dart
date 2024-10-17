@@ -6,7 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:heritage/api.dart';
 import 'package:heritage/graph.dart';
-import 'package:heritage/graph_provider.dart';
 import 'package:heritage/graph_view.dart';
 import 'package:heritage/help.dart';
 import 'package:heritage/heritage_app.dart';
@@ -14,7 +13,8 @@ import 'package:heritage/layout.dart';
 import 'package:heritage/profile_display.dart';
 import 'package:heritage/util.dart';
 
-const _kMinPanelHeight = 330.0;
+const _kMinPanelHeight = 310.0;
+const _kAwaitingColor = Color.fromRGBO(0xFC, 0x57, 0x57, 1.0);
 
 typedef AddConnectionButtonsBuilder = Widget Function(
     BuildContext context, double paddingWidth);
@@ -215,7 +215,7 @@ class _PanelsState extends ConsumerState<Panels> {
                             return const SizedBox.shrink();
                           }
                           return _ProfileSheet(
-                            selectedPerson: person,
+                            person: person,
                             relatedness: relatedness,
                             isFocalPersonSelected: widget.isFocalPersonSelected,
                             isPrimaryPersonSelected:
@@ -223,6 +223,9 @@ class _PanelsState extends ConsumerState<Panels> {
                             addConnectionButtonsBuilder:
                                 addConnectionButtonsBuilder,
                             onEdit: widget.onEdit,
+                            onInvite: widget.onShareInvite,
+                            onViewPerspective: widget.onViewPerspective,
+                            onDelete: widget.onDeletePerson,
                           );
                         }),
                       ),
@@ -322,26 +325,43 @@ class _PanelsState extends ConsumerState<Panels> {
             WidgetsBinding.instance.endOfFrame.then((_) {
               if (mounted) {
                 final controller = Scaffold.of(context).showBottomSheet(
-                    shape: const RoundedRectangleBorder(
-                      borderRadius: BorderRadius.only(
-                        topLeft: Radius.circular(10),
-                        topRight: Radius.circular(10),
-                      ),
-                    ), (context) {
-                  final addConnectionButtonsBuilder =
-                      widget.addConnectionButtonsBuilder;
-                  if (addConnectionButtonsBuilder == null) {
-                    return const SizedBox.shrink();
-                  }
-                  return _ProfileSheet(
-                    selectedPerson: person,
-                    relatedness: relatedness,
-                    isFocalPersonSelected: widget.isFocalPersonSelected,
-                    isPrimaryPersonSelected: widget.isPrimaryPersonSelected,
-                    addConnectionButtonsBuilder: addConnectionButtonsBuilder,
-                    onEdit: widget.onEdit,
-                  );
-                });
+                  shape: const RoundedRectangleBorder(
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(10),
+                      topRight: Radius.circular(10),
+                    ),
+                  ),
+                  backgroundColor: const Color.fromRGBO(0xEC, 0xEC, 0xEC, 1.0),
+                  (context) {
+                    final addConnectionButtonsBuilder =
+                        widget.addConnectionButtonsBuilder;
+                    if (addConnectionButtonsBuilder == null) {
+                      return const SizedBox.shrink();
+                    }
+                    return Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 8.0),
+                          child: _DragHandle(),
+                        ),
+                        _ProfileSheet(
+                          person: person,
+                          relatedness: relatedness,
+                          isFocalPersonSelected: widget.isFocalPersonSelected,
+                          isPrimaryPersonSelected:
+                              widget.isPrimaryPersonSelected,
+                          addConnectionButtonsBuilder:
+                              addConnectionButtonsBuilder,
+                          onEdit: widget.onEdit,
+                          onInvite: widget.onShareInvite,
+                          onViewPerspective: widget.onViewPerspective,
+                          onDelete: widget.onDeletePerson,
+                        ),
+                      ],
+                    );
+                  },
+                );
                 setState(() => _bottomSheetController = controller);
                 controller.closed.then((_) {
                   if (mounted) {
@@ -492,21 +512,27 @@ class _DismissWhenNoPersonSelectedState
 }
 
 class _ProfileSheet extends StatefulWidget {
-  final Person selectedPerson;
+  final Person person;
   final Relatedness relatedness;
   final bool isFocalPersonSelected;
   final bool isPrimaryPersonSelected;
   final AddConnectionButtonsBuilder addConnectionButtonsBuilder;
   final VoidCallback? onEdit;
+  final VoidCallback? onInvite;
+  final VoidCallback? onViewPerspective;
+  final VoidCallback? onDelete;
 
   const _ProfileSheet({
     super.key,
-    required this.selectedPerson,
+    required this.person,
     required this.relatedness,
     required this.isFocalPersonSelected,
     required this.isPrimaryPersonSelected,
     required this.addConnectionButtonsBuilder,
     required this.onEdit,
+    required this.onInvite,
+    required this.onViewPerspective,
+    required this.onDelete,
   });
 
   @override
@@ -520,28 +546,110 @@ class _ProfileSheetState extends State<_ProfileSheet> {
       height: _kMinPanelHeight,
       clipBehavior: Clip.antiAlias,
       decoration: const BoxDecoration(
-        color: Color.fromRGBO(0xEC, 0xEC, 0xEC, 1.0),
         borderRadius: BorderRadius.only(
           topLeft: Radius.circular(10),
           topRight: Radius.circular(10),
         ),
       ),
       child: Column(
-        key: Key(widget.selectedPerson.id),
+        key: Key(widget.person.id),
         mainAxisSize: MainAxisSize.min,
         children: [
-          Padding(
+          Container(
+            height: 30,
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Row(
               children: [
+                if (widget.person.isAwaiting) const AwaitingInvite(),
+                const Spacer(),
+                if (widget.onDelete != null)
+                  FilledButton(
+                    onPressed: () async {
+                      final delete = await showDialog<bool>(
+                        context: context,
+                        builder: (context) {
+                          return AlertDialog(
+                            title: Text(
+                                'Delete ${widget.person.profile.fullName} from the tree?'),
+                            actions: [
+                              TextButton(
+                                onPressed: Navigator.of(context).pop,
+                                child: const Text(
+                                  'Cancel',
+                                  style: TextStyle(
+                                    color: Colors.black,
+                                  ),
+                                ),
+                              ),
+                              TextButton(
+                                onPressed: () =>
+                                    Navigator.of(context).pop(true),
+                                child: const Text(
+                                  'Delete',
+                                  style: TextStyle(
+                                    color: _kAwaitingColor,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      );
+                      if (mounted && delete == true) {
+                        widget.onDelete?.call();
+                      }
+                    },
+                    style: IconButton.styleFrom(
+                      shape: const RoundedRectangleBorder(
+                        borderRadius: BorderRadius.all(
+                          Radius.circular(64),
+                        ),
+                      ),
+                      padding: EdgeInsets.zero,
+                      minimumSize: const Size.square(40),
+                      foregroundColor: _kAwaitingColor,
+                      backgroundColor: Colors.white,
+                    ),
+                    child: const Icon(
+                      Icons.delete_outline,
+                      size: 20,
+                    ),
+                  )
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Stack(
+              children: [
                 if (widget.onEdit != null)
-                  IconButton(
-                    onPressed: widget.onEdit,
-                    icon: const Icon(Icons.edit),
+                  Positioned(
+                    left: 0,
+                    top: 0,
+                    bottom: 0,
+                    child: Center(
+                      child: FilledButton(
+                        onPressed: widget.onEdit,
+                        style: IconButton.styleFrom(
+                          shape: const RoundedRectangleBorder(
+                            borderRadius: BorderRadius.all(
+                              Radius.circular(64),
+                            ),
+                          ),
+                          padding: EdgeInsets.zero,
+                          minimumSize: const Size.square(48),
+                          foregroundColor: widget.person.isAwaiting
+                              ? _kAwaitingColor
+                              : primaryColor,
+                          backgroundColor: Colors.white,
+                        ),
+                        child: const Icon(Icons.edit),
+                      ),
+                    ),
                   ),
-                Expanded(
+                Center(
                   child: ProfileNameSection(
-                    person: widget.selectedPerson,
+                    person: widget.person,
                     relatedness: widget.relatedness,
                     isPrimaryPersonSelected: widget.isPrimaryPersonSelected,
                   ),
@@ -549,8 +657,16 @@ class _ProfileSheetState extends State<_ProfileSheet> {
               ],
             ),
           ),
-          ColoredBox(
-            color: Colors.white,
+          const SizedBox(height: 16),
+          Container(
+            height: 128,
+            margin: const EdgeInsets.symmetric(horizontal: 16),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.all(
+                Radius.circular(10),
+              ),
+            ),
             child: Column(
               children: [
                 Padding(
@@ -558,38 +674,41 @@ class _ProfileSheetState extends State<_ProfileSheet> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      const SizedBox(height: 8),
                       Text(
-                        widget.isFocalPersonSelected
-                            ? 'I need to add my...'
-                            : 'Add ${widget.selectedPerson.profile.firstName}\'s...',
-                        style: Theme.of(context).textTheme.titleLarge,
+                        widget.isPrimaryPersonSelected
+                            ? 'Add my...'
+                            : 'Add ${widget.person.profile.firstName}\'s...',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: Color.fromRGBO(0x88, 0x88, 0x88, 1.0),
+                        ),
                       ),
-                      const SizedBox(height: 4),
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: widget.addConnectionButtonsBuilder
-                            .call(context, 12),
-                      ),
+                      const SizedBox(height: 8),
+                      widget.addConnectionButtonsBuilder.call(context, 12),
                     ],
                   ),
-                ),
-                const SizedBox(height: 16),
-                const Divider(
-                  height: 1,
-                  color: Color.fromRGBO(0xEB, 0xEB, 0xEB, 1.0),
                 ),
               ],
             ),
           ),
-          FilledButton(
-            onPressed: () {},
-            style: FilledButton.styleFrom(
-              padding: const EdgeInsets.all(8),
-              foregroundColor: Colors.white,
-              backgroundColor: primaryColor,
+          const SizedBox(height: 16),
+          if (widget.onInvite != null)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: FilledButton(
+                onPressed: widget.onInvite,
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.all(8),
+                  minimumSize: const Size.fromHeight(64),
+                  foregroundColor: Colors.white,
+                  backgroundColor:
+                      widget.person.isAwaiting ? _kAwaitingColor : primaryColor,
+                ),
+                child: Text('Invite ${widget.person.profile.firstName}'),
+              ),
             ),
-            child: const Text('Invite Or Something'),
-          ),
         ],
       ),
     );
@@ -803,6 +922,7 @@ class _SidePanelContainer extends StatelessWidget {
 }
 
 class AddConnectionButtons extends StatelessWidget {
+  final bool isAwaiting;
   final bool canAddParent;
   final bool canAddSpouse;
   final bool canAddChildren;
@@ -811,6 +931,7 @@ class AddConnectionButtons extends StatelessWidget {
 
   const AddConnectionButtons({
     super.key,
+    required this.isAwaiting,
     required this.canAddParent,
     required this.canAddSpouse,
     required this.canAddChildren,
@@ -821,51 +942,49 @@ class AddConnectionButtons extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final addConnectionPressed = onAddConnectionPressed;
+    final foregroundColor = isAwaiting ? _kAwaitingColor : primaryColor;
     return Row(
-      mainAxisSize: MainAxisSize.min,
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      mainAxisSize: MainAxisSize.max,
+      mainAxisAlignment: MainAxisAlignment.spaceAround,
       children: [
         _AddConnectionButton(
           onPressed: canAddParent && addConnectionPressed != null
               ? () => addConnectionPressed(Relationship.parent)
               : null,
-          paddingWidth: paddingWidth,
+          foregroundColor: foregroundColor,
           icon: SvgPicture.asset(
             'assets/images/connection_parent.svg',
             width: 24,
           ),
           label: const Text('Parent'),
         ),
-        SizedBox(width: paddingWidth * 2),
         _AddConnectionButton(
           onPressed: addConnectionPressed != null
               ? () => addConnectionPressed(Relationship.sibling)
               : null,
-          paddingWidth: paddingWidth,
+          foregroundColor: foregroundColor,
           icon: SvgPicture.asset(
             'assets/images/connection_sibling.svg',
             width: 32,
           ),
           label: const Text('Sibling'),
         ),
-        SizedBox(width: paddingWidth * 2),
         _AddConnectionButton(
           onPressed: canAddChildren && addConnectionPressed != null
               ? () => addConnectionPressed(Relationship.child)
               : null,
-          paddingWidth: paddingWidth,
+          foregroundColor: foregroundColor,
           icon: SvgPicture.asset(
             'assets/images/connection_child.svg',
             width: 32,
           ),
           label: const Text('Child'),
         ),
-        SizedBox(width: paddingWidth * 2),
         _AddConnectionButton(
           onPressed: canAddSpouse && addConnectionPressed != null
               ? () => addConnectionPressed(Relationship.spouse)
               : null,
-          paddingWidth: paddingWidth,
+          foregroundColor: foregroundColor,
           icon: SvgPicture.asset(
             'assets/images/connection_spouse.svg',
             width: 32,
@@ -878,14 +997,14 @@ class AddConnectionButtons extends StatelessWidget {
 }
 
 class _AddConnectionButton extends StatelessWidget {
-  final double paddingWidth;
+  final Color foregroundColor;
   final Widget icon;
   final Widget label;
   final VoidCallback? onPressed;
 
   const _AddConnectionButton({
     super.key,
-    required this.paddingWidth,
+    required this.foregroundColor,
     required this.icon,
     required this.label,
     required this.onPressed,
@@ -901,29 +1020,26 @@ class _AddConnectionButton extends StatelessWidget {
           opacity: onPressed == null ? 0.4 : 1.0,
           child: Greyscale(
             enabled: onPressed == null,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                FilledButton(
-                  onPressed: onPressed,
-                  style: FilledButton.styleFrom(
-                    minimumSize: const Size.square(48),
-                    foregroundColor:
-                        const Color.fromRGBO(0x00, 0xAE, 0xFF, 1.0),
-                    backgroundColor:
-                        const Color.fromRGBO(0xEB, 0xEB, 0xEB, 1.0),
-                  ),
-                  child: icon,
+            child: FilledButton(
+              onPressed: onPressed,
+              style: FilledButton.styleFrom(
+                minimumSize: const Size(64, 84),
+                padding: EdgeInsets.zero,
+                textStyle: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
                 ),
-                const SizedBox(height: 4),
-                DefaultTextStyle.merge(
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                  ),
-                  child: label,
-                ),
-              ],
+                foregroundColor: foregroundColor,
+                backgroundColor: Colors.transparent,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  icon,
+                  const SizedBox(height: 4),
+                  label,
+                ],
+              ),
             ),
           ),
         ),
@@ -964,79 +1080,42 @@ class ProfileNameSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const nameSectionHeight = 60.0;
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        SizedBox(
-          height: nameSectionHeight,
-          child: Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                if (isPrimaryPersonSelected) ...[
-                  const Text('My profile'),
-                  Text(
-                    person.profile.fullName,
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                ] else ...[
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          person.profile.fullName,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.titleLarge,
-                        ),
-                      ),
-                      const VerifiedBadge(
-                        width: 24,
-                      ),
-                    ],
-                  ),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          relatedness.description,
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleMedium
-                              ?.copyWith(
-                                  color: const Color.fromRGBO(
-                                      0x7A, 0x7A, 0x7A, 1.0)),
-                        ),
-                      ),
-                      Consumer(
-                        builder: (context, ref, child) {
-                          final manager = ref.watch(graphProvider.select((s) =>
-                              s.people[person.ownedBy]?.profile.firstName));
-                          return Text(
-                            person.ownedBy == person.id
-                                ? 'Verified by ${person.profile.firstName}'
-                                : 'Managed ${manager == null ? 'user' : 'by $manager'}',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleMedium
-                                ?.copyWith(
-                                    color: const Color.fromRGBO(
-                                        0x3F, 0x71, 0xFF, 1.0)),
-                          );
-                        },
-                      )
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                ],
-              ],
+        Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Text(
+              person.profile.fullName,
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            if (!person.isAwaiting)
+              const Positioned(
+                right: -30,
+                child: VerifiedBadge(size: 32),
+              ),
+          ],
+        ),
+        if (isPrimaryPersonSelected)
+          const Text(
+            'Me',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: Color.fromRGBO(0x3B, 0x3B, 0x3B, 1.0),
+            ),
+          )
+        else
+          Text(
+            relatedness.description,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: Color.fromRGBO(0x3B, 0x3B, 0x3B, 1.0),
             ),
           ),
-        ),
       ],
     );
   }

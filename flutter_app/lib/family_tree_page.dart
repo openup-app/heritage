@@ -237,6 +237,7 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
               : (context, paddingWidth) {
                   return AddConnectionButtons(
                     paddingWidth: paddingWidth,
+                    isAwaiting: selectedPerson.isAwaiting,
                     canAddParent: selectedPerson.parents.isEmpty &&
                         relatedness.isBloodRelative,
                     canAddSpouse: selectedPerson.spouses.isEmpty,
@@ -284,17 +285,18 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
           onSave: (firstName, lastName, photo) async {
             final newPerson = await notifier.addConnection(
                 source: selectedPerson.id, relationship: relationship);
-            if (newPerson != null) {
-              await notifier.updateProfile(
-                newPerson.id,
-                newPerson.profile.copyWith(
-                  firstName: firstName,
-                  lastName: lastName,
-                  photo: photo ?? newPerson.profile.photo,
-                ),
-              );
-              return newPerson.id;
+            if (newPerson == null) {
+              return null;
             }
+            await notifier.updateProfile(
+              newPerson.id,
+              newPerson.profile.copyWith(
+                firstName: firstName,
+                lastName: lastName,
+                photo: photo ?? newPerson.profile.photo,
+              ),
+            );
+            return newPerson.id;
           },
           onDone: Navigator.of(context).pop,
         );
@@ -752,7 +754,7 @@ class FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
                               },
                             ),
                           ),
-                          if (node.data.ownedBy == null)
+                          if (node.data.isAwaiting)
                             const Positioned(
                               left: 0,
                               top: 0,
