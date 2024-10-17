@@ -106,7 +106,7 @@ class GraphNotifier extends StateNotifier<Graph> {
       return null;
     }
     return result.fold((l) {
-      debugPrint(l);
+      debugPrint(l.toString());
       return null;
     }, (r) {
       _updatePeople(r.$2);
@@ -120,7 +120,7 @@ class GraphNotifier extends StateNotifier<Graph> {
       return;
     }
     return result.fold(
-      debugPrint,
+      (l) => debugPrint(l.toString()),
       (r) => _updatePeople([r]),
     );
   }
@@ -131,7 +131,7 @@ class GraphNotifier extends StateNotifier<Graph> {
       return;
     }
     return result.fold(
-      debugPrint,
+      (l) => debugPrint(l.toString()),
       (r) => _updatePeople(r, deletedId: id),
     );
   }
@@ -142,7 +142,7 @@ class GraphNotifier extends StateNotifier<Graph> {
       return;
     }
     result.fold(
-      debugPrint,
+      (l) => debugPrint(l.toString()),
       (r) => _updatePeople([r]),
     );
   }

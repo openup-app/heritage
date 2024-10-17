@@ -130,7 +130,7 @@ class _MenuPageState extends ConsumerState<MenuPage> {
     setState(() => _loading = false);
     result.fold(
       (l) => ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(l))),
+          .showSnackBar(SnackBar(content: Text(l.toString()))),
       (r) => _navigate(r.id),
     );
   }

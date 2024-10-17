@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:heritage/api.dart';
+import 'package:heritage/api_util.dart';
 import 'package:heritage/family_tree_page_panels.dart';
 import 'package:heritage/onboarding_flow.dart';
 import 'package:heritage/restart_app.dart';
@@ -159,7 +160,12 @@ class _LandingPageContentState extends ConsumerState<_LandingPageContent> {
                 }
 
                 result.fold(
-                  (l) => _showErrorPopup(label: 'Something went wrong'),
+                  (l) {
+                    showErrorMessage(
+                      context: context,
+                      message: authErrorToMessage(l, isGoogleOauth: true),
+                    );
+                  },
                   (r) async {
                     final userRecord =
                         await FirebaseAuth.instance.signInWithCustomToken(r);
@@ -167,7 +173,10 @@ class _LandingPageContentState extends ConsumerState<_LandingPageContent> {
                       return;
                     }
                     if (userRecord.user == null) {
-                      _showErrorPopup(label: 'Something went wrong');
+                      showErrorMessage(
+                        context: context,
+                        message: 'Failed to sign in',
+                      );
                     } else {
                       RestartApp.of(context).restart();
                     }
@@ -179,7 +188,12 @@ class _LandingPageContentState extends ConsumerState<_LandingPageContent> {
                 final api = ref.read(apiProvider);
                 final result = await api.sendSms(phoneNumber: phoneNumber);
                 result.fold(
-                  (l) => _showErrorPopup(label: 'Failed to send code'),
+                  (l) {
+                    showErrorMessage(
+                      context: context,
+                      message: smsErrorToMessage(l),
+                    );
+                  },
                   (r) {
                     if (mounted) {
                       setState(() => _awaitingSmsVerification = true);
@@ -196,7 +210,12 @@ class _LandingPageContentState extends ConsumerState<_LandingPageContent> {
                 final api = ref.read(apiProvider);
                 final result = await api.sendSms(phoneNumber: _phoneNumber);
                 result.fold(
-                  (l) => _showErrorPopup(label: 'Failed to send code'),
+                  (l) {
+                    showErrorMessage(
+                      context: context,
+                      message: smsErrorToMessage(l),
+                    );
+                  },
                   (r) {},
                 );
               },
@@ -212,11 +231,10 @@ class _LandingPageContentState extends ConsumerState<_LandingPageContent> {
                 );
                 result.fold(
                   (l) {
-                    if (l == 'Status 401') {
-                      _showErrorPopup(label: 'Invalid code');
-                    } else {
-                      _showErrorPopup(label: 'Something went wrong');
-                    }
+                    showErrorMessage(
+                      context: context,
+                      message: authErrorToMessage(l, isGoogleOauth: false),
+                    );
                   },
                   (r) => RestartApp.of(context).restart(),
                 );
@@ -225,25 +243,6 @@ class _LandingPageContentState extends ConsumerState<_LandingPageContent> {
             ),
           ),
       ],
-    );
-  }
-
-  void _showErrorPopup({
-    required String label,
-  }) {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text(label),
-          actions: [
-            TextButton(
-              onPressed: Navigator.of(context).pop,
-              child: const Text('Okay'),
-            )
-          ],
-        );
-      },
     );
   }
 }

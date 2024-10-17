@@ -45,7 +45,7 @@ class Api {
     _headers['x-app-uid'] = uid;
   }
 
-  Future<Either<Error, void>> sendSms({
+  Future<Either<ApiError<SmsError>, void>> sendSms({
     required String phoneNumber,
   }) {
     return _makeRequest(
@@ -57,10 +57,19 @@ class Api {
         }),
       ),
       handleResponse: (response) => right(null),
+      handleError: (response) {
+        final result = jsonDecode(response.body);
+        final error = Error.fromJson(result['error']);
+        final code = SmsError.values.asNameMap()[error.code];
+        if (code == null) {
+          debugPrint('Missing error code: ${error.code}');
+        }
+        return ClientError(code ?? SmsError.failure);
+      },
     );
   }
 
-  Future<Either<Error, String>> authenticatePhone({
+  Future<Either<ApiError<AuthError>, String>> authenticatePhone({
     required String? claimUid,
     required String phoneNumber,
     required String smsCode,
@@ -82,10 +91,19 @@ class Api {
         final json = jsonDecode(response.body);
         return right(json['token']);
       },
+      handleError: (response) {
+        final result = jsonDecode(response.body);
+        final error = Error.fromJson(result['error']);
+        final code = AuthError.values.asNameMap()[error.code];
+        if (code == null) {
+          debugPrint('Missing error code: ${error.code}');
+        }
+        return ClientError(code ?? AuthError.failure);
+      },
     );
   }
 
-  Future<Either<Error, String>> authenticateOauth({
+  Future<Either<ApiError<AuthError>, String>> authenticateOauth({
     required String? claimUid,
     required String idToken,
   }) {
@@ -105,10 +123,19 @@ class Api {
         final json = jsonDecode(response.body);
         return right(json['token']);
       },
+      handleError: (response) {
+        final result = jsonDecode(response.body);
+        final error = Error.fromJson(result['error']);
+        final code = AuthError.values.asNameMap()[error.code];
+        if (code == null) {
+          debugPrint('Missing error code: ${error.code}');
+        }
+        return ClientError(code ?? AuthError.failure);
+      },
     );
   }
 
-  Future<Either<Error, (Id id, List<Person> people)>> addConnection({
+  Future<Either<ApiError, (Id id, List<Person> people)>> addConnection({
     required Id sourceId,
     required Relationship relationship,
     required String? inviteText,
@@ -131,7 +158,7 @@ class Api {
     );
   }
 
-  Future<Either<Error, Person>> createRoot({
+  Future<Either<ApiError, Person>> createRoot({
     required String firstName,
     required String lastName,
   }) {
@@ -151,7 +178,7 @@ class Api {
     );
   }
 
-  Future<Either<Error, List<Person>>> getLimitedGraph(Id id) {
+  Future<Either<ApiError, List<Person>>> getLimitedGraph(Id id) {
     return _makeRequest(
       request: () => http.get(
         Uri.parse('$_baseUrl/v1/people/$id/graph'),
@@ -165,7 +192,7 @@ class Api {
     );
   }
 
-  Future<Either<Error, List<Person>>> getPeople(List<Id> ids) {
+  Future<Either<ApiError, List<Person>>> getPeople(List<Id> ids) {
     if (ids.isEmpty) {
       return Future.value(right([]));
     }
@@ -182,7 +209,7 @@ class Api {
     );
   }
 
-  Future<Either<Error, List<Person>>> getRoots() {
+  Future<Either<ApiError, List<Person>>> getRoots() {
     return _makeRequest(
       request: () => http.get(
         Uri.parse('$_baseUrl/v1/roots'),
@@ -196,7 +223,7 @@ class Api {
     );
   }
 
-  Future<Either<Error, Person>> updateProfile(
+  Future<Either<ApiError, Person>> updateProfile(
       String id, Profile profile) async {
     final uri = Uri.parse('$_baseUrl/v1/people/$id/profile');
     final request = http.MultipartRequest('PUT', uri);
@@ -226,7 +253,7 @@ class Api {
       final response = await request.send().timeout(_kTimeout);
 
       if (response.statusCode != 200) {
-        return left('Status ${response.statusCode}');
+        return left(ClientError('Status ${response.statusCode}'));
       }
 
       // Handle the response
@@ -234,17 +261,17 @@ class Api {
       final json = jsonDecode(responseBody.body);
       return right(Person.fromJson(json['person']));
     } on http.ClientException {
-      return left('Client Exception');
+      return left(PackageError());
     } on SocketException {
-      return left('Socket Exception');
+      return left(NetworkError());
     } on TimeoutException {
-      return left('Timeout Exception');
+      return left(NetworkError());
     } catch (e) {
-      return left('Error $e');
+      return left(UnhandledError(e.toString()));
     }
   }
 
-  Future<Either<Error, List<Person>>> deletePerson(Id id) {
+  Future<Either<ApiError, List<Person>>> deletePerson(Id id) {
     return _makeRequest(
       request: () => http.delete(
         Uri.parse('$_baseUrl/v1/people/$id'),
@@ -258,7 +285,7 @@ class Api {
     );
   }
 
-  Future<Either<Error, Person>> takeOwnership(Id id) {
+  Future<Either<ApiError, Person>> takeOwnership(Id id) {
     return _makeRequest(
       request: () => http.put(
         Uri.parse('$_baseUrl/v1/people/$id/take_ownership'),
@@ -271,7 +298,7 @@ class Api {
     );
   }
 
-  Future<Either<Error, Null>> addInvite(
+  Future<Either<ApiError, Null>> addInvite(
     Id fromId,
     Id toId,
     String inviteText,
@@ -307,24 +334,30 @@ class Api {
     ));
   }
 
-  Future<Either<Error, R>> _makeRequest<R>({
+  Future<Either<ApiError<T>, R>> _makeRequest<T, R>({
     required Future<http.Response> Function() request,
-    required Either<Error, R> Function(http.Response response) handleResponse,
+    required Either<ApiError<T>, R> Function(http.Response response)
+        handleResponse,
+    ApiError<T> Function(http.Response response)? handleError,
   }) async {
     try {
       final response = await request().timeout(_kTimeout);
       if (response.statusCode != 200) {
-        return left('Status ${response.statusCode}');
+        if (response.statusCode == 400 && handleError != null) {
+          return left(handleError(response));
+        } else {
+          return left(UnhandledError('Status ${response.statusCode}'));
+        }
       }
       return handleResponse(response);
     } on http.ClientException {
-      return left('Client Exception');
+      return left(PackageError());
     } on SocketException {
-      return left('Socket Exception');
+      return left(NetworkError());
     } on TimeoutException {
-      return left('Timeout Exception');
+      return left(NetworkError());
     } catch (e) {
-      return left('Error $e');
+      return left(UnhandledError(e.toString()));
     }
   }
 }
@@ -339,7 +372,43 @@ String _platformName() => kIsWeb
                 ? 'linux'
                 : 'unknown';
 
-typedef Error = String;
+sealed class ApiError<T> {}
+
+class ClientError<T> implements ApiError<T> {
+  T data;
+
+  ClientError(this.data);
+}
+
+class PackageError<T> implements ApiError<T> {}
+
+class NetworkError<T> implements ApiError<T> {}
+
+class UnhandledError<T> implements ApiError<T> {
+  final String message;
+
+  UnhandledError(this.message);
+}
+
+@freezed
+class Error with _$Error {
+  const factory Error({
+    required String code,
+  }) = _Error;
+
+  factory Error.fromJson(Map<String, Object?> json) => _$ErrorFromJson(json);
+}
+
+enum SmsError { failure, tooManyAttempts, badPhoneNumber }
+
+enum AuthError {
+  failure,
+  badRequest,
+  badCredential,
+  badUid,
+  alreadyOwned,
+  accountLinkFailure
+}
 
 typedef Id = String;
 

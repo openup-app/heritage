@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:heritage/api.dart';
+import 'package:heritage/api_util.dart';
 import 'package:heritage/auth/sign_in_button.dart';
 import 'package:heritage/authentication.dart';
 import 'package:heritage/family_tree_page.dart';
@@ -109,15 +110,24 @@ class _OnboardingFlowState extends ConsumerState<OnboardingFlow> {
                         }
 
                         result.fold(
-                          (l) => _showErrorPopup(label: 'Something went wrong'),
+                          (l) {
+                            showErrorMessage(
+                              context: context,
+                              message:
+                                  authErrorToMessage(l, isGoogleOauth: true),
+                            );
+                          },
                           (r) async {
                             final userRecord = await FirebaseAuth.instance
                                 .signInWithCustomToken(r);
-                            if (!mounted) {
+                            if (!context.mounted) {
                               return;
                             }
                             if (userRecord.user == null) {
-                              _showErrorPopup(label: 'Something went wrong');
+                              showErrorMessage(
+                                context: context,
+                                message: 'Failed to link account',
+                              );
                             } else {
                               setState(() => _step += 2);
                             }
@@ -130,7 +140,12 @@ class _OnboardingFlowState extends ConsumerState<OnboardingFlow> {
                         final result =
                             await api.sendSms(phoneNumber: phoneNumber);
                         result.fold(
-                          (l) => _showErrorPopup(label: 'Failed to send code'),
+                          (l) {
+                            showErrorMessage(
+                              context: context,
+                              message: smsErrorToMessage(l),
+                            );
+                          },
                           (r) {
                             if (mounted) {
                               setState(() => _step++);
@@ -147,7 +162,12 @@ class _OnboardingFlowState extends ConsumerState<OnboardingFlow> {
                         final result =
                             await api.sendSms(phoneNumber: _phoneNumber);
                         result.fold(
-                          (l) => _showErrorPopup(label: 'Failed to send code'),
+                          (l) {
+                            showErrorMessage(
+                              context: context,
+                              message: smsErrorToMessage(l),
+                            );
+                          },
                           (r) {},
                         );
                       },
@@ -163,11 +183,11 @@ class _OnboardingFlowState extends ConsumerState<OnboardingFlow> {
                         );
                         result.fold(
                           (l) {
-                            if (l == 'Status 401') {
-                              _showErrorPopup(label: 'Invalid code');
-                            } else {
-                              _showErrorPopup(label: 'Something went wrong');
-                            }
+                            showErrorMessage(
+                              context: context,
+                              message:
+                                  authErrorToMessage(l, isGoogleOauth: false),
+                            );
                           },
                           (r) => setState(() => _step++),
                         );
