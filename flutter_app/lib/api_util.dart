@@ -32,9 +32,7 @@ String smsErrorToMessage(ApiError<SmsError> error) {
     ServerError() => 'Something went wrong on our end, please try again',
     NetworkError() =>
       'There was a network connection problem, please try again',
-    PackageError() ||
-    UnhandledError() =>
-      'Something went wrong, please try again',
+    PackageError() || UnhandledError() => 'An error occurred, please try again',
   };
 }
 
@@ -57,8 +55,6 @@ String authErrorToMessage(
     ServerError() => 'Something went wrong on our end, please try again',
     NetworkError() =>
       'There was a network connection problem, please try again',
-    PackageError() ||
-    UnhandledError() =>
-      'Something went wrong, please try again',
+    PackageError() || UnhandledError() => 'An error occurred, please try again',
   };
 }
