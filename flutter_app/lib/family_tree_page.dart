@@ -21,6 +21,8 @@ import 'package:heritage/zoomable_pannable_viewport.dart';
 import 'package:lottie/lottie.dart';
 import 'package:path_drawing/path_drawing.dart' as path_drawing;
 
+const _kGhostOpacity = 0.4;
+
 enum LoadingError { expiredLink, unauthorized, failedToLoad }
 
 class FamilyTreeLoadingPage extends ConsumerStatefulWidget {
@@ -164,10 +166,6 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
               selectedPerson.id == graph.focalPerson.id,
           isPrimaryPersonSelected: selectedPerson != null &&
               selectedPerson.id == widget.viewHistory.primaryUserId,
-          isProfileEditable: selectedPerson != null &&
-              (!selectedPerson.isOwned ||
-                  selectedPerson.id == graph.focalPerson.id) &&
-              !widget.viewHistory.isPerspectiveMode,
           maybeShowDateOfPassing: selectedPerson != null &&
               selectedPerson.ownershipUnableReason ==
                   OwnershipUnableReason.deceased,
@@ -234,20 +232,24 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
                     _selectPerson(selectedPerson.id);
                   }
                 },
-          addConnectionButtonsBuilder: !_canAddConnection ||
-                  selectedPerson == null ||
+          addConnectionButtonsBuilder: selectedPerson == null ||
                   relatedness == null
               ? null
               : (context, paddingWidth) {
+                  final canAddConnection = _canAddConnection;
                   return AddConnectionButtons(
                     paddingWidth: paddingWidth,
-                    isAwaiting: selectedPerson.isAwaiting,
-                    canAddParent: selectedPerson.parents.isEmpty &&
+                    isAwaiting: canAddConnection && selectedPerson.isAwaiting,
+                    canAddParent: canAddConnection &&
+                        selectedPerson.parents.isEmpty &&
                         relatedness.isBloodRelative,
-                    canAddSpouse: selectedPerson.spouses.isEmpty,
-                    canAddChildren: relatedness.isAncestor ||
-                        !relatedness.isGrandparentLevelOrHigher,
-                    onAddConnectionPressed: _addConnection,
+                    canAddSpouse:
+                        canAddConnection && selectedPerson.spouses.isEmpty,
+                    canAddChildren: canAddConnection &&
+                        (relatedness.isAncestor ||
+                            !relatedness.isGrandparentLevelOrHigher),
+                    onAddConnectionPressed:
+                        canAddConnection ? _addConnection : null,
                   );
                 },
         ),
@@ -353,6 +355,7 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
             focalNode,
             linkedNode,
             pov: PointOfView.first,
+            capitalizeWords: true,
           ),
         );
         _relatedness = relatedness;
@@ -384,6 +387,7 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
         focalNode,
         selectedNode,
         pov: PointOfView.first,
+        capitalizeWords: true,
       ),
     );
     _onProfileSelected(person, relatedness);
@@ -465,6 +469,7 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
     }
 
     final activePeople = graphWhere(focalPerson, (e) => e.data.isOwned)
+        .whereNot((e) => e.id == focalPerson.id)
         .take(4)
         .map((e) => e.data)
         .toList();
@@ -542,22 +547,12 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
     return !isAwaiting && !isFocalPerson && !isPrimaryUser && !isSilbing;
   }
 
-  bool get _canShareLoginLink {
-    final graph = ref.watch(graphProvider);
-    final isPerspectiveMode = widget.viewHistory.isPerspectiveMode;
-    final isFocalUserSelected = _selectedPerson?.id == graph.focalPerson.id;
-    final isDirectRelativeOrSpouse =
-        _relatedness?.isDirectRelativeOrSpouse == true;
-    return !isPerspectiveMode &&
-        (isFocalUserSelected || isDirectRelativeOrSpouse);
-  }
-
   bool get _canEdit {
     final graph = ref.watch(graphProvider);
     final isPerspectiveMode = widget.viewHistory.isPerspectiveMode;
     final isFocalUserSelected = _selectedPerson?.id == graph.focalPerson.id;
     final isOwned = _selectedPerson?.isOwned == true;
-    return !isPerspectiveMode && isFocalUserSelected || !isOwned;
+    return !isPerspectiveMode && (isFocalUserSelected || !isOwned);
   }
 
   bool get _canDeletePerson {
@@ -738,7 +733,7 @@ class FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
                               forceHover: widget.selectedPerson?.id == data.id,
                               builder: (context, overlaying) {
                                 return Opacity(
-                                  opacity: isGhost ? 0.4 : 1.0,
+                                  opacity: isGhost ? _kGhostOpacity : 1.0,
                                   child: MouseRegion(
                                     cursor: enabled
                                         ? SystemMouseCursors.click
@@ -773,12 +768,17 @@ class FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
                             ),
                           ),
                           if (node.data.isAwaiting)
-                            const Positioned(
+                            Positioned(
                               left: 0,
                               top: 0,
                               right: 0,
-                              child: Center(
-                                child: AwaitingInvite(),
+                              child: Opacity(
+                                opacity: widget.viewHistory.isPerspectiveMode
+                                    ? _kGhostOpacity
+                                    : 1.0,
+                                child: const Center(
+                                  child: AwaitingInvite(),
+                                ),
                               ),
                             ),
                         ],

@@ -24,9 +24,10 @@ import 'package:sentry_flutter/sentry_flutter.dart';
 part 'heritage_app.freezed.dart';
 part 'heritage_app.g.dart';
 
-const primaryColor = Color.fromRGBO(0x2A, 0xBB, 0xFF, 1.0);
+const primaryColor = Color.fromRGBO(0x00, 0xAB, 0xFF, 1.0);
 const greyColor = Color.fromRGBO(0xEC, 0xEC, 0xEC, 1.0);
 const unselectedColor = Color.fromRGBO(175, 175, 175, 1);
+const textColor = Color.fromRGBO(0x43, 0x43, 0x43, 1.0);
 
 class HeritageApp extends StatelessWidget {
   final Api api;
@@ -44,16 +45,19 @@ class HeritageApp extends StatelessWidget {
       fontSize: 22,
       fontWeight: FontWeight.w700,
       fontFamily: 'SF Pro Display',
+      color: textColor,
     );
     const subtitleStyle = TextStyle(
       fontSize: 14,
       fontWeight: FontWeight.w600,
       fontFamily: 'SF Pro Display',
+      color: textColor,
     );
     const miniTitleStyle = TextStyle(
       fontSize: 12,
       fontWeight: FontWeight.w400,
       fontFamily: 'SF Pro Display',
+      color: textColor,
     );
     return RestartApp(
       child: ProviderScope(
@@ -93,6 +97,7 @@ class HeritageApp extends StatelessWidget {
                         ),
                       ),
                     ),
+                    dividerColor: const Color.fromRGBO(0xA7, 0xA7, 0xA7, 1.0),
                     outlinedButtonTheme: OutlinedButtonThemeData(
                       style: OutlinedButton.styleFrom(
                         foregroundColor: primaryColor,
@@ -137,6 +142,15 @@ class HeritageApp extends StatelessWidget {
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.all(Radius.circular(10)),
                         borderSide: BorderSide.none,
+                      ),
+                    ),
+                    radioTheme: const RadioThemeData(
+                      fillColor: WidgetStatePropertyAll(primaryColor),
+                    ),
+                    listTileTheme: ListTileThemeData(
+                      contentPadding: EdgeInsets.zero,
+                      titleTextStyle: subtitleStyle.copyWith(
+                        color: textColor,
                       ),
                     ),
                     scrollbarTheme: const ScrollbarThemeData(

@@ -1377,10 +1377,16 @@ class AwaitingInvite extends StatelessWidget {
         clipBehavior: Clip.none,
         children: [
           Transform.scale(
-            scale: 8,
+            scale: 13,
             child: Lottie.asset(
               'assets/images/awaiting_invite.json',
               width: 148,
+            ),
+          ),
+          const Center(
+            child: Text(
+              'Awaiting Invite',
+              style: TextStyle(color: Colors.white, fontSize: 17),
             ),
           ),
         ],

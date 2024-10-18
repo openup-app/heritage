@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -95,7 +96,7 @@ class _OnboardingFlowState extends ConsumerState<OnboardingFlow> {
                   ),
                   _Container(
                     child: SignInLogic(
-                      title: 'Sign up to join\nyour family tree',
+                      title: 'Sign up to join\nyour family',
                       initialPhoneNumber: _phoneNumber,
                       onGoogleSignIn: (idToken) async {
                         final api = ref.read(apiProvider);
@@ -222,7 +223,10 @@ class _OnboardingFlowState extends ConsumerState<OnboardingFlow> {
                     onPhoto: (photo) => setState(() => _photo = photo),
                     onDone: _uploading ? null : _upload,
                   ),
-                  _ExitStep(
+                  _EndAnimationStep(
+                    newPerson:
+                        widget.person.data.copyWith.profile(photo: _photo),
+                    activePeople: widget.activePeople,
                     onDone: widget.onDone,
                   ),
                 ][_step],
@@ -231,25 +235,6 @@ class _OnboardingFlowState extends ConsumerState<OnboardingFlow> {
           ),
         ),
       ],
-    );
-  }
-
-  void _showErrorPopup({
-    required String label,
-  }) {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text(label),
-          actions: [
-            TextButton(
-              onPressed: Navigator.of(context).pop,
-              child: const Text('Okay'),
-            )
-          ],
-        );
-      },
     );
   }
 
@@ -511,51 +496,6 @@ class _EditPersonFlowState extends ConsumerState<EditPersonFlow> {
   }
 }
 
-class _IntroStep extends StatelessWidget {
-  final LinkedNode<Person> person;
-  final LinkedNode<Person> referral;
-  final VoidCallback onDone;
-
-  const _IntroStep({
-    super.key,
-    required this.person,
-    required this.referral,
-    required this.onDone,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final description = relatednessDescription(
-      referral,
-      person,
-      pov: PointOfView.second,
-    );
-    return _Container(
-      child: Column(
-        children: [
-          const SizedBox(height: 0),
-          LottieBuilder.asset(
-            'assets/images/link.json',
-            height: 108,
-          ),
-          Center(
-            child: _Title(
-              icon: null,
-              label:
-                  '${referral.data.profile.firstName} wants to add you\nas $description on the tree!',
-            ),
-          ),
-          const SizedBox(height: 100),
-          _Button(
-            onPressed: onDone,
-            child: const Text('Okay'),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _ActivePeopleStep extends StatefulWidget {
   final List<Person> activePeople;
   final VoidCallback onDone;
@@ -613,10 +553,11 @@ class _ActivePeopleStepState extends State<_ActivePeopleStep> {
             duration: _fadeDuration,
             opacity: _controlsVisible ? 1.0 : 0.0,
             child: const Text(
-              'Family actively\nbuilding the tree',
+              'Your family has been waiting for you',
               style: TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.w700,
+                color: Color.fromRGBO(0x3B, 0x3B, 0x3B, 1.0),
               ),
             ),
           ),
@@ -661,10 +602,149 @@ class _ActivePeopleStepState extends State<_ActivePeopleStep> {
               opacity: _controlsVisible ? 1.0 : 0.0,
               child: _Button(
                 onPressed: widget.onDone,
-                child: const Text('Join your tree'),
+                child: const Text('Join and build'),
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EndAnimationStep extends StatelessWidget {
+  final Person newPerson;
+  final List<Person> activePeople;
+  final VoidCallback onDone;
+
+  const _EndAnimationStep({
+    super.key,
+    required this.newPerson,
+    required this.activePeople,
+    required this.onDone,
+  });
+
+  static const _fadeDuration = Duration(milliseconds: 200);
+
+  @override
+  Widget build(BuildContext context) {
+    final halfCount = activePeople.length ~/ 2;
+    final leftPeople = activePeople.take(halfCount);
+    final rightPeople = activePeople.skip(halfCount);
+    return _Container(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: const Text(
+              'Welcome Fam!',
+              style: TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.w700,
+                color: primaryColor,
+              ),
+            ).animate().fadeIn(
+                  delay: const Duration(seconds: 3),
+                  duration: _fadeDuration,
+                ),
+          ),
+          const Spacer(),
+          SizedBox(
+            width: double.infinity,
+            height: 100,
+            child: OverflowBox(
+              maxWidth: 3400,
+              maxHeight: 100,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  for (final person in leftPeople)
+                    Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        Container(
+                          width: 56,
+                          height: 56,
+                          margin: const EdgeInsets.symmetric(horizontal: 5),
+                          clipBehavior: Clip.antiAlias,
+                          decoration: const BoxDecoration(
+                            shape: BoxShape.circle,
+                          ),
+                          child: PhotoDisplay(
+                            photo: person.profile.photo,
+                          ),
+                        ),
+                        const Positioned(
+                          right: -6,
+                          top: -6,
+                          child: VerifiedBadge(size: 36),
+                        ),
+                      ],
+                    ),
+                  SizedBox(
+                    width: 100,
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 5),
+                          clipBehavior: Clip.antiAlias,
+                          decoration: const BoxDecoration(
+                            shape: BoxShape.circle,
+                          ),
+                          child: PhotoDisplay(
+                            photo: newPerson.profile.photo,
+                          ),
+                        ),
+                        const Positioned(
+                          right: -4,
+                          top: -4,
+                          child: VerifiedBadge(size: 48),
+                        ).animate().fadeIn(
+                              delay: const Duration(seconds: 2),
+                              duration: _fadeDuration,
+                            ),
+                      ],
+                    ),
+                  ).animate().fadeIn(
+                        delay: const Duration(seconds: 1),
+                        duration: _fadeDuration,
+                      ),
+                  for (final person in rightPeople)
+                    Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        Container(
+                          width: 56,
+                          height: 56,
+                          margin: const EdgeInsets.symmetric(horizontal: 5),
+                          clipBehavior: Clip.antiAlias,
+                          decoration: const BoxDecoration(
+                            shape: BoxShape.circle,
+                          ),
+                          child: PhotoDisplay(
+                            photo: person.profile.photo,
+                          ),
+                        ),
+                        const Positioned(
+                          right: -6,
+                          top: -6,
+                          child: VerifiedBadge(size: 36),
+                        ),
+                      ],
+                    ),
+                ],
+              ),
+            ),
+          ),
+          const Spacer(),
+          _Button(
+            onPressed: onDone,
+            child: const Text('Join and build'),
+          ).animate().fadeIn(
+                delay: const Duration(seconds: 3),
+                duration: _fadeDuration,
+              ),
         ],
       ),
     );
@@ -732,6 +812,7 @@ class _SignInLogicState extends State<SignInLogic> {
             style: const TextStyle(
               fontSize: 28,
               fontWeight: FontWeight.w700,
+              color: Color.fromRGBO(0x3B, 0x3B, 0x3B, 1.0),
             ),
           ),
         ),
@@ -829,26 +910,9 @@ class _SignUpPhoneVerificationLogicState
                 style: TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.w700,
+                  color: Color.fromRGBO(0x3B, 0x3B, 0x3B, 1.0),
                 ),
               ),
-            ),
-            TextButton(
-              onPressed: _submitting ||
-                      _resendTimer != null ||
-                      widget.onResendCode == null
-                  ? null
-                  : () {
-                      setState(() {
-                        _resendTimer = Timer(
-                          const Duration(seconds: 10),
-                          () => setState(() => _resendTimer = null),
-                        );
-                      });
-                      _smsController.clear();
-                      widget.onResendCode?.call();
-                    },
-              style: TextButton.styleFrom(padding: EdgeInsets.zero),
-              child: const Text('Resend Code'),
             ),
             const Spacer(),
             TextFormField(
@@ -857,6 +921,27 @@ class _SignUpPhoneVerificationLogicState
               textAlign: TextAlign.center,
               decoration: const InputDecoration(
                 hintText: 'Verification code',
+              ),
+            ),
+            const SizedBox(height: 4),
+            Center(
+              child: TextButton(
+                onPressed: _submitting ||
+                        _resendTimer != null ||
+                        widget.onResendCode == null
+                    ? null
+                    : () {
+                        setState(() {
+                          _resendTimer = Timer(
+                            const Duration(seconds: 10),
+                            () => setState(() => _resendTimer = null),
+                          );
+                        });
+                        _smsController.clear();
+                        widget.onResendCode?.call();
+                      },
+                style: TextButton.styleFrom(padding: EdgeInsets.zero),
+                child: const Text('Resend Code'),
               ),
             ),
             const Spacer(),
@@ -962,7 +1047,7 @@ class _NameStepState extends State<_NameStep> {
 class _GenderStep extends StatefulWidget {
   final String title;
   final Gender? initialGender;
-  final void Function(Gender gender) onDone;
+  final void Function(Gender? gender) onDone;
 
   const _GenderStep({
     super.key,
@@ -991,30 +1076,34 @@ class _GenderStepState extends State<_GenderStep> {
             label: widget.title,
           ),
           const Spacer(),
-          for (final g in Gender.values) ...[
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8.0),
-              child: FilledButton(
-                onPressed: () => setState(() => _gender = g),
-                style: FilledButton.styleFrom(
-                  fixedSize: const Size.fromHeight(44),
-                  foregroundColor: gender == g ? Colors.white : null,
-                  backgroundColor: gender == g
-                      ? primaryColor
-                      : const Color.fromRGBO(0xDF, 0xDF, 0xDF, 1.0),
-                ),
-                child: Text('${g.name[0].toUpperCase()}${g.name.substring(1)}'),
-              ),
+          for (final g in [...Gender.values, null]) ...[
+            RadioListTile(
+              title: Text(_genderToLabel(g)),
+              value: g,
+              groupValue: gender,
+              onChanged: (value) {
+                if (value == g) {
+                  setState(() => _gender = g);
+                }
+              },
             ),
           ],
           const Spacer(),
           _Button(
-            onPressed: gender == null ? null : () => widget.onDone(gender),
+            onPressed: () => widget.onDone(gender),
             child: const Text('Next'),
           ),
         ],
       ),
     );
+  }
+
+  String _genderToLabel(Gender? gender) {
+    return switch (gender) {
+      Gender.male => 'Male',
+      Gender.female => 'Female',
+      null => 'Unspecified',
+    };
   }
 }
 
@@ -1190,33 +1279,45 @@ class _ShareStep extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const _Title(
-            icon: Icon(Icons.ios_share),
-            label: 'Share Your Tree',
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              'Give $name\naccess',
+              maxLines: 2,
+              style: const TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.w700,
+                color: Color.fromRGBO(0x3B, 0x3B, 0x3B, 1.0),
+              ),
+            ),
           ),
-          const Spacer(),
+          const SizedBox(height: 50),
           FilledButton.icon(
             onPressed: onShareInvite,
             style: FilledButton.styleFrom(
-              minimumSize: const Size.fromHeight(56),
+              minimumSize: const Size.fromHeight(84),
               foregroundColor: Colors.white,
               backgroundColor: primaryColor,
             ),
             icon: const Icon(Icons.ios_share),
-            label: Text('Invite $name to grow the tree'),
+            label: Text('Invite $name'),
           ),
-          const SizedBox(height: 16),
-          OutlinedButton(
+          const SizedBox(height: 4),
+          TextButton(
             onPressed: onMarkAsUnownable,
             style: OutlinedButton.styleFrom(
               minimumSize: const Size.fromHeight(56),
+              foregroundColor: Colors.grey,
             ),
-            child: Text('$name can\'t join'),
+            child: const Text('Tap here for child, disabled, deceased'),
           ),
           const Spacer(),
-          TextButton(
-            onPressed: onDone,
-            child: const Text('Done'),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(
+              onPressed: onDone,
+              child: const Text('Done'),
+            ),
           ),
         ],
       ),
@@ -1254,27 +1355,32 @@ class _UnableToOwnStepState extends State<_UnableToOwnStep> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _Title(
-                icon: const Icon(Icons.stop_screen_share_outlined),
-                label: '${widget.name} can\'t join',
+              Padding(
+                padding: const EdgeInsets.only(left: 32.0),
+                child: Text(
+                  '${widget.name} can\'t join',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w700,
+                    color: Color.fromRGBO(0x3B, 0x3B, 0x3B, 1.0),
+                  ),
+                ),
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 16),
               Text('${widget.name} is:'),
               const SizedBox(height: 16),
               for (final r in OwnershipUnableReason.values) ...[
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8.0),
-                  child: FilledButton(
-                    onPressed: () => setState(() => _reason = r),
-                    style: FilledButton.styleFrom(
-                      fixedSize: const Size.fromHeight(32),
-                      foregroundColor: reason == r ? Colors.white : null,
-                      backgroundColor: reason == r
-                          ? primaryColor
-                          : const Color.fromRGBO(0xDF, 0xDF, 0xDF, 1.0),
-                    ),
-                    child: Text(_reasonToSentence(r)),
-                  ),
+                RadioListTile(
+                  title: Text(_reasonToSentence(r)),
+                  value: r,
+                  groupValue: reason,
+                  onChanged: (value) {
+                    if (value == r) {
+                      setState(() => _reason = r);
+                    }
+                  },
                 ),
               ],
               const Spacer(),
@@ -1284,13 +1390,13 @@ class _UnableToOwnStepState extends State<_UnableToOwnStep> {
                     : () => widget.onDone?.call(reason),
                 child: widget.onDone == null
                     ? const _LoadingIndicator()
-                    : const Text('Next'),
+                    : const Text('Done'),
               ),
             ],
           ),
           Positioned(
             left: -16,
-            top: -8,
+            top: -3,
             child: IconButton(
               onPressed: widget.onBack,
               style: IconButton.styleFrom(padding: EdgeInsets.zero),
@@ -1322,7 +1428,7 @@ class _Title extends StatelessWidget {
 
   const _Title({
     super.key,
-    this.color,
+    this.color = const Color.fromRGBO(0x3B, 0x3B, 0x3B, 1.0),
     required this.icon,
     required this.label,
     this.optional = false,
@@ -1340,15 +1446,16 @@ class _Title extends StatelessWidget {
               icon!,
               const SizedBox(width: 4),
             ],
-            DefaultTextStyle.merge(
-              style: Theme.of(context)
-                  .textTheme
-                  .titleLarge
-                  ?.copyWith(fontSize: 18, color: color),
+            Text(
+              label,
               textAlign: TextAlign.center,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              child: Text(label),
+              style: const TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.w700,
+                color: Color.fromRGBO(0x3B, 0x3B, 0x3B, 1.0),
+              ),
             ),
           ],
         ),

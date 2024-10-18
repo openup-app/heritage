@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:heritage/api.dart';
-import 'package:heritage/graph.dart';
 import 'package:heritage/graph_provider.dart';
 import 'package:heritage/graph_view.dart';
 import 'package:heritage/help.dart';
@@ -15,7 +14,7 @@ import 'package:heritage/profile_display.dart';
 import 'package:heritage/util.dart';
 
 const _kMinPanelHeight = 310.0;
-const _kAwaitingColor = Color.fromRGBO(0xFC, 0x57, 0x57, 1.0);
+const _kAwaitingColor = Color.fromRGBO(0xFF, 0x39, 0x39, 1.0);
 
 typedef AddConnectionButtonsBuilder = Widget Function(
     BuildContext context, double paddingWidth);
@@ -26,7 +25,6 @@ class Panels extends ConsumerStatefulWidget {
   final bool isPerspectiveMode;
   final bool isPrimaryPersonSelected;
   final bool isFocalPersonSelected;
-  final bool isProfileEditable;
   final bool maybeShowDateOfPassing;
   final String focalPersonFullName;
   final PanelPopupState panelPopupState;
@@ -49,7 +47,6 @@ class Panels extends ConsumerStatefulWidget {
     required this.isPerspectiveMode,
     required this.isPrimaryPersonSelected,
     required this.isFocalPersonSelected,
-    required this.isProfileEditable,
     required this.maybeShowDateOfPassing,
     required this.focalPersonFullName,
     required this.panelPopupState,
@@ -555,19 +552,15 @@ class _ProfileSheetState extends State<_ProfileSheet> {
                             widget.onDelete?.call();
                           }
                         },
-                        style: IconButton.styleFrom(
-                          shape: const RoundedRectangleBorder(
-                            borderRadius: BorderRadius.all(
-                              Radius.circular(64),
-                            ),
-                          ),
+                        style: FilledButton.styleFrom(
+                          shape: const CircleBorder(),
                           padding: EdgeInsets.zero,
                           minimumSize: const Size.square(40),
                           foregroundColor: _kAwaitingColor,
                           backgroundColor: Colors.white,
                         ),
                         child: const Icon(
-                          Icons.delete_outline,
+                          Icons.delete_rounded,
                           size: 20,
                         ),
                       )
@@ -586,12 +579,8 @@ class _ProfileSheetState extends State<_ProfileSheet> {
                         child: Center(
                           child: FilledButton(
                             onPressed: widget.onEdit,
-                            style: IconButton.styleFrom(
-                              shape: const RoundedRectangleBorder(
-                                borderRadius: BorderRadius.all(
-                                  Radius.circular(64),
-                                ),
-                              ),
+                            style: FilledButton.styleFrom(
+                              shape: const CircleBorder(),
                               padding: EdgeInsets.zero,
                               minimumSize: const Size.square(48),
                               foregroundColor: widget.person.isAwaiting
@@ -610,63 +599,6 @@ class _ProfileSheetState extends State<_ProfileSheet> {
                         isPrimaryPersonSelected: widget.isPrimaryPersonSelected,
                       ),
                     ),
-                    if (ownershipUnableReason != null)
-                      Positioned(
-                        top: 0,
-                        right: 0,
-                        bottom: 0,
-                        child: Consumer(
-                          builder: (context, ref, child) {
-                            return Center(
-                              child: _OwnershipUnableReasonDisplay(
-                                reason: ownershipUnableReason,
-                                onPressed: () async {
-                                  final remove = await showDialog<bool>(
-                                    context: context,
-                                    builder: (context) {
-                                      return AlertDialog(
-                                        title: const Text('Remove label?'),
-                                        actions: [
-                                          TextButton(
-                                            onPressed:
-                                                Navigator.of(context).pop,
-                                            style: TextButton.styleFrom(
-                                              foregroundColor: Colors.black,
-                                            ),
-                                            child: const Text('Cancel'),
-                                          ),
-                                          TextButton(
-                                            onPressed: () =>
-                                                Navigator.of(context).pop(true),
-                                            style: TextButton.styleFrom(
-                                              foregroundColor: Colors.red,
-                                            ),
-                                            child: const Text(
-                                              'Remove',
-                                            ),
-                                          ),
-                                        ],
-                                      );
-                                    },
-                                  );
-                                  if (context.mounted && remove == true) {
-                                    final notifier =
-                                        ref.read(graphProvider.notifier);
-                                    final ownableFuture =
-                                        notifier.updateOwnershipUnableReason(
-                                            widget.person.id, null);
-                                    await showBlockingModal(
-                                        context, ownableFuture);
-                                    if (context.mounted) {
-                                      widget.onReselect?.call();
-                                    }
-                                  }
-                                },
-                              ),
-                            );
-                          },
-                        ),
-                      ),
                   ],
                 ),
               ),
@@ -731,10 +663,69 @@ class _ProfileSheetState extends State<_ProfileSheet> {
             ],
           ),
           if (widget.person.isAwaiting)
-            const Positioned(
+            Positioned(
               left: 0,
               top: 0,
-              child: AwaitingInvite(),
+              child: Transform.scale(
+                scale: 0.7,
+                child: const AwaitingInvite(),
+              ),
+            )
+          else if (ownershipUnableReason != null)
+            Align(
+              alignment: Alignment.topLeft,
+              child: Padding(
+                padding: const EdgeInsets.only(left: 16.0),
+                child: Consumer(
+                  builder: (context, ref, child) {
+                    return _OwnershipUnableReasonDisplay(
+                      reason: ownershipUnableReason,
+                      onPressed: widget.onEdit == null
+                          ? null
+                          : () async {
+                              final remove = await showDialog<bool>(
+                                context: context,
+                                builder: (context) {
+                                  return AlertDialog(
+                                    title: const Text('Remove label?'),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: Navigator.of(context).pop,
+                                        style: TextButton.styleFrom(
+                                          foregroundColor: Colors.black,
+                                        ),
+                                        child: const Text('Cancel'),
+                                      ),
+                                      TextButton(
+                                        onPressed: () =>
+                                            Navigator.of(context).pop(true),
+                                        style: TextButton.styleFrom(
+                                          foregroundColor: Colors.red,
+                                        ),
+                                        child: const Text(
+                                          'Remove',
+                                        ),
+                                      ),
+                                    ],
+                                  );
+                                },
+                              );
+                              if (context.mounted && remove == true) {
+                                final notifier =
+                                    ref.read(graphProvider.notifier);
+                                final ownableFuture =
+                                    notifier.updateOwnershipUnableReason(
+                                        widget.person.id, null);
+                                await showBlockingModal(context, ownableFuture);
+                                if (context.mounted) {
+                                  widget.onReselect?.call();
+                                }
+                              }
+                            },
+                    );
+                  },
+                ),
+              ),
             ),
         ],
       ),
@@ -1158,7 +1149,7 @@ class ProfileNameSection extends StatelessWidget {
 
 class _OwnershipUnableReasonDisplay extends StatelessWidget {
   final OwnershipUnableReason reason;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
 
   const _OwnershipUnableReasonDisplay({
     super.key,
@@ -1168,285 +1159,23 @@ class _OwnershipUnableReasonDisplay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return FilledButton(
-      onPressed: onPressed,
-      style: FilledButton.styleFrom(
-        padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 12),
-        foregroundColor: Colors.black,
-        backgroundColor: Colors.white,
-      ),
-      child: switch (reason) {
-        OwnershipUnableReason.child => const Text('Child'),
-        OwnershipUnableReason.deceased => const Text('Deceased'),
-        OwnershipUnableReason.disabled => const Text('Disabled'),
-      },
-    );
-  }
-}
-
-class AddConnectionDisplay extends ConsumerStatefulWidget {
-  final LinkedNode<Person> targetNode;
-  final LinkedNode<Person> focalNode;
-  final Relationship relationship;
-  final VoidCallback? onShare;
-  final VoidCallback? onTakeOwnership;
-
-  const AddConnectionDisplay({
-    super.key,
-    required this.targetNode,
-    required this.focalNode,
-    required this.relationship,
-    required this.onShare,
-    required this.onTakeOwnership,
-  });
-
-  @override
-  ConsumerState<AddConnectionDisplay> createState() =>
-      _AddConnectionDisplayState();
-}
-
-class _AddConnectionDisplayState extends ConsumerState<AddConnectionDisplay> {
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        ShareButton(
-          sourceFirstName: widget.focalNode.data.profile.firstName,
-          relatednessDescription: relatednessDescription(
-            widget.focalNode,
-            widget.targetNode,
-            pov: PointOfView.first,
-          ),
-          onPressed: widget.onShare,
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.all(
+          Radius.circular(12),
         ),
-        const SizedBox(height: 16),
-        TakeOwnershipButton(
-          onPressed: widget.onTakeOwnership,
-        ),
-      ],
-    );
-  }
-}
-
-class PendingProfiledDisplay extends StatefulWidget {
-  final LinkedNode<Person> targetNode;
-  final LinkedNode<Person> focalNode;
-  final VoidCallback? onShareInvite;
-  final VoidCallback? onTakeOwnership;
-  final VoidCallback? onAddConnection;
-  final VoidCallback? onDeletePressed;
-
-  const PendingProfiledDisplay({
-    super.key,
-    required this.targetNode,
-    required this.focalNode,
-    required this.onShareInvite,
-    required this.onTakeOwnership,
-    required this.onAddConnection,
-    required this.onDeletePressed,
-  });
-
-  @override
-  State<PendingProfiledDisplay> createState() => _PendingProfiledDisplayState();
-}
-
-class _PendingProfiledDisplayState extends State<PendingProfiledDisplay> {
-  @override
-  Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const Text(
-              'Pending\nprofile',
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 48,
-                fontWeight: FontWeight.w800,
-                color: Color.fromRGBO(0x3C, 0x3C, 0x3C, 1.0),
-              ),
-            ),
-            const SizedBox(height: 16),
-            const Text('Waiting for them to join and finish their profile'),
-            const SizedBox(height: 16),
-            ShareButton(
-              sourceFirstName: widget.focalNode.data.profile.firstName,
-              relatednessDescription: relatednessDescription(
-                widget.focalNode,
-                widget.targetNode,
-                pov: PointOfView.first,
-              ),
-              repeatedShare: true,
-              onPressed: widget.onShareInvite,
-            ),
-            const SizedBox(height: 16),
-            TakeOwnershipButton(
-              onPressed: widget.onTakeOwnership,
-            ),
-            const SizedBox(height: 16),
-          ],
-        ),
-        if (widget.onAddConnection != null || widget.onDeletePressed != null)
-          Align(
-            alignment: Alignment.topRight,
-            child: PopupMenuButton(
-              itemBuilder: (context) {
-                return [
-                  if (widget.onAddConnection != null)
-                    PopupMenuItem(
-                      onTap: widget.onAddConnection,
-                      child: const Text('Add another relative'),
-                    ),
-                  if (widget.onDeletePressed != null)
-                    PopupMenuItem(
-                      onTap: _onDeletePressed,
-                      child: const Text(
-                        'Delete profile',
-                        style: TextStyle(
-                          color: Color.fromRGBO(0xFF, 0x00, 0x00, 1.0),
-                        ),
-                      ),
-                    ),
-                ];
-              },
-            ),
-          ),
-      ],
-    );
-  }
-
-  void _onDeletePressed() async {
-    final delete = await showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Delete profile?'),
-          actions: [
-            TextButton(
-              onPressed: Navigator.of(context).pop,
-              style: TextButton.styleFrom(
-                foregroundColor: Colors.black,
-              ),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              style: TextButton.styleFrom(
-                foregroundColor: Colors.red,
-              ),
-              child: const Text('Delete'),
-            ),
-          ],
-        );
-      },
-    );
-    if (mounted && delete == true) {
-      widget.onDeletePressed?.call();
-    }
-  }
-}
-
-class ShareButton extends StatelessWidget {
-  final String? sourceFirstName;
-  final String relatednessDescription;
-  final bool repeatedShare;
-  final VoidCallback? onPressed;
-
-  const ShareButton({
-    super.key,
-    required this.sourceFirstName,
-    required this.relatednessDescription,
-    this.repeatedShare = false,
-    required this.onPressed,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return FilledButton(
-      onPressed: onPressed,
-      style: FilledButton.styleFrom(
-        foregroundColor: Colors.white,
-        backgroundColor: primaryColor,
-        fixedSize: const Size.fromHeight(64),
       ),
-      child: Stack(
-        children: [
-          const Align(
-            alignment: Alignment.centerLeft,
-            child: Padding(
-              padding: EdgeInsets.only(left: 25),
-              child: Icon(CupertinoIcons.share),
-            ),
-          ),
-          Center(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 54.0),
-              child: Text(
-                !repeatedShare
-                    ? 'Invite $relatednessDescription\nto complete their profile'
-                    : 'Share link again',
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ),
-        ],
+      child: GestureDetector(
+        onTap: onPressed,
+        child: switch (reason) {
+          OwnershipUnableReason.child => const Text('Child'),
+          OwnershipUnableReason.deceased => const Text('Deceased'),
+          OwnershipUnableReason.disabled => const Text('Disabled'),
+        },
       ),
     );
-  }
-}
-
-class TakeOwnershipButton extends StatelessWidget {
-  final VoidCallback? onPressed;
-
-  const TakeOwnershipButton({
-    super.key,
-    required this.onPressed,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return OutlinedButton(
-      onPressed: () => _onPressed(context),
-      style: OutlinedButton.styleFrom(
-        fixedSize: const Size.fromHeight(64),
-      ),
-      child: const Text('I will finish their profile'),
-    );
-  }
-
-  void _onPressed(BuildContext context) async {
-    final takeOwnership = await showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Manage Profile?'),
-          content: const Text(
-              'Manage a profile only if the person is unable to, such as children, disabled or deceased relatives.'),
-          actions: [
-            TextButton(
-              onPressed: Navigator.of(context).pop,
-              style: TextButton.styleFrom(foregroundColor: Colors.black),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              style: TextButton.styleFrom(foregroundColor: Colors.red),
-              child: const Text('Proceed'),
-            ),
-          ],
-        );
-      },
-    );
-    if (context.mounted && takeOwnership == true) {
-      onPressed?.call();
-    }
   }
 }
 

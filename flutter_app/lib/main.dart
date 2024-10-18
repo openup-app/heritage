@@ -1,5 +1,7 @@
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:heritage/api.dart';
@@ -19,6 +21,8 @@ void main() async {
 void init() async {
   WidgetsFlutterBinding.ensureInitialized();
   usePathUrlStrategy();
+
+  Animate.restartOnHotReload = kDebugMode;
 
   // App nav misses address bar pastes/typing. So 404.html redirects to
   // index.html with the original path as a query param, so app can handle it
