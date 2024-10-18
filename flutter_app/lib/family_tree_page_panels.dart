@@ -411,7 +411,7 @@ class _DismissWhenNoPersonSelectedState
         oldWidget.relatedness != widget.relatedness) {
       final shouldShow = widget.selectedPerson != null &&
           widget.relatedness != null &&
-          widget.selectedPerson?.ownedBy != null;
+          widget.selectedPerson?.isAwaiting == false;
       _selectedPerson = widget.selectedPerson ?? _selectedPerson;
       _relatedness = widget.relatedness ?? _relatedness;
       if (!shouldShow) {

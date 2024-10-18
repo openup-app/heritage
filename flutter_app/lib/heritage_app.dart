@@ -630,7 +630,8 @@ Person _createPerson(String id) {
     children: [],
     spouses: [],
     addedBy: '',
-    ownedBy: '',
+    ownership: Ownership.unowned,
+    ownershipUnableReason: null,
     createdAt: DateTime.now(),
     profile: Profile(
       firstName: id,

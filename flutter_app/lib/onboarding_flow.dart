@@ -1095,6 +1095,73 @@ class _ExitStepState extends State<_ExitStep> {
   }
 }
 
+class _UnableToOwnStep extends StatefulWidget {
+  final String name;
+  final VoidCallback onBack;
+  final void Function(OwnershipUnableReason reason) onDone;
+
+  const _UnableToOwnStep({
+    super.key,
+    required this.name,
+    required this.onBack,
+    required this.onDone,
+  });
+
+  @override
+  State<_UnableToOwnStep> createState() => _UnableToOwnStepState();
+}
+
+class _UnableToOwnStepState extends State<_UnableToOwnStep> {
+  OwnershipUnableReason? _reason;
+
+  @override
+  Widget build(BuildContext context) {
+    final reason = _reason;
+    return _Container(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const _Title(
+            icon: Icon(Icons.stop_screen_share_outlined),
+            label: 'Unable to invite',
+          ),
+          Text('${widget.name} is:'),
+          for (final r in OwnershipUnableReason.values) ...[
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8.0),
+              child: FilledButton(
+                onPressed: () => setState(() => _reason = r),
+                style: FilledButton.styleFrom(
+                  fixedSize: const Size.fromHeight(44),
+                  foregroundColor: reason == r ? Colors.white : null,
+                  backgroundColor: reason == r
+                      ? primaryColor
+                      : const Color.fromRGBO(0xDF, 0xDF, 0xDF, 1.0),
+                ),
+                child: Text(_reasonToSentence(r)),
+              ),
+            ),
+          ],
+          const Spacer(),
+          _Button(
+            onPressed: reason == null ? null : () => widget.onDone(reason),
+            child: const Text('Next'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _reasonToSentence(OwnershipUnableReason reason) {
+    return switch (reason) {
+      OwnershipUnableReason.child => 'A child',
+      OwnershipUnableReason.deceased => 'Deceased',
+      OwnershipUnableReason.disabled => 'Disabled',
+    };
+  }
+}
+
 class _Title extends StatelessWidget {
   final Color? color;
   final Widget? icon;

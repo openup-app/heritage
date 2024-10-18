@@ -290,11 +290,15 @@ class Api {
     );
   }
 
-  Future<Either<ApiError, Person>> takeOwnership(Id id) {
+  Future<Either<ApiError, Person>> updateOwnershipUnableReason(
+      Id id, OwnershipUnableReason reason) {
     return _makeRequest(
       request: () => http.put(
-        Uri.parse('$_baseUrl/v1/people/$id/take_ownership'),
+        Uri.parse('$_baseUrl/v1/people/$id/ownership_unable_reason'),
         headers: _headers,
+        body: jsonEncode({
+          'reason': reason.name,
+        }),
       ),
       handleResponse: (response) {
         final json = jsonDecode(response.body);
@@ -425,6 +429,10 @@ typedef Id = String;
 
 enum Gender { male, female }
 
+enum Ownership { owned, unowned, unable }
+
+enum OwnershipUnableReason { child, disabled, deceased }
+
 enum Relationship { parent, sibling, spouse, child }
 
 @Freezed(makeCollectionsUnmodifiable: false)
@@ -435,7 +443,8 @@ class Person with _$Person implements GraphNode {
     required List<Id> spouses,
     required List<Id> children,
     required Id addedBy,
-    required Id? ownedBy,
+    required Ownership ownership,
+    required OwnershipUnableReason? ownershipUnableReason,
     @DateTimeConverter() required DateTime createdAt,
     @DateTimeConverter() DateTime? ownedAt,
     required Profile profile,
@@ -443,7 +452,11 @@ class Person with _$Person implements GraphNode {
 
   const Person._();
 
-  bool get isAwaiting => ownedBy == null;
+  bool get isAwaiting => ownership == Ownership.unowned;
+
+  bool get isOwned => ownership == Ownership.owned;
+
+  bool get isUnownable => ownership == Ownership.unable;
 
   factory Person.fromJson(Map<String, Object?> json) => _$PersonFromJson(json);
 

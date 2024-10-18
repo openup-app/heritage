@@ -136,8 +136,9 @@ class GraphNotifier extends StateNotifier<Graph> {
     );
   }
 
-  Future<void> takeOwnership(String id) async {
-    final result = await api.takeOwnership(id);
+  Future<void> updateOwnershipUnableReason(
+      String id, OwnershipUnableReason reason) async {
+    final result = await api.updateOwnershipUnableReason(id, reason);
     if (!mounted) {
       return;
     }
@@ -257,7 +258,8 @@ Person _tempPerson(String id) {
     spouses: [],
     children: [],
     addedBy: '',
-    ownedBy: '',
+    ownership: Ownership.owned,
+    ownershipUnableReason: null,
     createdAt: DateTime.now(),
     profile: const Profile(
       firstName: '',

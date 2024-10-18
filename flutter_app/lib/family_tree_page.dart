@@ -55,13 +55,11 @@ class FamilyTreeLoadingPageState extends ConsumerState<FamilyTreeLoadingPage> {
           WidgetsBinding.instance.endOfFrame.then((_) {
             if (mounted) {
               final focalPerson = ref.read(graphProvider).focalPerson;
-              final isManagedUser = focalPerson.ownedBy != null &&
-                  focalPerson.ownedBy != focalPerson.id;
-              final isLoggingInAsManagedUser =
-                  isManagedUser && !widget.isPerspectiveMode;
+              final isLoggingInAsUnownableUser =
+                  focalPerson.isUnownable && !widget.isPerspectiveMode;
               final isInvitedToOwnedUser =
-                  widget.isInvite && focalPerson.ownedBy != null;
-              if (isLoggingInAsManagedUser || isInvitedToOwnedUser) {
+                  widget.isInvite && focalPerson.isOwned;
+              if (isLoggingInAsUnownableUser || isInvitedToOwnedUser) {
                 widget.onError();
               } else {
                 widget.onReady();
@@ -163,10 +161,12 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
           isPrimaryPersonSelected: selectedPerson != null &&
               selectedPerson.id == widget.viewHistory.primaryUserId,
           isProfileEditable: selectedPerson != null &&
-              selectedPerson.ownedBy == graph.focalPerson.id &&
+              (!selectedPerson.isOwned ||
+                  selectedPerson.id == graph.focalPerson.id) &&
               !widget.viewHistory.isPerspectiveMode,
           maybeShowDateOfPassing: selectedPerson != null &&
-              selectedPerson.ownedBy != selectedPerson.id,
+              selectedPerson.ownershipUnableReason ==
+                  OwnershipUnableReason.deceased,
           focalPersonFullName: graph.focalPerson.profile.fullName,
           panelPopupState: _panelPopupState,
           onShareInvite: selectedPerson == null
@@ -394,7 +394,7 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
 
     final selectedPerson = _selectedPerson;
     if (selectedPerson != null) {
-      if (selectedPerson.ownedBy == null) {
+      if (selectedPerson.isAwaiting) {
         // TODO: Maybe delete here
       }
     }
@@ -447,12 +447,11 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
     }
 
     final isPerspectiveMode = widget.viewHistory.perspectiveUserId != null;
-    final needsOnboarding = focalPerson.data.ownedBy == null;
-    if (isPerspectiveMode || !needsOnboarding) {
+    if (isPerspectiveMode || !focalPerson.data.isAwaiting) {
       return;
     }
 
-    final activePeople = graphWhere(focalPerson, (e) => e.data.ownedBy != null)
+    final activePeople = graphWhere(focalPerson, (e) => e.data.isOwned)
         .take(4)
         .map((e) => e.data)
         .toList();
@@ -465,7 +464,6 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
           referral: referrer,
           activePeople: activePeople,
           onSave: (profile) async {
-            await notifier.takeOwnership(focalPersonId);
             await notifier.updateProfile(focalPerson.id, profile);
           },
           onDone: Navigator.of(context).pop,
@@ -512,12 +510,12 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
 
   bool get _canViewPerspective {
     final graph = ref.watch(graphProvider);
-    final isOwned = _selectedPerson?.ownedBy != null;
+    final isAwaiting = _selectedPerson?.isAwaiting == true;
     final isFocalPerson = _selectedPerson?.id == graph.focalPerson.id;
     final isPrimaryUser =
         _selectedPerson?.id == widget.viewHistory.primaryUserId;
     final isSilbing = _relatedness?.isSibling == true;
-    return isOwned && !isFocalPerson && !isPrimaryUser && !isSilbing;
+    return !isAwaiting && !isFocalPerson && !isPrimaryUser && !isSilbing;
   }
 
   bool get _canShareLoginLink {
@@ -534,23 +532,19 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
     final graph = ref.watch(graphProvider);
     final isPerspectiveMode = widget.viewHistory.isPerspectiveMode;
     final isFocalUserSelected = _selectedPerson?.id == graph.focalPerson.id;
-    final isOwned = _selectedPerson?.ownedBy != null;
+    final isOwned = _selectedPerson?.isOwned == true;
     return !isPerspectiveMode && isFocalUserSelected || !isOwned;
   }
 
   bool get _canDeletePerson {
     final isPerspectiveMode = widget.viewHistory.isPerspectiveMode;
-    final isOwnedByThemself = _selectedPerson?.ownedBy == _selectedPerson?.id;
-    final isUnowned = _selectedPerson?.ownedBy == null;
-    final isOwnedByPrimaryPerson =
-        _selectedPerson?.ownedBy == widget.viewHistory.primaryUserId;
+    final isOwned = _selectedPerson?.isOwned == true;
     final hasParents = _selectedPerson?.parents.isNotEmpty == true;
     final hasChildren = _selectedPerson?.children.isNotEmpty == true;
     final hasSpouses = _selectedPerson?.spouses.isNotEmpty == true;
     final hasParentsAndSpouse = hasParents && hasSpouses;
     return !isPerspectiveMode &&
-        !isOwnedByThemself &&
-        (isUnowned || isOwnedByPrimaryPerson) &&
+        !isOwned &&
         !hasChildren &&
         !hasParentsAndSpouse;
   }
@@ -685,7 +679,7 @@ class FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
                     nodeBuilder: (context, data, node, key) {
                       final isGhost =
                           widget.viewHistory.perspectiveUserId != null &&
-                              data.ownedBy == null;
+                              data.isAwaiting == true;
                       final isSelectedPerson = widget.selectedPerson == null ||
                           widget.selectedPerson?.id == data.id;
                       final enabled = isSelectedPerson && !isGhost;
