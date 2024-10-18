@@ -1,8 +1,8 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:heritage/api.dart';
 import 'package:heritage/api_util.dart';
+import 'package:heritage/authentication.dart';
 import 'package:heritage/family_tree_page_panels.dart';
 import 'package:heritage/onboarding_flow.dart';
 import 'package:heritage/restart_app.dart';
@@ -156,12 +156,11 @@ class _LandingPageContentState extends ConsumerState<_LandingPageContent> {
                     );
                   },
                   (r) async {
-                    final userRecord =
-                        await FirebaseAuth.instance.signInWithCustomToken(r);
+                    final success = await signInWithCustomToken(r);
                     if (!context.mounted) {
                       return;
                     }
-                    if (userRecord.user == null) {
+                    if (!success) {
                       showErrorMessage(
                         context: context,
                         message: 'Failed to sign in',
@@ -176,6 +175,9 @@ class _LandingPageContentState extends ConsumerState<_LandingPageContent> {
                 setState(() => _phoneNumber = phoneNumber);
                 final api = ref.read(apiProvider);
                 final result = await api.sendSms(phoneNumber: phoneNumber);
+                if (!mounted) {
+                  return;
+                }
                 result.fold(
                   (l) {
                     showErrorMessage(
@@ -183,11 +185,7 @@ class _LandingPageContentState extends ConsumerState<_LandingPageContent> {
                       message: smsErrorToMessage(l),
                     );
                   },
-                  (r) {
-                    if (mounted) {
-                      setState(() => _awaitingSmsVerification = true);
-                    }
-                  },
+                  (r) => setState(() => _awaitingSmsVerification = true),
                 );
               },
             ),
@@ -198,6 +196,9 @@ class _LandingPageContentState extends ConsumerState<_LandingPageContent> {
               onResendCode: () async {
                 final api = ref.read(apiProvider);
                 final result = await api.sendSms(phoneNumber: _phoneNumber);
+                if (!mounted) {
+                  return;
+                }
                 result.fold(
                   (l) {
                     showErrorMessage(
@@ -218,6 +219,9 @@ class _LandingPageContentState extends ConsumerState<_LandingPageContent> {
                   phoneNumber: _phoneNumber,
                   smsCode: smsCode,
                 );
+                if (!mounted) {
+                  return;
+                }
                 result.fold(
                   (l) {
                     showErrorMessage(
@@ -225,46 +229,26 @@ class _LandingPageContentState extends ConsumerState<_LandingPageContent> {
                       message: authErrorToMessage(l, isGoogleOauth: false),
                     );
                   },
-                  (r) => RestartApp.of(context).restart(),
+                  (r) async {
+                    final success = await signInWithCustomToken(r);
+                    if (!context.mounted) {
+                      return;
+                    }
+
+                    if (!success) {
+                      showErrorMessage(
+                        context: context,
+                        message: 'Failed to sign in',
+                      );
+                    } else {
+                      RestartApp.of(context).restart();
+                    }
+                  },
                 );
               },
               onBack: () => setState(() => _awaitingSmsVerification = false),
             ),
           ),
-      ],
-    );
-  }
-}
-
-class _InvalidLinkContent extends StatelessWidget {
-  const _InvalidLinkContent({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Column(
-      children: [
-        SizedBox(height: 24),
-        Text(
-          'Ask your family\for a login link',
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.w700,
-            color: Color.fromRGBO(0x00, 0xAE, 0xFF, 1.0),
-          ),
-        ),
-        Spacer(),
-        SizedBox(height: 24),
-        Text(
-          'Stitchfam is currently invite only.',
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w400,
-            color: Color.fromRGBO(0x9E, 0x9E, 0x9E, 1.0),
-          ),
-        ),
-        SizedBox(height: 24),
       ],
     );
   }

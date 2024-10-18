@@ -23,7 +23,7 @@ import 'package:path_drawing/path_drawing.dart' as path_drawing;
 
 const _kGhostOpacity = 0.4;
 
-enum LoadingError { expiredLink, unauthorized, failedToLoad }
+enum LoadingError { expiredLink, unableToSigninToAccount, failedToLoad }
 
 class FamilyTreeLoadingPage extends ConsumerStatefulWidget {
   final bool isPerspectiveMode;
@@ -62,7 +62,7 @@ class FamilyTreeLoadingPageState extends ConsumerState<FamilyTreeLoadingPage> {
               final isLoggingInAsUnownableUser =
                   focalPerson.isUnownable && !widget.isPerspectiveMode;
               if (isLoggingInAsUnownableUser) {
-                return widget.onError(LoadingError.unauthorized);
+                return widget.onError(LoadingError.unableToSigninToAccount);
               }
 
               final isInvitedToOwnedUser =
@@ -487,6 +487,7 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
         );
       },
     );
+    await WidgetsBinding.instance.endOfFrame;
     if (mounted) {
       _selectPerson(focalPersonId);
     }

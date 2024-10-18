@@ -697,8 +697,8 @@ class _EndAnimationStep extends StatelessWidget {
                           ),
                         ),
                         const Positioned(
-                          right: -4,
-                          top: -4,
+                          right: 0,
+                          top: 0,
                           child: VerifiedBadge(size: 48),
                         ).animate().fadeIn(
                               delay: const Duration(seconds: 2),
@@ -1184,8 +1184,9 @@ class _PhotoStepState extends State<_PhotoStep> {
           const SizedBox(height: 24),
           const SizedBox(height: 24),
           _Button(
-            onPressed:
-                _photo == null && !widget.optional ? null : widget.onDone,
+            onPressed: !widget.optional && (_photo == null || !_photoHasBeenSet)
+                ? null
+                : widget.onDone,
             child: widget.onDone == null
                 ? const _LoadingIndicator()
                 : Text(widget.buttonLabel),
@@ -1193,6 +1194,14 @@ class _PhotoStepState extends State<_PhotoStep> {
         ],
       ),
     );
+  }
+
+  bool get _photoHasBeenSet {
+    return switch (_photo) {
+      NetworkPhoto(:final key) => key != 'public/no_image.png',
+      MemoryPhoto() => true,
+      _ => false,
+    };
   }
 }
 

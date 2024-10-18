@@ -387,10 +387,9 @@ class _RouterBuilderState extends State<_RouterBuilder> {
                   onError: (error) {
                     final String message;
                     switch (error) {
-                      case LoadingError.unauthorized:
+                      case LoadingError.unableToSigninToAccount:
                         FirebaseAuth.instance.signOut();
-                        message =
-                            'Unable to locate your account. Stitchfam is invite only';
+                        message = 'Unable to sign in to this account';
                       case LoadingError.expiredLink:
                         message =
                             'This invite has already been used, please sign in';

@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fpdart/fpdart.dart' show Either, Left, Right;
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 
 // Log in/out, token refresh trigger
 final _firebaseUserProvider =
@@ -213,6 +214,28 @@ Future<AuthResult> _signInWithCredential(AuthCredential credential) async {
       return const AuthFailure(AuthError.failure);
     } else {
       rethrow;
+    }
+  }
+}
+
+Future<bool> signInWithCustomToken(String token) async {
+  try {
+    final result = await FirebaseAuth.instance.signInWithCustomToken(token);
+    final user = result.user;
+    if (user != null) {
+      return true;
+    } else {
+      return false;
+    }
+  } on FirebaseAuthException catch (e, s) {
+    if (e.code == 'custom-token-mismatch') {
+      return false;
+    } else if (e.code == 'invalid-custom-token') {
+      return false;
+    } else {
+      debugPrint(e.code);
+      Sentry.captureException(e, stackTrace: s);
+      return false;
     }
   }
 }

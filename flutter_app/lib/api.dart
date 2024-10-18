@@ -419,6 +419,7 @@ enum AuthError {
   failure,
   badRequest,
   badCredential,
+  credentialUsedForDifferentUid,
   noAccount,
   unknownUid,
   alreadyOwned,
