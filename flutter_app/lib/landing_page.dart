@@ -20,7 +20,7 @@ class LandingPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color.fromRGBO(223, 235, 250, 1),
+      resizeToAvoidBottomInset: false,
       body: SafeArea(
         child: TiledBackground(
           transformNotifier: _tempNotifier,
@@ -44,40 +44,44 @@ class LandingPage extends StatelessWidget {
                 ),
               ),
               Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 287,
-                      height: 327,
-                      alignment: Alignment.center,
-                      padding: const EdgeInsets.all(16),
-                      decoration: const BoxDecoration(
-                        color: Color.fromRGBO(0xEC, 0xEC, 0xEC, 1.0),
-                        borderRadius: BorderRadius.all(
-                          Radius.circular(25),
+                child: Padding(
+                  padding: EdgeInsets.only(
+                      bottom: MediaQuery.of(context).viewInsets.bottom),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 287,
+                        height: 327,
+                        alignment: Alignment.center,
+                        padding: const EdgeInsets.all(16),
+                        decoration: const BoxDecoration(
+                          color: Color.fromRGBO(0xEC, 0xEC, 0xEC, 1.0),
+                          borderRadius: BorderRadius.all(
+                            Radius.circular(25),
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              offset: Offset(0, 3),
+                              blurRadius: 20,
+                              color: Color.fromRGBO(0x00, 0x00, 0x00, 0.2),
+                            )
+                          ],
                         ),
-                        boxShadow: [
-                          BoxShadow(
-                            offset: Offset(0, 3),
-                            blurRadius: 20,
-                            color: Color.fromRGBO(0x00, 0x00, 0x00, 0.2),
-                          )
-                        ],
+                        child: const _LandingPageContent(),
                       ),
-                      child: const _LandingPageContent(),
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Stitchfam is invite only.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w400,
-                        color: Color.fromRGBO(0xFF, 0xFF, 0xFF, 0.25),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Stitchfam is invite only.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w400,
+                          color: Color.fromRGBO(0xFF, 0xFF, 0xFF, 0.25),
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
               Align(
