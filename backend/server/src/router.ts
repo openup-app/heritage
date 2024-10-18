@@ -54,8 +54,9 @@ export function router(auth: Auth, database: Database, storage: Storage): Router
           phoneNumber: credential.phoneNumber,
         }
       }
+    } else {
+      return { type: "failure" };
     }
-    return { type: "failure" };
   }
 
   async function createUser(uid: string, data: SignInData): Promise<string | undefined> {
