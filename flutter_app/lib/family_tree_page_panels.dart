@@ -30,7 +30,6 @@ class Panels extends ConsumerStatefulWidget {
   final String focalPersonFullName;
   final PanelPopupState panelPopupState;
   final VoidCallback? onShareInvite;
-  final VoidCallback? onShareLoginLink;
   final VoidCallback? onEdit;
   final VoidCallback? onViewPerspective;
   final VoidCallback? onLeavePerspective;
@@ -53,7 +52,6 @@ class Panels extends ConsumerStatefulWidget {
     required this.focalPersonFullName,
     required this.panelPopupState,
     required this.onShareInvite,
-    required this.onShareLoginLink,
     required this.onEdit,
     required this.onViewPerspective,
     required this.onLeavePerspective,

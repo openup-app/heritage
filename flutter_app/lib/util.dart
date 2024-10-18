@@ -93,20 +93,6 @@ Future<ShareType> shareInvite({
   return ShareType.share;
 }
 
-Future<ShareType> shareLoginLink({
-  required String targetId,
-  required String targetName,
-}) async {
-  final data = ShareData(
-    text:
-        '$targetName\'s login link for Stitchfam.\nOnly share it with $targetName',
-    url: 'https://stitchfam.com/login/$targetId',
-  );
-
-  await shareContent(data);
-  return ShareType.share;
-}
-
 enum ShareType { share, clipboard }
 
 void launchEmail() {

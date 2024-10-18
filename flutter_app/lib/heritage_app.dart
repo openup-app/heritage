@@ -190,10 +190,10 @@ class _RouterBuilderState extends State<_RouterBuilder> {
 
     final auth = FirebaseAuth.instance;
     final uid = auth.currentUser?.uid;
-    final redirectPath = uid != null ? '/login/$uid' : widget.redirectPath;
+    final redirectPath = widget.redirectPath;
 
-    if (redirectPath != null && redirectPath.startsWith('/login/')) {
-      final focalUserId = redirectPath.substring(7);
+    if (uid != null) {
+      final focalUserId = uid;
       initialLocation = '/view';
       viewHistory = ViewHistory(primaryUserId: focalUserId);
     } else if (redirectPath != null && redirectPath.startsWith('/invite/')) {

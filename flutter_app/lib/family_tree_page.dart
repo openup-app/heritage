@@ -186,14 +186,6 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
                     _onDismissSelected();
                   }
                 },
-          onShareLoginLink: !_canShareLoginLink || selectedPerson == null
-              ? null
-              : () {
-                  shareLoginLink(
-                    targetId: selectedPerson.id,
-                    targetName: selectedPerson.profile.firstName,
-                  );
-                },
           onEdit: !_canEdit || selectedPerson == null
               ? null
               : () {
