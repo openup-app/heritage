@@ -2,7 +2,6 @@ import { getFirestore, Firestore, DocumentReference, Transaction } from "firebas
 import shortUUID from "short-uuid";
 import { z } from "zod";
 import logger from "./log.js";
-import { storage } from "firebase-admin";
 
 export class Database {
   private firestore: Firestore;
@@ -134,7 +133,6 @@ export class Database {
     const person = this.newEmptyPerson(null, "root");
     person.profile.firstName = firstName;
     person.profile.lastName = lastName;
-    person.ownedBy = person.id;
     person.ownedAt = new Date().toISOString();
     await this.personRef(person.id).create(person);
     return person;
@@ -185,9 +183,9 @@ export class Database {
     return this.firestore.runTransaction(async (t: Transaction) => {
       const personSnapshot = await t.get(this.personRef(id));
       const person = personSchema.parse(personSnapshot.data());
-      const ownedByThemself = person.ownedBy != null && person.ownedBy == person.id;
-      if (ownedByThemself) {
-        throw "Unable to delete users who own themself";
+      const owned = person.ownership === "owned";
+      if (owned) {
+        throw "Unable to delete users who are owned";
       }
 
       if (person.children.length > 0) {
@@ -315,9 +313,14 @@ export class Database {
     return personSchema.parse(data);
   }
 
-  public async updateOwnership(id: Id, newOwnerId: Id): Promise<Person> {
+  public async updateOwned(id: Id): Promise<void> {
     const personRef = this.personRef(id);
-    await personRef.update({ "ownedBy": newOwnerId, "ownedAt": new Date().toISOString(), });
+    await personRef.update({ "ownership": "owned", "ownershipUnableReason": null, });
+  }
+
+  public async updateOwnershipUnableReason(id: Id, reason: OwnershipUnableReason): Promise<Person> {
+    const personRef = this.personRef(id);
+    await personRef.update({ "ownership": "unable", "ownershipUnableReason": reason, });
     const snapshot = await personRef.get();
     const data = snapshot.data();
     return personSchema.parse(data);
@@ -354,9 +357,10 @@ export class Database {
       "spouses": [],
       "children": [],
       "addedBy": creatorId,
-      "ownedBy": null,
-      "createdAt": new Date().toISOString(),
       "ownedAt": null,
+      "ownership": "unowned",
+      "ownershipUnableReason": null,
+      "createdAt": new Date().toISOString(),
       "profile": {
         "firstName": "",
         "lastName": "",
@@ -400,6 +404,8 @@ export const genderSchema = z.enum(["male", "female"]).nullable();
 
 export const relationshipSchema = z.enum(["parent", "sibling", "spouse", "child"]);
 
+export const ownershipUnableReasonSchema = z.enum(["child", "disabled", "deceased"]);
+
 export const profileSchema = z.object({
   firstName: z.string(),
   lastName: z.string(),
@@ -419,9 +425,10 @@ const personSchema = z.object({
   spouses: z.array(idSchema),
   children: z.array(idSchema),
   addedBy: idSchema,
-  ownedBy: idSchema.nullable(),
-  createdAt: z.string(),
   ownedAt: z.string().nullable(),
+  ownership: z.enum(["owned", "unowned", "unable"]),
+  ownershipUnableReason: ownershipUnableReasonSchema.nullable(),
+  createdAt: z.string(),
   profile: profileSchema,
 });
 
@@ -430,6 +437,8 @@ type Id = z.infer<typeof idSchema>;
 type Gender = z.infer<typeof genderSchema>;
 
 type Relationship = z.infer<typeof relationshipSchema>;
+
+type OwnershipUnableReason = z.infer<typeof ownershipUnableReasonSchema>;
 
 export type Profile = z.infer<typeof profileSchema>;
 

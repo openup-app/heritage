@@ -1,5 +1,5 @@
 import { Request, Response, Router } from "express";
-import { Database, Person, Profile, genderSchema, relationshipSchema } from "./database.js";
+import { Database, Person, Profile, genderSchema, ownershipUnableReasonSchema, relationshipSchema } from "./database.js";
 import { Storage } from "./storage/storage.js";
 import { Auth } from "./auth.js";
 import { z } from "zod";
@@ -90,7 +90,7 @@ export function router(auth: Auth, database: Database, storage: Storage): Router
       // Ensure person exists and is unowned
       try {
         const person = await database.getPerson(body.claimUid);
-        if (person.ownedBy) {
+        if (person.ownership === "owned") {
           return res.status(400).json({ "error": { "code": "alreadyOwned" } });
         }
       } catch (e) {
@@ -100,6 +100,11 @@ export function router(auth: Auth, database: Database, storage: Storage): Router
       const signInToken = await createUser(body.claimUid, signInResult.data);
       if (!signInToken) {
         return res.sendStatus(500);
+      }
+      try {
+        database.updateOwned(body.claimUid);
+      } catch {
+        // Can ignore for now, but should mark as owned
       }
       return res.json({ "token": signInToken })
     }
@@ -244,20 +249,22 @@ export function router(auth: Auth, database: Database, storage: Storage): Router
     }
   });
 
-  router.put("/people/:id/take_ownership", async (req: Request, res: Response) => {
+  router.put("/people/:id/ownership_unable_reason", async (req: Request, res: Response) => {
     const id = req.params.id;
-    const newOwnerId = req.headers["x-app-uid"] as string | undefined;
 
-    if (!newOwnerId) {
+    let body: PutOwnershipUnableReasonBody;
+    try {
+      body = putOwnershipUnableReasonSchema.parse(req.body);
+    } catch {
       return res.sendStatus(400);
     }
 
     try {
       const oldPerson = await database.getPerson(id);
-      if (oldPerson.ownedBy) {
+      if (oldPerson.ownership === "owned") {
         return res.sendStatus(401);
       }
-      const person = await database.updateOwnership(id, newOwnerId);
+      const person = await database.updateOwnershipUnableReason(id, body.reason);
       return res.json({
         'person': constructPerson(person, storage),
       })
@@ -454,6 +461,10 @@ const createRootSchema = z.object({
   lastName: z.string(),
 });
 
+const putOwnershipUnableReasonSchema = z.object({
+  reason: ownershipUnableReasonSchema,
+});
+
 const photoUpdateSchema = z.object({
   type: z.enum(["network", "memory"]),
   key: z.string(),
@@ -487,6 +498,8 @@ type AuthenticateBody = z.infer<typeof authenticateSchema>;
 type AddConnectionBody = z.infer<typeof addConnectionSchema>;
 
 type CreateRootBody = z.infer<typeof createRootSchema>;
+
+type PutOwnershipUnableReasonBody = z.infer<typeof putOwnershipUnableReasonSchema>;
 
 type GalleryUpdate = z.infer<typeof photoUpdateSchema>;
 
