@@ -1092,6 +1092,24 @@ class LogoText extends StatelessWidget {
   }
 }
 
+class TaglineText extends StatelessWidget {
+  const TaglineText({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const IgnorePointer(
+      child: Text(
+        'Collaborative Family Tree',
+        style: TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w700,
+          color: Colors.white,
+        ),
+      ),
+    );
+  }
+}
+
 class ProfileNameSection extends StatelessWidget {
   final Person person;
   final Relatedness relatedness;

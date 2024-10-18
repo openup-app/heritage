@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:heritage/api.dart';
 import 'package:heritage/api_util.dart';
 import 'package:heritage/authentication.dart';
+import 'package:heritage/family_tree_page.dart';
 import 'package:heritage/family_tree_page_panels.dart';
 import 'package:heritage/onboarding_flow.dart';
 import 'package:heritage/restart_app.dart';
@@ -11,105 +12,116 @@ import 'package:url_launcher/link.dart';
 final _privacyPolicyUri = Uri.parse('https://stitchfam.com/privacy_policy');
 final _tosUri = Uri.parse('https://stitchfam.com/tos');
 
+final _tempNotifier = ValueNotifier(Matrix4.identity());
+
 class LandingPage extends StatelessWidget {
   const LandingPage({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color.fromRGBO(223, 235, 250, 1.0),
+      backgroundColor: const Color.fromRGBO(223, 235, 250, 1),
       body: SafeArea(
-        child: Stack(
-          children: [
-            const Align(
-              alignment: Alignment.topCenter,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  SizedBox(height: 16),
-                  LogoText(width: 230),
-                  Text('Collaborative Family Tree'),
-                ],
+        child: TiledBackground(
+          transformNotifier: _tempNotifier,
+          tint: null,
+          child: Stack(
+            children: [
+              const Positioned.fill(
+                child: ColoredBox(
+                  color: Color.fromRGBO(0x00, 0x00, 0x00, 0.75),
+                ),
               ),
-            ),
-            Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 287,
-                    height: 327,
-                    alignment: Alignment.center,
-                    padding: const EdgeInsets.all(16),
-                    decoration: const BoxDecoration(
-                      color: Color.fromRGBO(0xEC, 0xEC, 0xEC, 1.0),
-                      borderRadius: BorderRadius.all(
-                        Radius.circular(25),
+              const Align(
+                alignment: Alignment.topCenter,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SizedBox(height: 16),
+                    LogoText(width: 230),
+                    TaglineText(),
+                  ],
+                ),
+              ),
+              Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 287,
+                      height: 327,
+                      alignment: Alignment.center,
+                      padding: const EdgeInsets.all(16),
+                      decoration: const BoxDecoration(
+                        color: Color.fromRGBO(0xEC, 0xEC, 0xEC, 1.0),
+                        borderRadius: BorderRadius.all(
+                          Radius.circular(25),
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            offset: Offset(0, 3),
+                            blurRadius: 20,
+                            color: Color.fromRGBO(0x00, 0x00, 0x00, 0.2),
+                          )
+                        ],
                       ),
-                      boxShadow: [
-                        BoxShadow(
-                          offset: Offset(0, 3),
-                          blurRadius: 20,
-                          color: Color.fromRGBO(0x00, 0x00, 0x00, 0.2),
-                        )
+                      child: const _LandingPageContent(),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Stitchfam is invite only.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w400,
+                        color: Color.fromRGBO(0xFF, 0xFF, 0xFF, 0.25),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Align(
+                alignment: Alignment.bottomCenter,
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 16.0),
+                  child: TextButtonTheme(
+                    data: TextButtonThemeData(
+                      style: TextButton.styleFrom(
+                        foregroundColor:
+                            const Color.fromRGBO(0xFF, 0xFF, 0xFF, 0.25),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Link(
+                          uri: _privacyPolicyUri,
+                          target: LinkTarget.blank,
+                          builder: (context, followLink) {
+                            return TextButton(
+                              onPressed: followLink,
+                              child: const Text('Privacy Policy'),
+                            );
+                          },
+                        ),
+                        const SizedBox(width: 16),
+                        Link(
+                          uri: _tosUri,
+                          target: LinkTarget.blank,
+                          builder: (context, followLink) {
+                            return TextButton(
+                              onPressed: followLink,
+                              child: const Text('Terms of Service'),
+                            );
+                          },
+                        ),
                       ],
                     ),
-                    child: const _LandingPageContent(),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Stitchfam is invite only.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w400,
-                      color: Color.fromRGBO(0x9E, 0x9E, 0x9E, 1.0),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Align(
-              alignment: Alignment.bottomCenter,
-              child: Padding(
-                padding: const EdgeInsets.only(bottom: 16.0),
-                child: TextButtonTheme(
-                  data: TextButtonThemeData(
-                    style: TextButton.styleFrom(
-                      foregroundColor:
-                          const Color.fromRGBO(0x00, 0x00, 0x00, 0.35),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Link(
-                        uri: _privacyPolicyUri,
-                        target: LinkTarget.blank,
-                        builder: (context, followLink) {
-                          return TextButton(
-                            onPressed: followLink,
-                            child: const Text('Privacy Policy'),
-                          );
-                        },
-                      ),
-                      const SizedBox(width: 16),
-                      Link(
-                        uri: _tosUri,
-                        target: LinkTarget.blank,
-                        builder: (context, followLink) {
-                          return TextButton(
-                            onPressed: followLink,
-                            child: const Text('Terms of Service'),
-                          );
-                        },
-                      ),
-                    ],
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

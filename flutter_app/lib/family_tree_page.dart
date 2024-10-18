@@ -660,7 +660,7 @@ class FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
           opacity: _ready ? 1.0 : 0.0,
           child: Stack(
             children: [
-              _TiledBackground(
+              TiledBackground(
                 transformNotifier: _transformNotifier,
                 tint: widget.viewHistory.perspectiveUserId != null
                     ? const Color.fromRGBO(0xFF, 0x00, 0x00, 0.05)
@@ -855,12 +855,12 @@ class HoverableNodeProfile extends StatelessWidget {
   }
 }
 
-class _TiledBackground extends StatefulWidget {
+class TiledBackground extends StatefulWidget {
   final ValueNotifier<Matrix4> transformNotifier;
   final Color? tint;
   final Widget child;
 
-  const _TiledBackground({
+  const TiledBackground({
     super.key,
     required this.transformNotifier,
     required this.tint,
@@ -868,10 +868,10 @@ class _TiledBackground extends StatefulWidget {
   });
 
   @override
-  State<_TiledBackground> createState() => _TiledBackgroundState();
+  State<TiledBackground> createState() => _TiledBackgroundState();
 }
 
-class _TiledBackgroundState extends State<_TiledBackground> {
+class _TiledBackgroundState extends State<TiledBackground> {
   ui.Image? _image;
 
   @override
