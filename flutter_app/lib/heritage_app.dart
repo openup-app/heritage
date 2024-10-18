@@ -390,7 +390,6 @@ class _RouterBuilderState extends State<_RouterBuilder> {
                     _router.goNamed('landing');
                   },
                   child: FamilyTreePage(
-                    referrerId: referrerId,
                     viewHistory: viewHistory,
                   ),
                 ),

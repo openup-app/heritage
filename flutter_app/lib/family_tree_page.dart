@@ -103,12 +103,10 @@ class FamilyTreeLoadingPageState extends ConsumerState<FamilyTreeLoadingPage> {
 }
 
 class FamilyTreePage extends ConsumerStatefulWidget {
-  final Id? referrerId;
   final ViewHistory viewHistory;
 
   const FamilyTreePage({
     super.key,
-    this.referrerId,
     required this.viewHistory,
   });
 
@@ -439,16 +437,11 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
 
     final graph = ref.read(graphProvider);
     final focalPersonId = graph.focalPerson.id;
-    final referrerId = widget.referrerId;
-    if (referrerId == null) {
-      return;
-    }
     final notifier = ref.read(graphProvider.notifier);
     final nodes = graph.people.values.toList();
-    final linkedNodes = buildLinkedTree(nodes, referrerId);
+    final linkedNodes = buildLinkedTree(nodes, focalPersonId);
     final focalPerson = linkedNodes[focalPersonId];
-    final referrer = linkedNodes[referrerId];
-    if (focalPerson == null || referrer == null) {
+    if (focalPerson == null) {
       return;
     }
 
@@ -467,7 +460,6 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
       builder: (context) {
         return OnboardingFlow(
           person: focalPerson,
-          referral: referrer,
           activePeople: activePeople,
           onSave: (profile) async {
             await notifier.updateProfile(focalPerson.id, profile);

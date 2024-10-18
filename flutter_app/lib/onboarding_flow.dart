@@ -21,7 +21,6 @@ import 'package:lottie/lottie.dart';
 
 class OnboardingFlow extends ConsumerStatefulWidget {
   final LinkedNode<Person> person;
-  final LinkedNode<Person> referral;
   final List<Person> activePeople;
   final Future<void> Function(Profile profile) onSave;
   final VoidCallback onDone;
@@ -29,7 +28,6 @@ class OnboardingFlow extends ConsumerStatefulWidget {
   const OnboardingFlow({
     super.key,
     required this.person,
-    required this.referral,
     required this.activePeople,
     required this.onSave,
     required this.onDone,
