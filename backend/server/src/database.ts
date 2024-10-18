@@ -318,9 +318,9 @@ export class Database {
     await personRef.update({ "ownership": "owned", "ownershipUnableReason": null, "ownedAt": new Date().toISOString() });
   }
 
-  public async updateOwnershipUnableReason(id: Id, reason: OwnershipUnableReason): Promise<Person> {
+  public async updateOwnershipUnableReason(id: Id, reason: OwnershipUnableReason | null): Promise<Person> {
     const personRef = this.personRef(id);
-    await personRef.update({ "ownership": "unable", "ownershipUnableReason": reason, });
+    await personRef.update({ "ownership": reason ? "unable" : "unowned", "ownershipUnableReason": reason, });
     const snapshot = await personRef.get();
     const data = snapshot.data();
     return personSchema.parse(data);

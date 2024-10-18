@@ -102,7 +102,7 @@ export function router(auth: Auth, database: Database, storage: Storage): Router
         return res.sendStatus(500);
       }
       try {
-        database.updateOwned(body.claimUid);
+        await database.updateOwned(body.claimUid);
       } catch {
         // Can ignore for now, but should mark as owned
       }
@@ -462,7 +462,7 @@ const createRootSchema = z.object({
 });
 
 const putOwnershipUnableReasonSchema = z.object({
-  reason: ownershipUnableReasonSchema,
+  reason: ownershipUnableReasonSchema.nullable(),
 });
 
 const photoUpdateSchema = z.object({
