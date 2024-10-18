@@ -315,7 +315,7 @@ export class Database {
 
   public async updateOwned(id: Id): Promise<void> {
     const personRef = this.personRef(id);
-    await personRef.update({ "ownership": "owned", "ownershipUnableReason": null, });
+    await personRef.update({ "ownership": "owned", "ownershipUnableReason": null, "ownedAt": new Date().toISOString() });
   }
 
   public async updateOwnershipUnableReason(id: Id, reason: OwnershipUnableReason): Promise<Person> {
