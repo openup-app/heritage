@@ -33,9 +33,11 @@ export function router(auth: Auth, database: Database, storage: Storage): Router
       if (!googleUser) {
         return { "type": "badCredential" };
       }
+      const signIn = await auth.getSignInTokenByEmail(googleUser.email);
       return {
         type: "success",
-        token: await auth.getSignInTokenByEmail(googleUser.email),
+        uid: signIn?.uid,
+        token: signIn?.token,
         data: {
           type: credential.type,
           googleUser: googleUser,
@@ -46,9 +48,11 @@ export function router(auth: Auth, database: Database, storage: Storage): Router
       if (status !== "success") {
         return { "type": "badCredential" };
       }
+      const signIn = await auth.getSignInTokenByPhoneNumber(credential.phoneNumber);
       return {
         type: "success",
-        token: await auth.getSignInTokenByPhoneNumber(credential.phoneNumber),
+        uid: signIn?.uid,
+        token: signIn?.token,
         data: {
           type: credential.type,
           phoneNumber: credential.phoneNumber,
@@ -79,6 +83,10 @@ export function router(auth: Auth, database: Database, storage: Storage): Router
     if (signInResult.type !== "success") {
       return res.status(400).json({ "error": { "code": signInResult.type } });
     } else {
+      if (signInResult.uid && body.claimUid && signInResult.uid !== body.claimUid) {
+        return res.status(400).json({ "error": { "code": "credentialUsedForDifferentUid" } });
+      }
+
       if (signInResult.token) {
         return res.json({ "token": signInResult.token });
       }
@@ -543,6 +551,7 @@ const signInDataSchema = z.discriminatedUnion("type", [authResultOauthDataSchema
 
 const signInResultSuccessSchema = z.object({
   type: z.literal("success"),
+  uid: z.string().nullable().optional(),
   token: z.string().nullable().optional(),
   data: signInDataSchema,
 });

@@ -137,19 +137,33 @@ export class Auth {
         }
     }
 
-    public async getSignInTokenByEmail(email: string): Promise<string | undefined> {
+    public async getSignInTokenByEmail(email: string): Promise<{ uid: string, token: string } | undefined> {
         try {
             const userRecord = await this.firebaseAuth.getUserByEmail(email);
-            return this.getSignInTokenByUid(userRecord.uid);
+            const token = await this.getSignInTokenByUid(userRecord.uid);
+            if (!token) {
+                return;
+            }
+            return {
+                uid: userRecord.uid,
+                token: token,
+            };
         } catch (e) {
             return;
         }
     }
 
-    public async getSignInTokenByPhoneNumber(phoneNumber: string): Promise<string | undefined> {
+    public async getSignInTokenByPhoneNumber(phoneNumber: string): Promise<{ uid: string, token: string } | undefined> {
         try {
             const userRecord = await this.firebaseAuth.getUserByPhoneNumber(phoneNumber);
-            return this.getSignInTokenByUid(userRecord.uid);
+            const token = await this.getSignInTokenByUid(userRecord.uid);
+            if (!token) {
+                return;
+            }
+            return {
+                uid: userRecord.uid,
+                token: token,
+            };
         } catch (e) {
             return;
         }
