@@ -21,11 +21,13 @@ import 'package:heritage/zoomable_pannable_viewport.dart';
 import 'package:lottie/lottie.dart';
 import 'package:path_drawing/path_drawing.dart' as path_drawing;
 
+enum LoadingError { expiredLink, unauthorized, failedToLoad }
+
 class FamilyTreeLoadingPage extends ConsumerStatefulWidget {
   final bool isPerspectiveMode;
   final bool isInvite;
   final VoidCallback onReady;
-  final VoidCallback onError;
+  final void Function(LoadingError error) onError;
   final Widget child;
 
   const FamilyTreeLoadingPage({
@@ -57,14 +59,18 @@ class FamilyTreeLoadingPageState extends ConsumerState<FamilyTreeLoadingPage> {
               final focalPerson = ref.read(graphProvider).focalPerson;
               final isLoggingInAsUnownableUser =
                   focalPerson.isUnownable && !widget.isPerspectiveMode;
+              if (isLoggingInAsUnownableUser) {
+                return widget.onError(LoadingError.unauthorized);
+              }
+
               final isInvitedToOwnedUser =
                   widget.isInvite && focalPerson.isOwned;
-              if (isLoggingInAsUnownableUser || isInvitedToOwnedUser) {
-                widget.onError();
-              } else {
-                widget.onReady();
-                setState(() => _ready = true);
+              if (isInvitedToOwnedUser) {
+                return widget.onError(LoadingError.expiredLink);
               }
+
+              widget.onReady();
+              setState(() => _ready = true);
             }
           });
         }
@@ -77,7 +83,7 @@ class FamilyTreeLoadingPageState extends ConsumerState<FamilyTreeLoadingPage> {
         if (next) {
           WidgetsBinding.instance.endOfFrame.then((_) {
             if (mounted) {
-              widget.onError();
+              widget.onError(LoadingError.failedToLoad);
             }
           });
         }

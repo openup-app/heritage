@@ -243,16 +243,8 @@ class _RouterBuilderState extends State<_RouterBuilder> {
           path: '/',
           name: 'landing',
           pageBuilder: (context, state) {
-            final statusString = state.uri.queryParameters['status'];
-            final status = statusString == 'failure'
-                ? LandingPageStatus.invalidLink
-                : statusString == 'decline'
-                    ? LandingPageStatus.decline
-                    : null;
-            return TopLevelTransitionPage(
-              child: LandingPage(
-                status: status,
-              ),
+            return const TopLevelTransitionPage(
+              child: LandingPage(),
             );
           },
         ),
@@ -378,12 +370,24 @@ class _RouterBuilderState extends State<_RouterBuilder> {
                   isPerspectiveMode: isPersectiveMode,
                   isInvite: isInvite,
                   onReady: () {},
-                  onError: () {
-                    FirebaseAuth.instance.signOut();
-                    _router.goNamed(
-                      'landing',
-                      queryParameters: {'status': 'failure'},
-                    );
+                  onError: (error) {
+                    final String message;
+                    switch (error) {
+                      case LoadingError.unauthorized:
+                        FirebaseAuth.instance.signOut();
+                        message =
+                            'Unable to locate your account. Stitchfam is invite only';
+                      case LoadingError.expiredLink:
+                        message =
+                            'This invite has already been used, please sign in';
+                        FirebaseAuth.instance.signOut();
+                      case LoadingError.failedToLoad:
+                        // No need to log out
+                        message = 'Failed to load the tree';
+                    }
+                    ScaffoldMessenger.of(context)
+                        .showSnackBar(SnackBar(content: Text(message)));
+                    _router.goNamed('landing');
                   },
                   child: FamilyTreePage(
                     referrerId: referrerId,

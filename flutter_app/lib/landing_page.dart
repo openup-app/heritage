@@ -12,12 +12,7 @@ final _privacyPolicyUri = Uri.parse('https://stitchfam.com/privacy_policy');
 final _tosUri = Uri.parse('https://stitchfam.com/tos');
 
 class LandingPage extends StatelessWidget {
-  final LandingPageStatus? status;
-
-  const LandingPage({
-    super.key,
-    required this.status,
-  });
+  const LandingPage({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -59,13 +54,7 @@ class LandingPage extends StatelessWidget {
                         )
                       ],
                     ),
-                    child: switch (status) {
-                      null ||
-                      LandingPageStatus.decline =>
-                        const _LandingPageContent(),
-                      LandingPageStatus.invalidLink =>
-                        const _InvalidLinkContent(),
-                    },
+                    child: const _LandingPageContent(),
                   ),
                   const SizedBox(height: 8),
                   const Text(
@@ -280,5 +269,3 @@ class _InvalidLinkContent extends StatelessWidget {
     );
   }
 }
-
-enum LandingPageStatus { invalidLink, decline }
