@@ -137,7 +137,7 @@ class GraphNotifier extends StateNotifier<Graph> {
   }
 
   Future<void> updateOwnershipUnableReason(
-      String id, OwnershipUnableReason reason) async {
+      String id, OwnershipUnableReason? reason) async {
     final result = await api.updateOwnershipUnableReason(id, reason);
     if (!mounted) {
       return;

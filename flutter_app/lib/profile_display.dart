@@ -1037,7 +1037,7 @@ class NodeProfile extends StatelessWidget {
                   ],
                 ),
               ),
-              if (!person.isAwaiting)
+              if (person.isOwned)
                 const Positioned(
                   right: -20,
                   top: -15,

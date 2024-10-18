@@ -274,14 +274,22 @@ class _OnboardingFlowState extends ConsumerState<OnboardingFlow> {
 
 class CreatePersonFlow extends StatefulWidget {
   final Relationship relationship;
-  final Future<Id?> Function(String firstName, String lastName, Photo? photo)
-      onSave;
-  final void Function(Id id) onDone;
+  final Future<Id?> Function(
+    String firstName,
+    String lastName,
+    Photo? photo,
+  ) onSaveProfile;
+  final Future<void> Function(Id id, OwnershipUnableReason reason)
+      onSetOwnershipUnable;
+  final Future<void> Function(Id id, String name) onShareInvite;
+  final void Function(Id newId) onDone;
 
   const CreatePersonFlow({
     super.key,
     required this.relationship,
-    required this.onSave,
+    required this.onSaveProfile,
+    required this.onSetOwnershipUnable,
+    required this.onShareInvite,
     required this.onDone,
   });
 
@@ -295,9 +303,11 @@ class _CreatePersonFlowState extends State<CreatePersonFlow> {
   String _lastName = '';
   Photo? _photo;
   bool _uploading = false;
+  Id? _newId;
 
   @override
   Widget build(BuildContext context) {
+    final newId = _newId;
     return Stack(
       alignment: Alignment.center,
       children: [
@@ -330,6 +340,33 @@ class _CreatePersonFlowState extends State<CreatePersonFlow> {
                     onPhoto: (photo) => setState(() => _photo = photo),
                     onDone: _uploading ? null : _upload,
                   ),
+                  _ShareStep(
+                    name: _firstName,
+                    onShareInvite: newId == null
+                        ? null
+                        : () async {
+                            await widget.onShareInvite(newId, _firstName);
+                            if (mounted) {
+                              widget.onDone(newId);
+                            }
+                          },
+                    onMarkAsUnownable: () => setState(() => _step++),
+                    onDone: newId == null ? null : () => widget.onDone(newId),
+                  ),
+                  _UnableToOwnStep(
+                    name: _firstName,
+                    onBack: () => setState(() => _step--),
+                    onDone: newId == null || _uploading
+                        ? null
+                        : (reason) async {
+                            setState(() => _uploading = true);
+                            await widget.onSetOwnershipUnable(newId, reason);
+                            if (mounted) {
+                              setState(() => _uploading = false);
+                              widget.onDone(newId);
+                            }
+                          },
+                  ),
                 ][_step],
               ),
             ),
@@ -341,23 +378,31 @@ class _CreatePersonFlowState extends State<CreatePersonFlow> {
 
   Future<void> _upload() async {
     setState(() => _uploading = true);
-    final id = await widget.onSave(_firstName, _lastName, _photo);
-    if (!mounted || id == null) {
-      return;
+    final id = await widget.onSaveProfile(_firstName, _lastName, _photo);
+    if (mounted) {
+      setState(() {
+        _newId = id;
+        _uploading = false;
+        _step++;
+      });
     }
-    return widget.onDone(id);
   }
 }
 
 class EditPersonFlow extends ConsumerStatefulWidget {
   final Person person;
   final Future<void> Function(Profile profile) onSave;
+  final Future<void> Function(String name) onShareInvite;
+  final Future<void> Function(OwnershipUnableReason reason)
+      onSetOwnershipUnable;
   final void Function() onDone;
 
   const EditPersonFlow({
     super.key,
     required this.person,
     required this.onSave,
+    required this.onShareInvite,
+    required this.onSetOwnershipUnable,
     required this.onDone,
   });
 
@@ -406,6 +451,31 @@ class _EditPersonFlowState extends ConsumerState<EditPersonFlow> {
                     onPhoto: (photo) => setState(() => _photo = photo),
                     onDone: _uploading ? null : _upload,
                   ),
+                  _ShareStep(
+                    name: _firstName,
+                    onShareInvite: () async {
+                      await widget.onShareInvite(_firstName);
+                      if (mounted) {
+                        widget.onDone();
+                      }
+                    },
+                    onMarkAsUnownable: () => setState(() => _step++),
+                    onDone: widget.onDone,
+                  ),
+                  _UnableToOwnStep(
+                    name: _firstName,
+                    onBack: () => setState(() => _step--),
+                    onDone: _uploading
+                        ? null
+                        : (reason) async {
+                            setState(() => _uploading = true);
+                            await widget.onSetOwnershipUnable(reason);
+                            if (mounted) {
+                              setState(() => _uploading = false);
+                              widget.onDone();
+                            }
+                          },
+                  ),
                 ][_step],
               ),
             ),
@@ -430,7 +500,14 @@ class _EditPersonFlowState extends ConsumerState<EditPersonFlow> {
     if (!mounted) {
       return;
     }
-    widget.onDone();
+    if (widget.person.isUnownable) {
+      widget.onDone();
+    } else {
+      setState(() {
+        _uploading = false;
+        _step++;
+      });
+    }
   }
 }
 
@@ -1093,10 +1170,64 @@ class _ExitStepState extends State<_ExitStep> {
   }
 }
 
+class _ShareStep extends StatelessWidget {
+  final String name;
+  final VoidCallback? onShareInvite;
+  final VoidCallback? onMarkAsUnownable;
+  final VoidCallback? onDone;
+
+  const _ShareStep({
+    super.key,
+    required this.name,
+    required this.onShareInvite,
+    required this.onMarkAsUnownable,
+    required this.onDone,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return _Container(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const _Title(
+            icon: Icon(Icons.ios_share),
+            label: 'Share Your Tree',
+          ),
+          const Spacer(),
+          FilledButton.icon(
+            onPressed: onShareInvite,
+            style: FilledButton.styleFrom(
+              minimumSize: const Size.fromHeight(56),
+              foregroundColor: Colors.white,
+              backgroundColor: primaryColor,
+            ),
+            icon: const Icon(Icons.ios_share),
+            label: Text('Invite $name to grow the tree'),
+          ),
+          const SizedBox(height: 16),
+          OutlinedButton(
+            onPressed: onMarkAsUnownable,
+            style: OutlinedButton.styleFrom(
+              minimumSize: const Size.fromHeight(56),
+            ),
+            child: Text('$name can\'t join'),
+          ),
+          const Spacer(),
+          TextButton(
+            onPressed: onDone,
+            child: const Text('Done'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _UnableToOwnStep extends StatefulWidget {
   final String name;
   final VoidCallback onBack;
-  final void Function(OwnershipUnableReason reason) onDone;
+  final void Function(OwnershipUnableReason reason)? onDone;
 
   const _UnableToOwnStep({
     super.key,
@@ -1116,35 +1247,58 @@ class _UnableToOwnStepState extends State<_UnableToOwnStep> {
   Widget build(BuildContext context) {
     final reason = _reason;
     return _Container(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+      child: Stack(
+        clipBehavior: Clip.none,
         children: [
-          const _Title(
-            icon: Icon(Icons.stop_screen_share_outlined),
-            label: 'Unable to invite',
-          ),
-          Text('${widget.name} is:'),
-          for (final r in OwnershipUnableReason.values) ...[
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8.0),
-              child: FilledButton(
-                onPressed: () => setState(() => _reason = r),
-                style: FilledButton.styleFrom(
-                  fixedSize: const Size.fromHeight(44),
-                  foregroundColor: reason == r ? Colors.white : null,
-                  backgroundColor: reason == r
-                      ? primaryColor
-                      : const Color.fromRGBO(0xDF, 0xDF, 0xDF, 1.0),
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _Title(
+                icon: const Icon(Icons.stop_screen_share_outlined),
+                label: '${widget.name} can\'t join',
+              ),
+              const SizedBox(height: 32),
+              Text('${widget.name} is:'),
+              const SizedBox(height: 16),
+              for (final r in OwnershipUnableReason.values) ...[
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8.0),
+                  child: FilledButton(
+                    onPressed: () => setState(() => _reason = r),
+                    style: FilledButton.styleFrom(
+                      fixedSize: const Size.fromHeight(32),
+                      foregroundColor: reason == r ? Colors.white : null,
+                      backgroundColor: reason == r
+                          ? primaryColor
+                          : const Color.fromRGBO(0xDF, 0xDF, 0xDF, 1.0),
+                    ),
+                    child: Text(_reasonToSentence(r)),
+                  ),
                 ),
-                child: Text(_reasonToSentence(r)),
+              ],
+              const Spacer(),
+              _Button(
+                onPressed: reason == null || widget.onDone == null
+                    ? null
+                    : () => widget.onDone?.call(reason),
+                child: widget.onDone == null
+                    ? const _LoadingIndicator()
+                    : const Text('Next'),
+              ),
+            ],
+          ),
+          Positioned(
+            left: -16,
+            top: -8,
+            child: IconButton(
+              onPressed: widget.onBack,
+              style: IconButton.styleFrom(padding: EdgeInsets.zero),
+              icon: const Icon(
+                CupertinoIcons.chevron_back,
+                color: Color.fromRGBO(0xA4, 0xA4, 0xA4, 1.0),
               ),
             ),
-          ],
-          const Spacer(),
-          _Button(
-            onPressed: reason == null ? null : () => widget.onDone(reason),
-            child: const Text('Next'),
           ),
         ],
       ),
@@ -1192,6 +1346,8 @@ class _Title extends StatelessWidget {
                   .titleLarge
                   ?.copyWith(fontSize: 18, color: color),
               textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               child: Text(label),
             ),
           ],

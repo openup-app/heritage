@@ -291,13 +291,13 @@ class Api {
   }
 
   Future<Either<ApiError, Person>> updateOwnershipUnableReason(
-      Id id, OwnershipUnableReason reason) {
+      Id id, OwnershipUnableReason? reason) {
     return _makeRequest(
       request: () => http.put(
         Uri.parse('$_baseUrl/v1/people/$id/ownership_unable_reason'),
         headers: _headers,
         body: jsonEncode({
-          'reason': reason.name,
+          'reason': reason?.name,
         }),
       ),
       handleResponse: (response) {

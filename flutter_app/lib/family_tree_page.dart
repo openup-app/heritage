@@ -226,6 +226,14 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
                   showBlockingModal(context, deleteFuture);
                 },
           onInformPanelDismissed: _onDismissSelected,
+          onReselect: selectedPerson == null
+              ? null
+              : () async {
+                  await WidgetsBinding.instance.endOfFrame;
+                  if (mounted) {
+                    _selectPerson(selectedPerson.id);
+                  }
+                },
           addConnectionButtonsBuilder: !_canAddConnection ||
                   selectedPerson == null ||
                   relatedness == null
@@ -272,15 +280,18 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
       return;
     }
 
+    final focalPerson = ref.read(graphProvider).focalPerson;
     final notifier = ref.read(graphProvider.notifier);
     final newId = await showDialog<Id>(
       context: context,
       builder: (context) {
         return CreatePersonFlow(
           relationship: relationship,
-          onSave: (firstName, lastName, photo) async {
+          onSaveProfile: (firstName, lastName, photo) async {
             final newPerson = await notifier.addConnection(
-                source: selectedPerson.id, relationship: relationship);
+              source: selectedPerson.id,
+              relationship: relationship,
+            );
             if (newPerson == null) {
               return null;
             }
@@ -294,7 +305,18 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
             );
             return newPerson.id;
           },
-          onDone: Navigator.of(context).pop,
+          onSetOwnershipUnable: (id, reason) async {
+            await notifier.updateOwnershipUnableReason(id, reason);
+          },
+          onShareInvite: (id, name) async {
+            await shareInvite(
+              targetId: id,
+              targetName: name,
+              focalName: focalPerson.profile.firstName,
+              referrerId: focalPerson.id,
+            );
+          },
+          onDone: (newId) => Navigator.of(context).pop(newId),
         );
       },
     );
@@ -467,6 +489,7 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
 
   void _showEditPersonFlow(Person person) async {
     final notifier = ref.read(graphProvider.notifier);
+    final focalPerson = ref.read(graphProvider).focalPerson;
     _onDismissSelected();
     await showDialog(
       context: context,
@@ -475,6 +498,17 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
           person: person,
           onSave: (profile) async {
             await notifier.updateProfile(person.id, profile);
+          },
+          onSetOwnershipUnable: (reason) async {
+            await notifier.updateOwnershipUnableReason(person.id, reason);
+          },
+          onShareInvite: (name) async {
+            await shareInvite(
+              targetId: person.id,
+              targetName: name,
+              focalName: focalPerson.profile.firstName,
+              referrerId: focalPerson.id,
+            );
           },
           onDone: Navigator.of(context).pop,
         );

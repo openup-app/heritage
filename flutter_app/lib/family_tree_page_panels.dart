@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:heritage/api.dart';
 import 'package:heritage/graph.dart';
+import 'package:heritage/graph_provider.dart';
 import 'package:heritage/graph_view.dart';
 import 'package:heritage/help.dart';
 import 'package:heritage/heritage_app.dart';
@@ -38,6 +39,7 @@ class Panels extends ConsumerStatefulWidget {
   final void Function(Profile profile) onSaveProfile;
   final VoidCallback? onDeletePerson;
   final VoidCallback onInformPanelDismissed;
+  final VoidCallback? onReselect;
   final AddConnectionButtonsBuilder? addConnectionButtonsBuilder;
 
   const Panels({
@@ -60,6 +62,7 @@ class Panels extends ConsumerStatefulWidget {
     required this.onSaveProfile,
     required this.onDeletePerson,
     required this.onInformPanelDismissed,
+    required this.onReselect,
     required this.addConnectionButtonsBuilder,
   });
 
@@ -203,6 +206,7 @@ class _PanelsState extends ConsumerState<Panels> {
                             onInvite: widget.onShareInvite,
                             onViewPerspective: widget.onViewPerspective,
                             onDelete: widget.onDeletePerson,
+                            onReselect: widget.onReselect,
                           );
                         }),
                       ),
@@ -303,6 +307,7 @@ class _PanelsState extends ConsumerState<Panels> {
                           onInvite: widget.onShareInvite,
                           onViewPerspective: widget.onViewPerspective,
                           onDelete: widget.onDeletePerson,
+                          onReselect: widget.onReselect,
                         ),
                       ],
                     );
@@ -467,6 +472,7 @@ class _ProfileSheet extends StatefulWidget {
   final VoidCallback? onInvite;
   final VoidCallback? onViewPerspective;
   final VoidCallback? onDelete;
+  final VoidCallback? onReselect;
 
   const _ProfileSheet({
     super.key,
@@ -479,6 +485,7 @@ class _ProfileSheet extends StatefulWidget {
     required this.onInvite,
     required this.onViewPerspective,
     required this.onDelete,
+    required this.onReselect,
   });
 
   @override
@@ -488,6 +495,7 @@ class _ProfileSheet extends StatefulWidget {
 class _ProfileSheetState extends State<_ProfileSheet> {
   @override
   Widget build(BuildContext context) {
+    final ownershipUnableReason = widget.person.ownershipUnableReason;
     return Container(
       height: _kMinPanelHeight,
       clipBehavior: Clip.none,
@@ -602,6 +610,63 @@ class _ProfileSheetState extends State<_ProfileSheet> {
                         isPrimaryPersonSelected: widget.isPrimaryPersonSelected,
                       ),
                     ),
+                    if (ownershipUnableReason != null)
+                      Positioned(
+                        top: 0,
+                        right: 0,
+                        bottom: 0,
+                        child: Consumer(
+                          builder: (context, ref, child) {
+                            return Center(
+                              child: _OwnershipUnableReasonDisplay(
+                                reason: ownershipUnableReason,
+                                onPressed: () async {
+                                  final remove = await showDialog<bool>(
+                                    context: context,
+                                    builder: (context) {
+                                      return AlertDialog(
+                                        title: const Text('Remove label?'),
+                                        actions: [
+                                          TextButton(
+                                            onPressed:
+                                                Navigator.of(context).pop,
+                                            style: TextButton.styleFrom(
+                                              foregroundColor: Colors.black,
+                                            ),
+                                            child: const Text('Cancel'),
+                                          ),
+                                          TextButton(
+                                            onPressed: () =>
+                                                Navigator.of(context).pop(true),
+                                            style: TextButton.styleFrom(
+                                              foregroundColor: Colors.red,
+                                            ),
+                                            child: const Text(
+                                              'Remove',
+                                            ),
+                                          ),
+                                        ],
+                                      );
+                                    },
+                                  );
+                                  if (context.mounted && remove == true) {
+                                    final notifier =
+                                        ref.read(graphProvider.notifier);
+                                    final ownableFuture =
+                                        notifier.updateOwnershipUnableReason(
+                                            widget.person.id, null);
+                                    await showBlockingModal(
+                                        context, ownableFuture);
+                                    if (context.mounted) {
+                                      widget.onReselect?.call();
+                                    }
+                                  }
+                                },
+                              ),
+                            );
+                          },
+                        ),
+                      ),
                   ],
                 ),
               ),
@@ -1061,7 +1126,7 @@ class ProfileNameSection extends StatelessWidget {
               person.profile.fullName,
               style: Theme.of(context).textTheme.titleLarge,
             ),
-            if (!person.isAwaiting)
+            if (person.isOwned)
               const Positioned(
                 right: -30,
                 child: VerifiedBadge(size: 32),
@@ -1087,6 +1152,34 @@ class ProfileNameSection extends StatelessWidget {
             ),
           ),
       ],
+    );
+  }
+}
+
+class _OwnershipUnableReasonDisplay extends StatelessWidget {
+  final OwnershipUnableReason reason;
+  final VoidCallback onPressed;
+
+  const _OwnershipUnableReasonDisplay({
+    super.key,
+    required this.reason,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return FilledButton(
+      onPressed: onPressed,
+      style: FilledButton.styleFrom(
+        padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 12),
+        foregroundColor: Colors.black,
+        backgroundColor: Colors.white,
+      ),
+      child: switch (reason) {
+        OwnershipUnableReason.child => const Text('Child'),
+        OwnershipUnableReason.deceased => const Text('Deceased'),
+        OwnershipUnableReason.disabled => const Text('Disabled'),
+      },
     );
   }
 }
