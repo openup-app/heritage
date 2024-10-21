@@ -5,7 +5,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:heritage/api.dart';
 import 'package:heritage/graph.dart';
-import 'package:heritage/util.dart';
 
 final focalPersonIdProvider =
     StateProvider<Id>((ref) => throw 'Uninitialized provider');
@@ -243,12 +242,13 @@ class GraphNotifier extends StateNotifier<Graph> {
 
 String _createTempInviteText(
     LinkedNode<Person> focalNode, LinkedNode<Person> targetNode) {
-  final relatedness = relatednessDescription(
-    focalNode,
-    targetNode,
-    pov: PointOfView.second,
-  );
-  return '${focalNode.data.profile.firstName} wants to add you as $relatedness on the family tree';
+  return '${focalNode.data.profile.firstName} wants to add you to the family tree';
+  // final relatedness = relatednessDescription(
+  //   focalNode,
+  //   targetNode,
+  //   pov: PointOfView.second,
+  // );
+  // return '${focalNode.data.profile.firstName} wants to add you as $relatedness on the family tree';
 }
 
 Person _tempPerson(String id) {
