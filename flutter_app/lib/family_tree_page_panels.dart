@@ -577,26 +577,36 @@ class _ProfileSheetState extends State<_ProfileSheet> {
                         top: 0,
                         bottom: 0,
                         child: Center(
-                          child: FilledButton(
+                          child: FilledButton.icon(
                             onPressed: widget.onEdit,
                             style: FilledButton.styleFrom(
-                              shape: const CircleBorder(),
-                              padding: EdgeInsets.zero,
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 12),
+                              shape: const RoundedRectangleBorder(
+                                borderRadius: BorderRadius.all(
+                                  Radius.circular(24),
+                                ),
+                              ),
                               minimumSize: const Size.square(48),
                               foregroundColor: widget.person.isAwaiting
                                   ? _kAwaitingColor
                                   : primaryColor,
                               backgroundColor: Colors.white,
                             ),
-                            child: const Icon(Icons.edit),
+                            icon: const Icon(Icons.edit),
+                            label: const Text('Edit'),
                           ),
                         ),
                       ),
                     Center(
-                      child: ProfileNameSection(
-                        person: widget.person,
-                        relatedness: widget.relatedness,
-                        isPrimaryPersonSelected: widget.isPrimaryPersonSelected,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 64.0),
+                        child: ProfileNameSection(
+                          person: widget.person,
+                          relatedness: widget.relatedness,
+                          isPrimaryPersonSelected:
+                              widget.isPrimaryPersonSelected,
+                        ),
                       ),
                     ),
                   ],
@@ -1133,6 +1143,8 @@ class ProfileNameSection extends StatelessWidget {
           children: [
             Text(
               person.profile.fullName,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.titleLarge,
             ),
             if (person.isOwned)
