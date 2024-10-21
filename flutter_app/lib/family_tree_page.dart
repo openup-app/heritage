@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:heritage/analytics/analytics.dart';
 import 'package:heritage/api.dart';
 import 'package:heritage/debouncer.dart';
 import 'package:heritage/family_tree_page_panels.dart';
@@ -174,6 +175,8 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
           onShareInvite: selectedPerson == null
               ? null
               : () async {
+                  final analytics = ref.read(analyticsProvider);
+                  analytics.trackPress(TrackedButton.inviteFromProfile);
                   await shareInvite(
                     targetId: selectedPerson.id,
                     targetName: selectedPerson.profile.firstName,
@@ -192,6 +195,8 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
           onViewPerspective: !_canViewPerspective || selectedPerson == null
               ? null
               : () {
+                  final analytics = ref.read(analyticsProvider);
+                  analytics.trackPress(TrackedButton.viewPerspective);
                   _onDismissSelected();
                   context.goNamed(
                     'view',
@@ -212,12 +217,18 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
                   );
                 },
           onViewRectUpdated: (rect) => _viewRectNotifier.value = rect,
-          onRecenter: () => _familyTreeViewKey.currentState
-              ?.centerOnPersonWithId(graph.focalPerson.id),
+          onRecenter: () {
+            final analytics = ref.read(analyticsProvider);
+            analytics.trackPress(TrackedButton.recenter);
+            _familyTreeViewKey.currentState
+                ?.centerOnPersonWithId(graph.focalPerson.id);
+          },
           onSaveProfile: _onDebounceAutosave,
           onDeletePerson: !_canDeletePerson || selectedPerson == null
               ? null
               : () {
+                  final analytics = ref.read(analyticsProvider);
+                  analytics.trackPress(TrackedButton.deletePerson);
                   _onDismissSelected();
                   final notifier = ref.read(graphProvider.notifier);
                   final deleteFuture = notifier.deletePerson(selectedPerson.id);
@@ -282,6 +293,9 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
       return;
     }
 
+    final analytics = ref.read(analyticsProvider);
+    analytics.trackPress(TrackedButton.addPerson);
+
     final focalPerson = ref.read(graphProvider).focalPerson;
     final notifier = ref.read(graphProvider.notifier);
     final newId = await showDialog<Id>(
@@ -311,6 +325,8 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
             await notifier.updateOwnershipUnableReason(id, reason);
           },
           onShareInvite: (id, name) async {
+            final analytics = ref.read(analyticsProvider);
+            analytics.trackPress(TrackedButton.inviteFromCreation);
             await shareInvite(
               targetId: id,
               targetName: name,
@@ -494,6 +510,9 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
   }
 
   void _showEditPersonFlow(Person person) async {
+    final analytics = ref.read(analyticsProvider);
+    analytics.trackPress(TrackedButton.editPerson);
+
     final notifier = ref.read(graphProvider.notifier);
     final focalPerson = ref.read(graphProvider).focalPerson;
     _onDismissSelected();
@@ -509,6 +528,7 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
             await notifier.updateOwnershipUnableReason(person.id, reason);
           },
           onShareInvite: (name) async {
+            analytics.trackPress(TrackedButton.inviteFromCreation);
             await shareInvite(
               targetId: person.id,
               targetName: name,
@@ -743,6 +763,10 @@ class FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
                                       onTap: !enabled
                                           ? null
                                           : () {
+                                              final analytics =
+                                                  ref.read(analyticsProvider);
+                                              analytics.trackPress(
+                                                  TrackedButton.profile);
                                               widget.onProfileSelected(
                                                   data, relatedness);
                                             },
@@ -750,17 +774,6 @@ class FamilyTreeViewState extends ConsumerState<FamilyTreeView> {
                                         person: data,
                                         relatednessDescription:
                                             relatedness.description,
-                                        onViewPerspectivePressed: () {
-                                          widget.onDismissSelected();
-                                          context.pushNamed(
-                                            'view',
-                                            extra: ViewHistory(
-                                              primaryUserId: widget
-                                                  .viewHistory.primaryUserId,
-                                              perspectiveUserId: data.id,
-                                            ),
-                                          );
-                                        },
                                       ),
                                     ),
                                   ),

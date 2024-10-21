@@ -7,7 +7,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:go_router/go_router.dart';
+import 'package:heritage/analytics/analytics.dart';
 import 'package:heritage/api.dart';
+import 'package:heritage/auth/auth_state.dart';
+import 'package:heritage/authentication.dart';
 import 'package:heritage/error_page.dart';
 import 'package:heritage/family_tree_page.dart';
 import 'package:heritage/graph_provider.dart';
@@ -31,11 +34,13 @@ const textColor = Color.fromRGBO(0x43, 0x43, 0x43, 1.0);
 
 class HeritageApp extends StatelessWidget {
   final Api api;
+  final Analytics analytics;
   final String? redirectPath;
 
   const HeritageApp({
     super.key,
     required this.api,
+    required this.analytics,
     required this.redirectPath,
   });
 
@@ -63,115 +68,141 @@ class HeritageApp extends StatelessWidget {
       child: ProviderScope(
         overrides: [
           apiProvider.overrideWithValue(api),
+          analyticsProvider.overrideWithValue(analytics),
         ],
         child: LayoutWidget(
           child: _CacheAssets(
-            child: _RouterBuilder(
-              redirectPath: redirectPath,
-              navigatorObservers: [SentryNavigatorObserver()],
-              tempApi: api,
-              builder: (context, router) {
-                return MaterialApp.router(
-                  routerConfig: router,
-                  title: 'Stitchfam',
-                  supportedLocales: const [
-                    Locale('en'),
-                    Locale('en', 'AU'),
-                  ],
-                  theme: ThemeData(
-                    useMaterial3: false,
-                    fontFamily: 'SF Pro Display',
-                    primaryColor: primaryColor,
-                    filledButtonTheme: FilledButtonThemeData(
-                      style: FilledButton.styleFrom(
-                        elevation: 0,
-                        foregroundColor: Colors.black,
-                        backgroundColor:
-                            const Color.fromRGBO(0xEB, 0xEB, 0xEB, 1.0),
-                        padding: EdgeInsets.zero,
-                        textStyle: subtitleStyle,
-                        shape: const RoundedRectangleBorder(
-                          borderRadius: BorderRadius.all(
-                            Radius.circular(10),
-                          ),
-                        ),
-                      ),
-                    ),
-                    dividerColor: const Color.fromRGBO(0xA7, 0xA7, 0xA7, 1.0),
-                    outlinedButtonTheme: OutlinedButtonThemeData(
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: primaryColor,
-                        textStyle: subtitleStyle,
-                        padding: EdgeInsets.zero,
-                        side: const BorderSide(
-                          color: Color.fromRGBO(0x2A, 0xBB, 0xFF, 1.0),
-                        ),
-                        shape: const RoundedRectangleBorder(
-                          borderRadius: BorderRadius.all(
-                            Radius.circular(10),
-                          ),
-                        ),
-                      ),
-                    ),
-                    textButtonTheme: TextButtonThemeData(
-                        style: TextButton.styleFrom(
-                      textStyle: subtitleStyle,
-                    )),
-                    textTheme: const TextTheme(
-                      displayLarge: titleStyle,
-                      displayMedium: titleStyle,
-                      displaySmall: titleStyle,
-                      headlineLarge: titleStyle,
-                      headlineMedium: titleStyle,
-                      headlineSmall: titleStyle,
-                      titleLarge: titleStyle,
-                      titleMedium: subtitleStyle,
-                      titleSmall: subtitleStyle,
-                      bodyLarge: subtitleStyle,
-                      bodyMedium: subtitleStyle,
-                      bodySmall: miniTitleStyle,
-                      labelLarge: miniTitleStyle,
-                      labelMedium: miniTitleStyle,
-                      labelSmall: miniTitleStyle,
-                    ),
-                    disabledColor: Colors.black,
-                    inputDecorationTheme: const InputDecorationTheme(
-                      filled: true,
-                      fillColor: Colors.white,
-                      outlineBorder: BorderSide.none,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(10)),
-                        borderSide: BorderSide.none,
-                      ),
-                    ),
-                    radioTheme: const RadioThemeData(
-                      fillColor: WidgetStatePropertyAll(primaryColor),
-                    ),
-                    listTileTheme: ListTileThemeData(
-                      contentPadding: EdgeInsets.zero,
-                      titleTextStyle: subtitleStyle.copyWith(
-                        color: textColor,
-                      ),
-                    ),
-                    scrollbarTheme: const ScrollbarThemeData(
-                      thumbColor: WidgetStatePropertyAll(Colors.grey),
-                      thumbVisibility: WidgetStatePropertyAll(true),
-                    ),
-                    dialogTheme: const DialogTheme(
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.all(
-                          Radius.circular(16),
-                        ),
-                      ),
-                    ),
-                  ),
+            child: Consumer(
+              builder: (context, ref, child) {
+                return AuthStateListener(
+                  onAuthStateChanged: (user) => _onAuthStateChanged(user, ref),
+                  child: child!,
                 );
               },
+              child: _RouterBuilder(
+                redirectPath: redirectPath,
+                navigatorObservers: [SentryNavigatorObserver()],
+                tempApi: api,
+                builder: (context, router) {
+                  return MaterialApp.router(
+                    routerConfig: router,
+                    title: 'Stitchfam',
+                    supportedLocales: const [
+                      Locale('en'),
+                      Locale('en', 'AU'),
+                    ],
+                    theme: ThemeData(
+                      useMaterial3: false,
+                      fontFamily: 'SF Pro Display',
+                      primaryColor: primaryColor,
+                      filledButtonTheme: FilledButtonThemeData(
+                        style: FilledButton.styleFrom(
+                          elevation: 0,
+                          foregroundColor: Colors.black,
+                          backgroundColor:
+                              const Color.fromRGBO(0xEB, 0xEB, 0xEB, 1.0),
+                          padding: EdgeInsets.zero,
+                          textStyle: subtitleStyle,
+                          shape: const RoundedRectangleBorder(
+                            borderRadius: BorderRadius.all(
+                              Radius.circular(10),
+                            ),
+                          ),
+                        ),
+                      ),
+                      dividerColor: const Color.fromRGBO(0xA7, 0xA7, 0xA7, 1.0),
+                      outlinedButtonTheme: OutlinedButtonThemeData(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: primaryColor,
+                          textStyle: subtitleStyle,
+                          padding: EdgeInsets.zero,
+                          side: const BorderSide(
+                            color: Color.fromRGBO(0x2A, 0xBB, 0xFF, 1.0),
+                          ),
+                          shape: const RoundedRectangleBorder(
+                            borderRadius: BorderRadius.all(
+                              Radius.circular(10),
+                            ),
+                          ),
+                        ),
+                      ),
+                      textButtonTheme: TextButtonThemeData(
+                          style: TextButton.styleFrom(
+                        textStyle: subtitleStyle,
+                      )),
+                      textTheme: const TextTheme(
+                        displayLarge: titleStyle,
+                        displayMedium: titleStyle,
+                        displaySmall: titleStyle,
+                        headlineLarge: titleStyle,
+                        headlineMedium: titleStyle,
+                        headlineSmall: titleStyle,
+                        titleLarge: titleStyle,
+                        titleMedium: subtitleStyle,
+                        titleSmall: subtitleStyle,
+                        bodyLarge: subtitleStyle,
+                        bodyMedium: subtitleStyle,
+                        bodySmall: miniTitleStyle,
+                        labelLarge: miniTitleStyle,
+                        labelMedium: miniTitleStyle,
+                        labelSmall: miniTitleStyle,
+                      ),
+                      disabledColor: Colors.black,
+                      inputDecorationTheme: const InputDecorationTheme(
+                        filled: true,
+                        fillColor: Colors.white,
+                        outlineBorder: BorderSide.none,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(10)),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                      radioTheme: const RadioThemeData(
+                        fillColor: WidgetStatePropertyAll(primaryColor),
+                      ),
+                      listTileTheme: ListTileThemeData(
+                        contentPadding: EdgeInsets.zero,
+                        titleTextStyle: subtitleStyle.copyWith(
+                          color: textColor,
+                        ),
+                      ),
+                      scrollbarTheme: const ScrollbarThemeData(
+                        thumbColor: WidgetStatePropertyAll(Colors.grey),
+                        thumbVisibility: WidgetStatePropertyAll(true),
+                      ),
+                      dialogTheme: const DialogTheme(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.all(
+                            Radius.circular(16),
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
             ),
           ),
         ),
       ),
     );
+  }
+
+  void _onAuthStateChanged(AuthUser? authUser, WidgetRef ref) {
+    final firebaseUser = FirebaseAuth.instance.currentUser;
+    if (firebaseUser == null) {
+      analytics.unsetUser();
+    } else {
+      analytics.setUser(
+        uid: firebaseUser.uid,
+        email: firebaseUser.email ?? '',
+        phoneNumber: firebaseUser.phoneNumber,
+        fullName: firebaseUser.displayName,
+        photo: firebaseUser.photoURL,
+      );
+    }
+
+    api.setAuthToken(authUser?.authToken);
   }
 }
 

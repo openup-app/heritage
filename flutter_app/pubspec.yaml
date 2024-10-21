@@ -34,11 +34,11 @@ dependencies:
   intl_phone_field: ^3.2.0
   json_annotation: ^4.9.0
   lottie: ^3.1.2
+  mixpanel_flutter: ^2.3.3
   package_info_plus: ^8.0.2
   path_drawing: ^1.0.1
   sentry_flutter: ^8.9.0
   share_plus: ^10.0.2
-  shared_preferences: ^2.3.2
   url_launcher: ^6.3.0
   vector_math: ^2.1.4
   web: ^1.1.0

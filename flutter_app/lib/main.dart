@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:heritage/analytics/analytics_platform.dart';
 import 'package:heritage/api.dart';
 import 'package:heritage/authentication.dart';
 import 'package:heritage/heritage_app.dart';
@@ -52,9 +53,12 @@ void init() async {
     ),
   );
 
+  final analytics = await initAnalytics();
+
   runApp(
     HeritageApp(
       api: api,
+      analytics: analytics,
       redirectPath: redirect,
     ),
   );

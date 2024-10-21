@@ -935,13 +935,11 @@ class _HoverPersonDisplayState extends State<HoverPersonDisplay> {
 class NodeProfile extends StatelessWidget {
   final Person person;
   final String relatednessDescription;
-  final VoidCallback? onViewPerspectivePressed;
 
   const NodeProfile({
     super.key,
     required this.person,
     required this.relatednessDescription,
-    required this.onViewPerspectivePressed,
   });
 
   @override
