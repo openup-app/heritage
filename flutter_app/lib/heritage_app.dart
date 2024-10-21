@@ -193,7 +193,7 @@ class HeritageApp extends StatelessWidget {
     if (firebaseUser == null) {
       analytics.unsetUser();
     } else {
-      analytics.setUser(
+      analytics.putUser(
         uid: firebaseUser.uid,
         email: firebaseUser.email ?? '',
         phoneNumber: firebaseUser.phoneNumber,

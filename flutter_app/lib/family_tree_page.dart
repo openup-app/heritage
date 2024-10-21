@@ -132,6 +132,7 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
   @override
   void initState() {
     super.initState();
+    _updatePrimaryPersonAnalyticsProfile();
     _maybeOnboard();
   }
 
@@ -407,6 +408,35 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
       ),
     );
     _onProfileSelected(person, relatedness);
+
+    final isPerspectiveMode = widget.viewHistory.isPerspectiveMode;
+    final isFocalPersonSelected = _selectedPerson?.id == focalNode.id;
+    if (!isPerspectiveMode && isFocalPersonSelected) {
+      _updatePrimaryPersonAnalyticsProfile();
+    }
+  }
+
+  void _updatePrimaryPersonAnalyticsProfile() {
+    final graph = ref.read(graphProvider);
+    final focalPerson = graph.focalPerson;
+    final isPerspectiveMode = widget.viewHistory.isPerspectiveMode;
+    if (isPerspectiveMode) {
+      return;
+    }
+
+    final photoUrl = switch (focalPerson.profile.photo) {
+      NetworkPhoto(:final url) => url,
+      _ => null,
+    };
+
+    final analytics = ref.read(analyticsProvider);
+    analytics.putUser(
+      uid: focalPerson.id,
+      firstName: focalPerson.profile.firstName,
+      lastName: focalPerson.profile.lastName,
+      fullName: focalPerson.profile.fullName,
+      photo: photoUrl,
+    );
   }
 
   void _onProfileSelected(Person person, Relatedness relatedness) async {

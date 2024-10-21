@@ -11,7 +11,7 @@ class Analytics {
     required this.platform,
   });
 
-  Future<void> setUser({
+  Future<void> putUser({
     required String uid,
     String? email,
     String? phoneNumber,
