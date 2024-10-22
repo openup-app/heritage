@@ -3,6 +3,7 @@ import 'package:heritage/phone_input/countries.dart';
 import 'package:heritage/phone_input/country_picker_dialog.dart';
 import 'package:heritage/phone_input/intl_phone_field.dart';
 import 'package:heritage/phone_input/phone_number.dart';
+import 'package:pointer_interceptor/pointer_interceptor.dart';
 
 class PhoneInput extends StatefulWidget {
   final String? initialPhoneNumber;
@@ -57,15 +58,17 @@ class _PhoneInputState extends State<PhoneInput> {
         ),
       ),
       builder: (context) {
-        return Material(
-          type: MaterialType.transparency,
-          child: CountryPickerContents(
-            languageCode: 'en',
-            filteredCountries: countriesList,
-            searchText: '',
-            countryList: countries,
-            selectedCountry: _selectedCountry,
-            onCountryChanged: (country) => Navigator.of(context).pop(country),
+        return PointerInterceptor(
+          child: Material(
+            type: MaterialType.transparency,
+            child: CountryPickerContents(
+              languageCode: 'en',
+              filteredCountries: countriesList,
+              searchText: '',
+              countryList: countries,
+              selectedCountry: _selectedCountry,
+              onCountryChanged: (country) => Navigator.of(context).pop(country),
+            ),
           ),
         );
       },
