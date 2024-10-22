@@ -15,9 +15,9 @@ import 'package:heritage/authentication.dart';
 import 'package:heritage/family_tree_page.dart';
 import 'package:heritage/graph.dart';
 import 'package:heritage/heritage_app.dart';
+import 'package:heritage/phone_input/phone_input.dart';
 import 'package:heritage/profile_display.dart';
 import 'package:heritage/util.dart';
-import 'package:intl_phone_field/intl_phone_field.dart';
 import 'package:lottie/lottie.dart';
 
 class OnboardingFlow extends ConsumerStatefulWidget {
@@ -832,14 +832,8 @@ class _SignInLogicState extends State<SignInLogic> {
             ),
           ],
         ),
-        IntlPhoneField(
-          initialValue: widget.initialPhoneNumber,
-          initialCountryCode: 'US',
-          keyboardType: TextInputType.number,
-          disableLengthCheck: true,
-          decoration: const InputDecoration(
-            hintText: 'Phone number',
-          ),
+        PhoneInput(
+          initialPhoneNumber: widget.initialPhoneNumber,
           onChanged: (value) =>
               _phoneNumberNotifier.value = value.completeNumber,
         ),
