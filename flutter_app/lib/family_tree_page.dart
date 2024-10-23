@@ -535,7 +535,7 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
     );
     await WidgetsBinding.instance.endOfFrame;
     if (mounted) {
-      _selectPerson(focalPersonId);
+      _familyTreeViewKey.currentState?.centerOnPersonWithId(focalPersonId);
     }
   }
 
