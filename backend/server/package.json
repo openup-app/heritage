@@ -5,7 +5,7 @@
   "main": "./built/src/server.js",
   "scripts": {
     "start": "node -r source-map-support/register ./built/server.js",
-    "build": "tsc",
+    "build": "tsc --skipLibCheck",
     "dev": "tsc-watch --onSuccess \"node -r source-map-support/register ./built/server.js\""
   },
   "author": "",
